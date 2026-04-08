@@ -1,0 +1,24 @@
+# Secrets & local config
+.mcp.json
+.env
+.env.*
+!.env.example
+
+# Claude Code
+.claude/
+
+# Specify
+.specify/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results
+frontend/test-results/
