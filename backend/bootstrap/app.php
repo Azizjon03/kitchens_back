@@ -11,6 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withBroadcasting(
+        __DIR__.'/../routes/channels.php',
+        ['prefix' => 'api', 'middleware' => ['auth:sanctum']],
+    )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
             \App\Http\Middleware\ForceJsonResponse::class,
@@ -19,6 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
             'company.active' => \App\Http\Middleware\EnsureCompanyActive::class,
+            'telegram' => \App\Http\Middleware\ValidateTelegramInitData::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

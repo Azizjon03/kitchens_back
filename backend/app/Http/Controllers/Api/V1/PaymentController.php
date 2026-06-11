@@ -19,9 +19,9 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'order_id' => 'required|exists:orders,id',
-            'method' => 'required|in:cash,card,click,payme',
+            // Phase 1: cash + card only. Online methods (click/payme) come later.
+            'method' => 'required|in:cash,card',
             'amount' => 'required|numeric|min:0.01',
-            'order_check_id' => 'nullable|exists:order_checks,id',
         ]);
 
         $user = $request->user();

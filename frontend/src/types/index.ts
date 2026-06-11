@@ -1,12 +1,25 @@
+export type Role =
+  | 'super_admin'
+  | 'company_admin'
+  | 'manager'
+  | 'waiter'
+  | 'chef'
+  | 'cashier'
+  | 'courier';
+
 export interface User {
   id: number;
   phone: string;
   email?: string;
-  full_name: string;
-  role: 'super_admin' | 'company_admin' | 'branch_admin' | 'waiter' | 'chef';
+  /** Backend field. `full_name` kept for backwards compatibility with older UI. */
+  name?: string;
+  full_name?: string;
+  role: Role;
   is_active: boolean;
   company_id?: number;
   branch_id?: number;
+  branch?: Branch;
+  created_at?: string;
 }
 
 export interface Company {
@@ -60,6 +73,7 @@ export interface Category {
   sort_order: number;
   is_active: boolean;
   children?: Category[];
+  menu_items?: MenuItem[];
   menu_items_count?: number;
 }
 
@@ -128,6 +142,8 @@ export interface OrderItem {
   unit_price: number;
   total_price: number;
   note?: string;
+  modifiers?: Modifier[];
+  addons?: Addon[];
 }
 
 export interface Order {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import api from './api';
+import { resetEcho } from './echo';
 import type { User } from '../types';
 
 interface AuthContextType {
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+    resetEcho();
     setUser(null);
   }, []);
 

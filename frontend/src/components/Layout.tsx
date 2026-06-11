@@ -18,12 +18,19 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  Users,
+  Wallet,
+  SlidersHorizontal,
+  Bell,
+  Soup,
 } from 'lucide-react';
+import type { Role } from '../types';
 
 interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
+  roles: Role[];
 }
 
 function ChangePasswordModal({ onClose }: { onClose: () => void }) {
@@ -182,22 +189,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
+  const role = (user?.role ?? 'waiter') as Role;
 
-  const superAdminNav: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'Kompaniyalar', path: '/companies', icon: <Building2 size={20} /> },
-    { label: 'Tariflar', path: '/plans', icon: <CreditCard size={20} /> },
-    { label: 'Tarix', path: '/history', icon: <History size={20} /> },
+  const allNav: NavItem[] = [
+    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['super_admin', 'company_admin', 'manager'] },
+    // Super admin
+    { label: 'Kompaniyalar', path: '/companies', icon: <Building2 size={20} />, roles: ['super_admin'] },
+    { label: 'Tariflar', path: '/plans', icon: <CreditCard size={20} />, roles: ['super_admin'] },
+    { label: 'Tarix', path: '/history', icon: <History size={20} />, roles: ['super_admin'] },
+    // Company
+    { label: 'Menyu', path: '/menu', icon: <UtensilsCrossed size={20} />, roles: ['company_admin', 'manager'] },
+    { label: "Qo'shimchalar", path: '/modifiers', icon: <SlidersHorizontal size={20} />, roles: ['company_admin', 'manager'] },
+    { label: 'Stollar', path: '/tables', icon: <Grid3X3 size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
+    { label: 'Ofitsiant', path: '/waiter', icon: <Bell size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
+    { label: 'Buyurtmalar', path: '/orders', icon: <ClipboardList size={20} />, roles: ['company_admin', 'manager', 'waiter', 'cashier'] },
+    { label: 'Oshxona', path: '/kitchen', icon: <Soup size={20} />, roles: ['company_admin', 'manager', 'chef'] },
+    { label: 'Kassa', path: '/cash-shifts', icon: <Wallet size={20} />, roles: ['company_admin', 'cashier'] },
+    { label: 'Xodimlar', path: '/staff', icon: <Users size={20} />, roles: ['company_admin'] },
+    { label: 'Filiallar', path: '/branches', icon: <Building2 size={20} />, roles: ['company_admin'] },
   ];
 
-  const companyNav: NavItem[] = [
-    { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'Menyu', path: '/menu', icon: <UtensilsCrossed size={20} /> },
-    { label: 'Stollar', path: '/tables', icon: <Grid3X3 size={20} /> },
-    { label: 'Buyurtmalar', path: '/orders', icon: <ClipboardList size={20} /> },
-  ];
-
-  const navItems = isSuperAdmin ? superAdminNav : companyNav;
+  const navItems = allNav.filter((item) => item.roles.includes(role));
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -263,11 +275,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
                 <span className="text-sm font-semibold text-amber-700">
-                  {user?.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                  {(user?.name || user?.full_name)?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.full_name}</p>
+                <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.full_name}</p>
                 <p className="text-xs text-gray-500 truncate">{user?.phone}</p>
               </div>
               <button

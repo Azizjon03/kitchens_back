@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Addon;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\MenuService;
+use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -49,7 +52,17 @@ class OrderController extends Controller
         return $this->success($orders);
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Menu (categories + available items) for staff taking orders (POS).
+     */
+    public function menu(Request $request, MenuService $menuService): JsonResponse
+    {
+        return $this->success(
+            $menuService->forCompany($request->user()->company_id)
+        );
+    }
+
+    public function store(Request $request, OrderService $orderService): JsonResponse
     {
         $data = $request->validate([
             'branch_id' => 'required|exists:branches,id',
@@ -68,86 +81,8 @@ class OrderController extends Controller
         ]);
 
         $user = $request->user();
-        $company = $user->company;
 
-        $order = DB::transaction(function () use ($data, $user, $company) {
-            $subtotal = 0;
-
-            $order = Order::create([
-                'company_id' => $company->id,
-                'branch_id' => $data['branch_id'],
-                'table_id' => $data['table_id'] ?? null,
-                'user_id' => $user->id,
-                'type' => $data['type'],
-                'status' => 'preparing',
-                'note' => $data['note'] ?? null,
-            ]);
-
-            foreach ($data['items'] as $itemData) {
-                $menuItem = MenuItem::findOrFail($itemData['menu_item_id']);
-                $unitPrice = $menuItem->price;
-                $quantity = $itemData['quantity'];
-                $weightKg = $itemData['weight_kg'] ?? null;
-
-                $totalPrice = $weightKg
-                    ? bcmul($unitPrice, $weightKg, 2)
-                    : bcmul($unitPrice, $quantity, 2);
-
-                // Add addon prices
-                $addonTotal = 0;
-                if (! empty($itemData['addon_ids'])) {
-                    $addonTotal = Addon::whereIn('id', $itemData['addon_ids'])->sum('price');
-                    $totalPrice = bcadd($totalPrice, bcmul($addonTotal, $quantity, 2), 2);
-                }
-
-                $orderItem = OrderItem::create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $menuItem->id,
-                    'quantity' => $quantity,
-                    'weight_kg' => $weightKg,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                    'note' => $itemData['note'] ?? null,
-                ]);
-
-                // Attach modifiers
-                if (! empty($itemData['modifier_ids'])) {
-                    foreach ($itemData['modifier_ids'] as $modifierId) {
-                        DB::table('order_item_modifiers')->insert([
-                            'order_item_id' => $orderItem->id,
-                            'modifier_id' => $modifierId,
-                        ]);
-                    }
-                }
-
-                // Attach addons with prices
-                if (! empty($itemData['addon_ids'])) {
-                    $addons = Addon::whereIn('id', $itemData['addon_ids'])->get();
-                    foreach ($addons as $addon) {
-                        DB::table('order_item_addons')->insert([
-                            'order_item_id' => $orderItem->id,
-                            'addon_id' => $addon->id,
-                            'price' => $addon->price,
-                        ]);
-                    }
-                }
-
-                $subtotal = bcadd($subtotal, $totalPrice, 2);
-            }
-
-            $serviceChargePct = $company->getServiceChargePct();
-            $serviceChargeAmount = bcmul($subtotal, bcdiv($serviceChargePct, 100, 4), 2);
-            $total = bcadd($subtotal, $serviceChargeAmount, 2);
-
-            $order->update([
-                'subtotal' => $subtotal,
-                'service_charge_pct' => $serviceChargePct,
-                'service_charge_amount' => $serviceChargeAmount,
-                'total' => $total,
-            ]);
-
-            return $order;
-        });
+        $order = $orderService->create($data, $user->company_id, $user->id);
 
         return $this->success(
             $order->load(['table', 'user', 'orderItems.menuItem']),
@@ -158,7 +93,7 @@ class OrderController extends Controller
     public function show(Order $order): JsonResponse
     {
         return $this->success(
-            $order->load(['table', 'user', 'orderItems.menuItem', 'payments', 'checks'])
+            $order->load(['table', 'user', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons', 'payments'])
         );
     }
 
@@ -269,6 +204,15 @@ class OrderController extends Controller
         $currentStatus = $order->status;
         $type = $order->type;
 
+        // A chef may only mark food as ready (preparing -> ready).
+        if ($request->user()->hasRole('chef') && $newStatus !== 'ready') {
+            return $this->error(
+                'FORBIDDEN',
+                'Chefs can only mark orders as ready.',
+                403
+            );
+        }
+
         $transitions = [
             'dine_in' => [
                 'preparing' => 'ready',
@@ -301,6 +245,8 @@ class OrderController extends Controller
         }
 
         $order->update(['status' => $newStatus]);
+
+        OrderStatusUpdated::dispatch($order->fresh(), $currentStatus);
 
         return $this->success($order->fresh()->load(['table', 'user', 'orderItems.menuItem']));
     }

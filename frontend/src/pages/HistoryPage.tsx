@@ -15,7 +15,7 @@ interface AuditLog {
   new_values: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
-  user?: { id: number; name: string; email: string } | null;
+  user?: { id: number; name: string; email?: string; phone?: string } | null;
   company?: { id: number; name: string } | null;
 }
 

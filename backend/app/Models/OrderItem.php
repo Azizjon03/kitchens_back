@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class OrderItem extends Model
 {
@@ -30,5 +31,15 @@ class OrderItem extends Model
     public function menuItem(): BelongsTo
     {
         return $this->belongsTo(MenuItem::class);
+    }
+
+    public function modifiers(): BelongsToMany
+    {
+        return $this->belongsToMany(Modifier::class, 'order_item_modifiers');
+    }
+
+    public function addons(): BelongsToMany
+    {
+        return $this->belongsToMany(Addon::class, 'order_item_addons')->withPivot('price');
     }
 }

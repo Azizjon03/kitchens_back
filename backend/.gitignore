@@ -23,3 +23,7 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Composer cache/config (created when running composer in-container)
+/.composer
+/.config

@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
+use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
+use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
+use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -23,6 +26,13 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/login', [AuthController::class, 'login']);
         Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
+    });
+
+    // Telegram Mini App (customer-facing, authenticated via Telegram initData)
+    Route::prefix('tg')->middleware('telegram')->group(function () {
+        Route::get('menu', [TgMenuController::class, 'index']);
+        Route::post('orders', [TgOrderController::class, 'store']);
+        Route::get('orders/{order}', [TgOrderController::class, 'show']);
     });
 
     // Authenticated routes
@@ -39,9 +49,10 @@ Route::prefix('v1')->group(function () {
         // Company-scoped routes (Menu & Tables)
         Route::middleware('company.active')->group(function () {
 
-            // Branches
+            // Branches & Staff (company_admin only)
             Route::middleware('role:company_admin')->group(function () {
                 Route::apiResource('branches', BranchController::class);
+                Route::apiResource('users', UserController::class);
             });
 
             // Menu
@@ -64,10 +75,18 @@ Route::prefix('v1')->group(function () {
             });
         });
 
-        // Orders - accessible by most staff
-        Route::middleware(['company.active', 'role:company_admin,manager,waiter,cashier'])->group(function () {
-            Route::apiResource('orders', OrderController::class)->except(['destroy']);
+        // Orders - read + status transitions (chef included for the kitchen display)
+        Route::middleware(['company.active', 'role:company_admin,manager,waiter,cashier,chef'])->group(function () {
+            Route::get('orders', [OrderController::class, 'index']);
+            Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+        });
+
+        // Orders - write actions (no chef)
+        Route::middleware(['company.active', 'role:company_admin,manager,waiter,cashier'])->group(function () {
+            Route::get('pos/menu', [OrderController::class, 'menu']);
+            Route::post('orders', [OrderController::class, 'store']);
+            Route::put('orders/{order}', [OrderController::class, 'update']);
             Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
             Route::post('orders/{order}/discount', [OrderController::class, 'applyDiscount']);
         });

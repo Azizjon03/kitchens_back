@@ -15,6 +15,25 @@ services:
       - db
       - redis
 
+  reverb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kitchens_reverb
+    restart: unless-stopped
+    working_dir: /var/www
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/var/www
+      - ./docker/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - kitchens
+    depends_on:
+      - db
+      - redis
+
   nginx:
     image: nginx:alpine
     container_name: kitchens_nginx

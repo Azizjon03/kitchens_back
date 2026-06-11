@@ -54,8 +54,53 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public function checks(): HasMany
+    public function customer(): BelongsTo
     {
-        return $this->hasMany(OrderCheck::class);
+        return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Compact payload used for KDS / waiter real-time broadcasts.
+     */
+    public function toBroadcastArray(): array
+    {
+        $this->loadMissing(['table', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons']);
+
+        // NB: inside the model `$this->table` is the protected table-name string,
+        // so the relation must be read via getRelationValue().
+        $tableRel = $this->getRelationValue('table');
+
+        return [
+            'id' => $this->id,
+            'company_id' => $this->company_id,
+            'branch_id' => $this->branch_id,
+            'type' => $this->type,
+            'status' => $this->status,
+            'note' => $this->note,
+            'total' => $this->total,
+            'created_at' => optional($this->created_at)->toIso8601String(),
+            'table' => $tableRel ? [
+                'id' => $tableRel->id,
+                'number' => $tableRel->number,
+            ] : null,
+            'items' => $this->orderItems->map(fn (OrderItem $item) => [
+                'id' => $item->id,
+                'name_uz' => $item->menuItem?->name_uz,
+                'name_ru' => $item->menuItem?->name_ru,
+                'quantity' => $item->quantity,
+                'weight_kg' => $item->weight_kg,
+                'note' => $item->note,
+                'modifiers' => $item->modifiers->map(fn (Modifier $m) => [
+                    'id' => $m->id,
+                    'name_uz' => $m->name_uz,
+                    'name_ru' => $m->name_ru,
+                ])->values(),
+                'addons' => $item->addons->map(fn (Addon $a) => [
+                    'id' => $a->id,
+                    'name_uz' => $a->name_uz,
+                    'name_ru' => $a->name_ru,
+                ])->values(),
+            ])->values(),
+        ];
     }
 }

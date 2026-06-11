@@ -9,10 +9,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Fill null phone values with a placeholder based on user id
-        DB::table('users')->whereNull('phone')->orWhere('phone', '')->update([
-            'phone' => DB::raw("'+998' || LPAD(id::text, 9, '0')"),
-        ]);
+        // Fill null/empty phone values with a placeholder based on user id.
+        // Done in PHP so it works across drivers (Postgres in prod, SQLite in tests).
+        $ids = DB::table('users')
+            ->whereNull('phone')
+            ->orWhere('phone', '')
+            ->pluck('id');
+
+        foreach ($ids as $id) {
+            DB::table('users')->where('id', $id)->update([
+                'phone' => '+998'.str_pad((string) $id, 9, '0', STR_PAD_LEFT),
+            ]);
+        }
 
         Schema::table('users', function (Blueprint $table) {
             $table->string('email')->nullable()->change();

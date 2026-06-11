@@ -42,11 +42,10 @@ const NEXT_STATUS: Record<string, Record<string, string>> = {
   delivery: { preparing: 'ready', ready: 'paid', paid: 'closed' },
 };
 
+// Phase 1: cash + card only (online methods come later).
 const PAYMENT_METHODS: { value: Payment['method']; label: string }[] = [
   { value: 'cash', label: 'Naqd' },
   { value: 'card', label: 'Karta' },
-  { value: 'click', label: 'Click' },
-  { value: 'payme', label: 'Payme' },
 ];
 
 const inputClass =

@@ -120,7 +120,7 @@ export default function DashboardPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Xush kelibsiz, {user?.full_name}!
+          Xush kelibsiz, {user?.name || user?.full_name}!
         </p>
       </div>
 

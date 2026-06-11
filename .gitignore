@@ -22,3 +22,9 @@ Thumbs.db
 
 # Test results
 frontend/test-results/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Local docker override (per-machine ports)
+docker-compose.override.yml
