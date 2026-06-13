@@ -61,6 +61,7 @@ interface CartItem {
   menu_item_id: number;
   menu_item?: MenuItem;
   quantity: number;
+  weight_kg?: number;
   note?: string;
 }
 
@@ -113,6 +114,7 @@ function CreateOrderModal({
         items: cart.map((c) => ({
           menu_item_id: c.menu_item_id,
           quantity: c.quantity,
+          weight_kg: c.menu_item?.sell_type === 'weight' ? c.weight_kg : null,
           note: c.note || undefined,
         })),
       };
@@ -132,15 +134,28 @@ function CreateOrderModal({
     if (!selectedMenuItemId) return;
     const mi = availableItems.find((m) => m.id === selectedMenuItemId);
     if (!mi) return;
+    const isWeight = mi.sell_type === 'weight';
     const existing = cart.findIndex((c) => c.menu_item_id === mi.id);
     if (existing >= 0) {
       setCart((prev) =>
-        prev.map((c, i) =>
-          i === existing ? { ...c, quantity: Math.round((c.quantity + itemQty) * 100) / 100 } : c,
-        ),
+        prev.map((c, i) => {
+          if (i !== existing) return c;
+          return isWeight
+            ? { ...c, weight_kg: Math.round(((c.weight_kg ?? 0) + itemQty) * 1000) / 1000 }
+            : { ...c, quantity: Math.round((c.quantity + itemQty) * 100) / 100 };
+        }),
       );
     } else {
-      setCart((prev) => [...prev, { menu_item_id: mi.id, menu_item: mi, quantity: itemQty, note: itemNote || undefined }]);
+      setCart((prev) => [
+        ...prev,
+        {
+          menu_item_id: mi.id,
+          menu_item: mi,
+          quantity: isWeight ? 1 : itemQty,
+          weight_kg: isWeight ? itemQty : undefined,
+          note: itemNote || undefined,
+        },
+      ]);
     }
     setSelectedMenuItemId('');
     setItemQty(1);
@@ -151,10 +166,15 @@ function CreateOrderModal({
     setCart((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const cartTotal = cart.reduce((sum, c) => {
-    const mi = availableItems.find((m) => m.id === c.menu_item_id);
-    return sum + (mi?.price ?? 0) * c.quantity;
-  }, 0);
+  const lineTotal = (c: CartItem) => {
+    const mi = c.menu_item ?? availableItems.find((m) => m.id === c.menu_item_id);
+    const price = Number(mi?.price ?? 0);
+    return mi?.sell_type === 'weight' ? price * (c.weight_kg ?? 0) : price * c.quantity;
+  };
+  const cartTotal = cart.reduce((sum, c) => sum + lineTotal(c), 0);
+
+  const selectedItem = availableItems.find((m) => m.id === selectedMenuItemId);
+  const selectedIsWeight = selectedItem?.sell_type === 'weight';
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -230,27 +250,35 @@ function CreateOrderModal({
               <div className="sm:col-span-2">
                 <select
                   value={selectedMenuItemId}
-                  onChange={(e) => setSelectedMenuItemId(e.target.value ? Number(e.target.value) : '')}
+                  onChange={(e) => {
+                    const id = e.target.value ? Number(e.target.value) : '';
+                    setSelectedMenuItemId(id);
+                    const mi = availableItems.find((m) => m.id === id);
+                    setItemQty(mi?.sell_type === 'weight' ? (Number(mi.min_weight) || 0.5) : 1);
+                  }}
                   className={inputClass}
                 >
                   <option value="">Taom tanlang...</option>
                   {availableItems.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name_uz} — {formatPrice(m.price)}
+                      {m.name_uz} — {formatPrice(m.price)}{m.sell_type === 'weight' ? '/kg' : ''}
                     </option>
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="relative">
                 <input
                   type="number"
-                  min={0.1}
-                  step={0.1}
+                  min={selectedIsWeight ? (Number(selectedItem?.min_weight) || 0.1) : 0.1}
+                  step={selectedIsWeight ? (Number(selectedItem?.weight_step) || 0.1) : 0.1}
                   value={itemQty}
-                  onChange={(e) => setItemQty(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
-                  placeholder="Soni (1, 0.7...)"
+                  onChange={(e) => setItemQty(Math.max(0.001, parseFloat(e.target.value) || 0.1))}
+                  placeholder={selectedIsWeight ? 'Og\'irlik (kg)' : 'Soni (1, 0.7...)'}
                   className={inputClass}
                 />
+                {selectedIsWeight && (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">kg</span>
+                )}
               </div>
               <div>
                 <button
@@ -293,8 +321,10 @@ function CreateOrderModal({
                           {mi?.name_uz ?? `#${c.menu_item_id}`}
                           {c.note && <span className="text-gray-400 text-xs ml-1">({c.note})</span>}
                         </td>
-                        <td className="px-4 py-2 text-center text-gray-700">{c.quantity}</td>
-                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice((mi?.price ?? 0) * c.quantity)}</td>
+                        <td className="px-4 py-2 text-center text-gray-700">
+                          {mi?.sell_type === 'weight' ? `${c.weight_kg ?? 0} kg` : c.quantity}
+                        </td>
+                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice(lineTotal(c))}</td>
                         <td className="px-4 py-2">
                           <button type="button" onClick={() => removeFromCart(idx)} className="text-red-400 hover:text-red-600">
                             <Trash2 size={16} />
@@ -752,8 +782,12 @@ function OrderDetailModal({
                         {item.menu_item?.name_uz ?? `#${item.menu_item_id}`}
                         {item.note && <span className="text-gray-400 text-xs ml-1">({item.note})</span>}
                       </td>
-                      <td className="px-4 py-2 text-center text-gray-700">{Number(item.quantity)}</td>
-                      <td className="px-4 py-2 text-right text-gray-700">{formatPrice(item.unit_price)}</td>
+                      <td className="px-4 py-2 text-center text-gray-700">
+                        {item.weight_kg ? `${Number(item.weight_kg)} kg` : Number(item.quantity)}
+                      </td>
+                      <td className="px-4 py-2 text-right text-gray-700">
+                        {formatPrice(item.unit_price)}{item.weight_kg ? '/kg' : ''}
+                      </td>
                       <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatPrice(item.total_price)}</td>
                     </tr>
                   ))}
