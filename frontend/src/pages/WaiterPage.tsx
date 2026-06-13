@@ -197,14 +197,27 @@ function OrderComposer({
                   ) : (
                     <div className="mt-2 flex items-center gap-2">
                       <button
-                        onClick={() => updateLine(l.key, { quantity: Math.max(1, l.quantity - 1) })}
+                        onClick={() =>
+                          updateLine(l.key, { quantity: Math.max(0.1, Math.round((l.quantity - 1) * 100) / 100) })
+                        }
                         className="p-1 border border-gray-200 rounded"
                       >
                         <Minus size={14} />
                       </button>
-                      <span className="text-sm w-6 text-center">{l.quantity}</span>
+                      <input
+                        type="number"
+                        step={0.1}
+                        min={0.1}
+                        value={l.quantity}
+                        onChange={(e) =>
+                          updateLine(l.key, { quantity: Math.max(0.1, parseFloat(e.target.value) || 0.1) })
+                        }
+                        className="w-16 text-sm text-center border border-gray-200 rounded py-1"
+                      />
                       <button
-                        onClick={() => updateLine(l.key, { quantity: l.quantity + 1 })}
+                        onClick={() =>
+                          updateLine(l.key, { quantity: Math.round((l.quantity + 1) * 100) / 100 })
+                        }
                         className="p-1 border border-gray-200 rounded"
                       >
                         <Plus size={14} />

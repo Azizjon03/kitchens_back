@@ -135,7 +135,9 @@ function CreateOrderModal({
     const existing = cart.findIndex((c) => c.menu_item_id === mi.id);
     if (existing >= 0) {
       setCart((prev) =>
-        prev.map((c, i) => (i === existing ? { ...c, quantity: c.quantity + itemQty } : c)),
+        prev.map((c, i) =>
+          i === existing ? { ...c, quantity: Math.round((c.quantity + itemQty) * 100) / 100 } : c,
+        ),
       );
     } else {
       setCart((prev) => [...prev, { menu_item_id: mi.id, menu_item: mi, quantity: itemQty, note: itemNote || undefined }]);
@@ -242,10 +244,11 @@ function CreateOrderModal({
               <div>
                 <input
                   type="number"
-                  min={1}
+                  min={0.1}
+                  step={0.1}
                   value={itemQty}
-                  onChange={(e) => setItemQty(Math.max(1, parseInt(e.target.value) || 1))}
-                  placeholder="Soni"
+                  onChange={(e) => setItemQty(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
+                  placeholder="Soni (1, 0.7...)"
                   className={inputClass}
                 />
               </div>
@@ -749,7 +752,7 @@ function OrderDetailModal({
                         {item.menu_item?.name_uz ?? `#${item.menu_item_id}`}
                         {item.note && <span className="text-gray-400 text-xs ml-1">({item.note})</span>}
                       </td>
-                      <td className="px-4 py-2 text-center text-gray-700">{item.quantity}</td>
+                      <td className="px-4 py-2 text-center text-gray-700">{Number(item.quantity)}</td>
                       <td className="px-4 py-2 text-right text-gray-700">{formatPrice(item.unit_price)}</td>
                       <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatPrice(item.total_price)}</td>
                     </tr>

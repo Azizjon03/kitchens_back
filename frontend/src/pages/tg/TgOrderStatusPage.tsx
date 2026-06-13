@@ -102,7 +102,7 @@ export default function TgOrderStatusPage() {
                 <span className="text-gray-700">
                   {it.name_uz || it.name_ru}{' '}
                   <span className="text-gray-400">
-                    {it.weight_kg ? `${it.weight_kg} kg` : `× ${it.quantity}`}
+                    {it.weight_kg ? `${it.weight_kg} kg` : `× ${Number(it.quantity)}`}
                   </span>
                 </span>
                 <span className="text-gray-900">{formatPrice(Number(it.total_price))}</span>

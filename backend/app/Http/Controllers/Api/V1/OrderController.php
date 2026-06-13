@@ -70,7 +70,7 @@ class OrderController extends Controller
             'type' => 'required|in:dine_in,takeaway,delivery',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'nullable|array',
@@ -102,7 +102,7 @@ class OrderController extends Controller
         $data = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'nullable|array',

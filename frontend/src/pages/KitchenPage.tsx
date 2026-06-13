@@ -121,7 +121,7 @@ function OrderCard({
             <div className="flex justify-between font-medium text-gray-900">
               <span>{item.name_uz || item.name_ru}</span>
               <span className="ml-2 whitespace-nowrap">
-                {item.weight_kg ? `${item.weight_kg} kg` : `× ${item.quantity}`}
+                {item.weight_kg ? `${item.weight_kg} kg` : `× ${Number(item.quantity)}`}
               </span>
             </div>
             {item.modifiers.length > 0 && (

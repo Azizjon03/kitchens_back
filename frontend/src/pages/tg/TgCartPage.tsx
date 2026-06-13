@@ -123,14 +123,21 @@ export default function TgCartPage() {
             ) : (
               <div className="mt-2 flex items-center gap-3">
                 <button
-                  onClick={() => update(l.key, { quantity: Math.max(1, l.quantity - 1) })}
+                  onClick={() => update(l.key, { quantity: Math.max(0.1, Math.round((l.quantity - 1) * 100) / 100) })}
                   className="p-1.5 border border-gray-200 rounded-lg"
                 >
                   <Minus size={14} />
                 </button>
-                <span className="text-sm w-6 text-center">{l.quantity}</span>
+                <input
+                  type="number"
+                  step={0.1}
+                  min={0.1}
+                  value={l.quantity}
+                  onChange={(e) => update(l.key, { quantity: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
+                  className="w-16 text-sm text-center border border-gray-200 rounded-lg py-1"
+                />
                 <button
-                  onClick={() => update(l.key, { quantity: l.quantity + 1 })}
+                  onClick={() => update(l.key, { quantity: Math.round((l.quantity + 1) * 100) / 100 })}
                   className="p-1.5 border border-gray-200 rounded-lg"
                 >
                   <Plus size={14} />
