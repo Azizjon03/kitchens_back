@@ -88,14 +88,19 @@ function CreateOrderModal({
     queryKey: ['tables'],
     queryFn: async () => (await api.get('/tables')).data,
   });
-  const tables: Table[] = tablesData?.data ?? tablesData ?? [];
+  const tables: Table[] = Array.isArray(tablesData?.data)
+    ? tablesData.data
+    : (tablesData?.data?.data ?? []);
   const branchTables = tables.filter((t) => t.branch_id === form.branch_id);
 
   const { data: menuData } = useQuery({
     queryKey: ['menu-items'],
     queryFn: async () => (await api.get('/menu-items')).data,
   });
-  const menuItems: MenuItem[] = menuData?.data ?? menuData ?? [];
+  // /menu-items is paginated → items live at data.data; tolerate a plain array too.
+  const menuItems: MenuItem[] = Array.isArray(menuData?.data)
+    ? menuData.data
+    : (menuData?.data?.data ?? []);
   const availableItems = menuItems.filter((m) => m.is_available);
 
   const mutation = useMutation({
@@ -881,7 +886,9 @@ export default function OrdersPage() {
     queryKey: ['branches'],
     queryFn: async () => (await api.get('/branches')).data,
   });
-  const branches: Branch[] = branchesData?.data ?? branchesData ?? [];
+  const branches: Branch[] = Array.isArray(branchesData?.data)
+    ? branchesData.data
+    : (branchesData?.data?.data ?? []);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['orders', page, statusFilter, typeFilter, branchFilter, dateFrom, dateTo],
