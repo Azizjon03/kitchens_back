@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { MenuItem } from '../types';
+import { tgCompanySlug } from './tgApi';
 
 export interface TgCartLine {
   key: string;
@@ -10,12 +11,31 @@ export interface TgCartLine {
   addon_ids: number[];
 }
 
-const STORAGE_KEY = 'tg_cart';
+const STORAGE_PREFIX = 'tg_cart';
+// Pre-fix storage key, shared by every company's Mini App (same origin: FRONTEND_URL/tg).
+// Kept only so we can wipe it once below — a cart under this key could belong to any company.
+const LEGACY_STORAGE_KEY = 'tg_cart';
 const EVENT = 'tg-cart-changed';
+
+/** Company-scoped storage key so carts never leak between companies sharing this origin. */
+function storageKey(): string {
+  const slug = tgCompanySlug();
+  return `${STORAGE_PREFIX}:${slug || '_unknown'}`;
+}
+
+// One-time cleanup: drop the old company-agnostic cart so nobody keeps seeing
+// a stale cart that may belong to a different company (wrong items, wrong prices).
+try {
+  if (localStorage.getItem(LEGACY_STORAGE_KEY) !== null) {
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+  }
+} catch {
+  /* localStorage unavailable (private mode / blocked storage) — nothing to clean up */
+}
 
 export function loadCart(): TgCartLine[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey());
     return raw ? (JSON.parse(raw) as TgCartLine[]) : [];
   } catch {
     return [];
@@ -23,12 +43,20 @@ export function loadCart(): TgCartLine[] {
 }
 
 function persist(cart: TgCartLine[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cart));
+  try {
+    localStorage.setItem(storageKey(), JSON.stringify(cart));
+  } catch {
+    /* storage blocked (private mode / quota) — page keeps working, just won't persist */
+  }
   window.dispatchEvent(new Event(EVENT));
 }
 
 export function clearCart() {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(storageKey());
+  } catch {
+    /* ignore */
+  }
   window.dispatchEvent(new Event(EVENT));
 }
 

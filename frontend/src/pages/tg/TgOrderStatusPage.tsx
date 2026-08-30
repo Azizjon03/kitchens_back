@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import tgApi, { tgInit } from '../../lib/tgApi';
+import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { Check, Clock } from 'lucide-react';
 
 function formatPrice(price: number) {
@@ -22,6 +22,9 @@ interface TgOrder {
 const STEPS_DINE_IN = ['preparing', 'ready', 'served', 'paid'];
 const STEPS_TAKEAWAY = ['preparing', 'ready', 'paid'];
 
+// Statuses that will never change again — once here, polling for updates is pointless.
+const TERMINAL_STATUSES = ['paid', 'closed', 'cancelled'];
+
 const LABELS: Record<string, string> = {
   preparing: 'Tayyorlanmoqda',
   ready: 'Tayyor',
@@ -31,6 +34,17 @@ const LABELS: Record<string, string> = {
   cancelled: 'Bekor qilindi',
 };
 
+/**
+ * Index of `status` within `steps` for progress-bar rendering. A status that
+ * isn't one of the listed steps (e.g. `closed`, which comes after `paid`) is
+ * treated as "past the end" so every step renders as done, instead of
+ * `indexOf` returning -1 and the whole bar looking like nothing has started.
+ */
+function progressIndex(steps: string[], status: string): number {
+  const idx = steps.indexOf(status);
+  return idx !== -1 ? idx : steps.length;
+}
+
 export default function TgOrderStatusPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -39,13 +53,22 @@ export default function TgOrderStatusPage() {
     tgInit();
   }, []);
 
-  const { data: order, isLoading } = useQuery<TgOrder>({
+  const {
+    data: order,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery<TgOrder>({
     queryKey: ['tg-order', id],
     queryFn: async () => (await tgApi.get(`/orders/${id}`)).data.data as TgOrder,
-    refetchInterval: 10000,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status && TERMINAL_STATUSES.includes(status) ? false : 10000;
+    },
   });
 
-  if (isLoading || !order) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
@@ -53,9 +76,36 @@ export default function TgOrderStatusPage() {
     );
   }
 
+  // No data at all — either the request failed outright (404, network down) or
+  // came back empty. Show a clear message with a way out instead of spinning forever.
+  if (!order) {
+    const message = tgErrorMessage(error, {
+      fallback: "Buyurtma holatini yuklab bo'lmadi.",
+      notFound: 'Bunday buyurtma topilmadi.',
+    });
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center gap-4">
+        <p className="text-gray-600">{message}</p>
+        <button
+          onClick={() => refetch()}
+          disabled={isRefetching}
+          className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50"
+        >
+          {isRefetching ? 'Qayta yuklanmoqda...' : 'Qayta urinish'}
+        </button>
+        <button
+          onClick={() => navigate(`/tg${window.location.search}`)}
+          className="text-sm font-medium text-gray-500"
+        >
+          Menyuga qaytish
+        </button>
+      </div>
+    );
+  }
+
   const steps = order.type === 'dine_in' ? STEPS_DINE_IN : STEPS_TAKEAWAY;
-  const currentIdx = steps.indexOf(order.status);
   const cancelled = order.status === 'cancelled';
+  const currentIdx = progressIndex(steps, order.status);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -64,13 +114,24 @@ export default function TgOrderStatusPage() {
           <p className="text-sm text-gray-500">Buyurtma</p>
           <p className="text-2xl font-bold text-gray-900">#{order.id}</p>
           {order.table && <p className="text-sm text-gray-500 mt-1">Stol #{order.table.number}</p>}
-          <p className="mt-2 inline-flex px-3 py-1 rounded-full text-sm font-medium bg-amber-50 text-amber-700">
+          <p
+            className={`mt-2 inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+              cancelled ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
+            }`}
+          >
             {LABELS[order.status] ?? order.status}
           </p>
         </div>
 
-        {/* Progress */}
-        {!cancelled && (
+        {/* Progress / cancelled state */}
+        {cancelled ? (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
+            <p className="text-red-700 font-semibold">Buyurtma bekor qilindi</p>
+            <p className="text-sm text-red-600 mt-1">
+              Savolingiz bo'lsa, restoran xodimlariga murojaat qiling.
+            </p>
+          </div>
+        ) : (
           <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
             {steps.map((s, i) => {
               const done = i < currentIdx;

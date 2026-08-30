@@ -12,6 +12,8 @@ function formatPrice(price: number) {
 
 interface TgMenuResponse {
   company: { primary_color?: string };
+  // Company-wide setting, returned as a sibling of `company` by /tg/menu.
+  service_charge_pct?: number | string | null;
   branches: { id: number; name: string; address?: string }[];
   menu: Category[];
 }
@@ -72,7 +74,13 @@ export default function TgCartPage() {
     },
   });
 
-  const total = cartTotal(cart);
+  // Whole so'm throughout — no fractional currency units, so round instead of
+  // carrying floating-point remainders into the displayed/submitted total.
+  const subtotal = Math.round(cartTotal(cart));
+  const serviceChargePct = Number(data?.service_charge_pct) || 0;
+  const serviceChargeAmount =
+    serviceChargePct > 0 ? Math.round((subtotal * serviceChargePct) / 100) : 0;
+  const total = subtotal + serviceChargeAmount;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
@@ -207,9 +215,21 @@ export default function TgCartPage() {
       {cart.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 space-y-2">
           {error && <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{error}</div>}
-          <div className="flex items-center justify-between text-sm font-semibold">
-            <span>Jami</span>
-            <span>{formatPrice(total)}</span>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-sm text-gray-500">
+              <span>Taomlar</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+            {serviceChargeAmount > 0 && (
+              <div className="flex items-center justify-between text-sm text-gray-500">
+                <span>Xizmat haqi ({serviceChargePct}%)</span>
+                <span>{formatPrice(serviceChargeAmount)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm font-semibold text-gray-900 pt-1 border-t border-gray-100">
+              <span>Jami</span>
+              <span>{formatPrice(total)}</span>
+            </div>
           </div>
           <button
             onClick={() => mutation.mutate()}

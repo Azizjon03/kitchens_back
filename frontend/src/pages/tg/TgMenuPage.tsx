@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import tgApi, { tgInit } from '../../lib/tgApi';
+import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { useTgCart, cartTotal, cartCount } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
 import { Plus, ShoppingCart } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function TgMenuPage() {
     tgInit();
   }, []);
 
-  const { data, isLoading, isError } = useQuery<TgMenuResponse>({
+  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery<TgMenuResponse>({
     queryKey: ['tg-menu'],
     queryFn: async () => {
       const res = await tgApi.get('/menu');
@@ -53,9 +53,17 @@ export default function TgMenuPage() {
   }
 
   if (isError || !data) {
+    const message = tgErrorMessage(error, { fallback: "Menyuni yuklab bo'lmadi." });
     return (
-      <div className="flex items-center justify-center min-h-screen p-6 text-center text-gray-500">
-        Menyuni yuklab bo'lmadi. Iltimos, qaytadan urinib ko'ring.
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center gap-4">
+        <p className="text-gray-600">{message}</p>
+        <button
+          onClick={() => refetch()}
+          disabled={isRefetching}
+          className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50"
+        >
+          {isRefetching ? 'Qayta yuklanmoqda...' : 'Qayta urinish'}
+        </button>
       </div>
     );
   }
