@@ -22,7 +22,13 @@ class MenuService
                 $query->withoutGlobalScopes()
                     ->where('company_id', $companyId)
                     ->where('is_available', true)
-                    ->with(['modifiers', 'addons'])
+                    ->with([
+                        // Deactivated modifiers/addons are still attached to
+                        // the item (so re-enabling them keeps working), but
+                        // must not be offered to the customer while inactive.
+                        'modifiers' => fn ($q) => $q->withoutGlobalScopes()->where('is_active', true),
+                        'addons' => fn ($q) => $q->withoutGlobalScopes()->where('is_active', true),
+                    ])
                     ->orderBy('sort_order');
             }])
             ->orderBy('sort_order')

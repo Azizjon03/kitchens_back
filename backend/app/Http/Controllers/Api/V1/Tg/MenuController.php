@@ -34,6 +34,10 @@ class MenuController extends Controller
             ],
             'branches' => $branches,
             'menu' => $menuService->forCompany($company->id),
+            // So the Mini App can show the real total (incl. service charge)
+            // in the cart before the order is placed, instead of surprising
+            // the customer with a bigger bill at checkout.
+            'service_charge_pct' => $company->getServiceChargePct(),
         ]);
     }
 }

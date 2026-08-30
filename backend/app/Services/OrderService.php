@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\OrderCreated;
 use App\Models\Addon;
+use App\Models\Category;
 use App\Models\Company;
 use App\Models\MenuItem;
 use App\Models\Modifier;
@@ -11,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Scopes\CompanyScope;
 use App\Models\Table;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -92,7 +94,11 @@ class OrderService
      *
      * Every line is validated against its menu item's sell_type first, so a
      * portion-priced dish can never be charged as if it were sold by weight
-     * (and vice versa). Shared by order creation and order editing.
+     * (and vice versa). Every menu item, modifier and add-on referenced by a
+     * line is also required to be available/active and to belong to the
+     * given company, so a stale cart (Telegram) or a tampered payload can
+     * never sneak a disabled or cross-tenant item onto the kitchen ticket.
+     * Shared by order creation and order editing.
      *
      * @param  array<int, array<string, mixed>>  $items
      * @return string Subtotal as a bcmath decimal string (scale 2)
@@ -104,19 +110,36 @@ class OrderService
         $subtotal = '0.00';
 
         foreach (array_values($items) as $index => $itemData) {
+            $field = "items.{$index}";
+
             $menuItem = MenuItem::withoutGlobalScope(CompanyScope::class)
                 ->where('company_id', $companyId)
                 ->findOrFail($itemData['menu_item_id']);
 
-            $line = $this->priceLine($menuItem, $itemData, "items.{$index}");
+            $this->assertMenuItemIsOrderable($menuItem, $companyId, $field);
+
+            $line = $this->priceLine($menuItem, $itemData, $field);
+
+            $modifiers = collect();
+
+            if (! empty($itemData['modifier_ids'])) {
+                $modifiers = $this->resolveModifiers(
+                    $menuItem,
+                    $itemData['modifier_ids'],
+                    $companyId,
+                    "{$field}.modifier_ids"
+                );
+            }
 
             $addons = collect();
 
             if (! empty($itemData['addon_ids'])) {
-                $addons = Addon::withoutGlobalScope(CompanyScope::class)
-                    ->where('company_id', $companyId)
-                    ->whereIn('id', $itemData['addon_ids'])
-                    ->get();
+                $addons = $this->resolveAddons(
+                    $menuItem,
+                    $itemData['addon_ids'],
+                    $companyId,
+                    "{$field}.addon_ids"
+                );
 
                 // Add-ons are priced per portion. Weight lines always carry a
                 // quantity of 1, so multiplying stays correct for both types.
@@ -138,18 +161,11 @@ class OrderService
                 'note' => $itemData['note'] ?? null,
             ]);
 
-            if (! empty($itemData['modifier_ids'])) {
-                $modifierIds = Modifier::withoutGlobalScope(CompanyScope::class)
-                    ->where('company_id', $companyId)
-                    ->whereIn('id', $itemData['modifier_ids'])
-                    ->pluck('id');
-
-                foreach ($modifierIds as $modifierId) {
-                    DB::table('order_item_modifiers')->insert([
-                        'order_item_id' => $orderItem->id,
-                        'modifier_id' => $modifierId,
-                    ]);
-                }
+            foreach ($modifiers as $modifier) {
+                DB::table('order_item_modifiers')->insert([
+                    'order_item_id' => $orderItem->id,
+                    'modifier_id' => $modifier->id,
+                ]);
             }
 
             foreach ($addons as $addon) {
@@ -164,6 +180,120 @@ class OrderService
         }
 
         return $subtotal;
+    }
+
+    /**
+     * Reject a line whose menu item (or its category) has been taken off the
+     * menu. `MenuService` already hides unavailable items from menu listings,
+     * but without this check a stale client-side cart (or a direct API call)
+     * could still order them.
+     *
+     * @throws ValidationException
+     */
+    private function assertMenuItemIsOrderable(MenuItem $menuItem, int $companyId, string $field): void
+    {
+        if (! $menuItem->is_available) {
+            $this->fail("{$field}.menu_item_id", "\"{$menuItem->name_uz}\" is not available.");
+        }
+
+        $category = Category::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $companyId)
+            ->find($menuItem->category_id);
+
+        if ($category !== null && ! $category->is_active) {
+            $this->fail("{$field}.menu_item_id", "\"{$menuItem->name_uz}\": its category is not available.");
+        }
+    }
+
+    /**
+     * Resolve and validate a line's modifier_ids: every id must be an
+     * integer, belong to this company, be active, and be attached to this
+     * specific menu item (via menu_item_modifiers) — otherwise the request
+     * fails instead of silently dropping the unknown/foreign id.
+     *
+     * @param  array<int, mixed>  $rawIds
+     *
+     * @throws ValidationException
+     */
+    private function resolveModifiers(MenuItem $menuItem, array $rawIds, int $companyId, string $field): Collection
+    {
+        $ids = $this->normalizeIds($rawIds, $field);
+
+        $attachedIds = DB::table('menu_item_modifiers')
+            ->where('menu_item_id', $menuItem->id)
+            ->pluck('modifier_id');
+
+        $modifiers = Modifier::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->whereIn('id', $ids)
+            ->whereIn('id', $attachedIds)
+            ->get();
+
+        if ($modifiers->count() !== count($ids)) {
+            $invalid = collect($ids)->diff($modifiers->pluck('id'))->implode(', ');
+            $this->fail($field, "Invalid or unavailable modifier id(s): {$invalid}.");
+        }
+
+        return $modifiers;
+    }
+
+    /**
+     * Resolve and validate a line's addon_ids: every id must be an integer,
+     * belong to this company, be active, and be attached to this specific
+     * menu item (via menu_item_addons) — otherwise the request fails instead
+     * of silently dropping the unknown/foreign id (which previously left the
+     * customer thinking their add-on was ordered when it was not).
+     *
+     * @param  array<int, mixed>  $rawIds
+     *
+     * @throws ValidationException
+     */
+    private function resolveAddons(MenuItem $menuItem, array $rawIds, int $companyId, string $field): Collection
+    {
+        $ids = $this->normalizeIds($rawIds, $field);
+
+        $attachedIds = DB::table('menu_item_addons')
+            ->where('menu_item_id', $menuItem->id)
+            ->pluck('addon_id');
+
+        $addons = Addon::withoutGlobalScope(CompanyScope::class)
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->whereIn('id', $ids)
+            ->whereIn('id', $attachedIds)
+            ->get();
+
+        if ($addons->count() !== count($ids)) {
+            $invalid = collect($ids)->diff($addons->pluck('id'))->implode(', ');
+            $this->fail($field, "Invalid or unavailable addon id(s): {$invalid}.");
+        }
+
+        return $addons;
+    }
+
+    /**
+     * Coerce a list of modifier/addon ids into unique integers, rejecting
+     * anything that isn't a whole number (floats, strings, arrays, bools).
+     *
+     * @param  array<int, mixed>  $rawIds
+     * @return array<int, int>
+     *
+     * @throws ValidationException
+     */
+    private function normalizeIds(array $rawIds, string $field): array
+    {
+        $ids = [];
+
+        foreach ($rawIds as $rawId) {
+            if (! is_numeric($rawId) || (int) $rawId != $rawId) {
+                $this->fail($field, 'Each id must be an integer.');
+            }
+
+            $ids[] = (int) $rawId;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     /**

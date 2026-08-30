@@ -10,6 +10,7 @@ use App\Models\Table;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class OrderController extends Controller
 {
@@ -24,12 +25,22 @@ class OrderController extends Controller
             'branch_id' => 'nullable|integer',
             'table_id' => 'nullable|integer',
             'items' => 'required|array|min:1',
-            'items.*.menu_item_id' => 'required|integer',
+            'items.*.menu_item_id' => [
+                'required',
+                'integer',
+                // Scoped to this company so a stale/tampered cart can't
+                // reference another tenant's menu item id (would otherwise
+                // be a 404 from findOrFail deep inside OrderService instead
+                // of a clean 422 here).
+                Rule::exists('menu_items', 'id')->where(fn ($query) => $query->where('company_id', $company->id)),
+            ],
             'items.*.quantity' => 'required|numeric|min:0.01',
             'items.*.weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'nullable|array',
+            'items.*.modifier_ids.*' => 'integer',
             'items.*.addon_ids' => 'nullable|array',
+            'items.*.addon_ids.*' => 'integer',
             'note' => 'nullable|string|max:1000',
         ]);
 
