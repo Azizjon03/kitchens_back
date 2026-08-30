@@ -1,0 +1,86 @@
+# Build kontekstini yengillashtiradi: docker build har safar shu katalogni
+# daemon'ga yuboradi. Bularsiz kontekst yuzlab MB dan bir necha MB ga tushadi.
+
+# Bog'liqliklar — image ichida composer/npm orqali qayta o'rnatiladi
+**/vendor/
+**/node_modules/
+
+# Git tarixi va CI
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# IDE va muharrir
+.idea/
+.vscode/
+.fleet/
+*.iml
+*.swp
+*.swo
+
+# Muhit fayllari — konteynerga env_file/environment orqali beriladi
+.env
+.env.*
+!.env.example
+
+# Laravel runtime — konteyner o'zi qayta yaratadi
+**/storage/logs/*.log
+**/storage/framework/cache/data/**
+**/storage/framework/sessions/[a-zA-Z0-9]*
+**/storage/framework/views/*.php
+**/storage/framework/testing/**
+**/storage/debugbar/*
+**/storage/clockwork/*
+**/bootstrap/cache/*.php
+**/public/hot
+**/public/storage
+
+# Test artefaktlari
+.phpunit.result.cache
+.phpunit.cache/
+coverage/
+.pest/
+
+# Docker fayllarining o'zi image ichida kerak emas
+.dockerignore
+docker-compose*.yml
+compose*.yaml
+compose*.yml
+
+# OS va loglar
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-error.log
+# ── Vositalar va agent kataloglari ────────────────────────────────────
+# Bular loyihada ishlash uchun, ilova uchun emas. O'lchangan holat:
+# collpro_core/.worktrees 825 MB, invoice_front/.claude 728 MB,
+# ak_tech/.claude 335 MB. Bularsiz build konteksti bir necha barobar kichrayadi.
+.worktrees/
+.claude/
+.superpowers/
+.playwright-mcp/
+.playwright/
+playwright-report/
+test-results/
+.cursor/
+.aider*
+.devcontainer/
+.husky/
+
+# ── Ildizda tashlab ketilgan hujjat/ma'lumot fayllari ─────────────────
+# Faqat loyiha ILDIZI ("/" prefiksi bilan) — database/seeders yoki
+# fixtures ichidagi haqiqiy CSV/Excel fayllarga tegilmaydi.
+/*.xlsx
+/*.xls
+/*.csv
+/*.sqlite
+/*.sqlite3
+/*.dump
+/*.sql
+/*.sql.gz
+/*.tar
+/*.tar.gz
+/*.zip

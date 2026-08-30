@@ -20,7 +20,8 @@ class Table extends Model
     ];
 
     protected $casts = [
-        'number' => 'integer',
+        // `number` is a string column (20 chars) so zone codes like "A1" are
+        // preserved; casting it to int would turn them into 0.
         'seats' => 'integer',
     ];
 

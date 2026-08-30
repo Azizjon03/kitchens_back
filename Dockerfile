@@ -15,10 +15,9 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 # Copy existing application
-COPY ./backend /var/www
-
-# Set permissions
-RUN chown -R www-data:www-data /var/www
+# --chown ishlatiladi: alohida `RUN chown -R` butun daraxtni ikkinchi qatlamga
+# qayta yozib, image hajmini ilova hajmicha bekorga oshirardi.
+COPY --chown=www-data:www-data ./backend /var/www
 
 USER www-data
 

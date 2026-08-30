@@ -29,9 +29,9 @@ Route::prefix('v1')->group(function () {
     });
 
     // Telegram Mini App (customer-facing, authenticated via Telegram initData)
-    Route::prefix('tg')->middleware('telegram')->group(function () {
+    Route::prefix('tg')->middleware(['telegram', 'throttle:60,1'])->group(function () {
         Route::get('menu', [TgMenuController::class, 'index']);
-        Route::post('orders', [TgOrderController::class, 'store']);
+        Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1');
         Route::get('orders/{order}', [TgOrderController::class, 'show']);
     });
 
@@ -49,9 +49,16 @@ Route::prefix('v1')->group(function () {
         // Company-scoped routes (Menu & Tables)
         Route::middleware('company.active')->group(function () {
 
-            // Branches & Staff (company_admin only)
+            // Branches - list is open to all company staff (KDS/waiter screens
+            // need it even for staff with no branch_id assigned yet), writes
+            // (and single-branch show) stay company_admin only.
+            Route::middleware('role:company_admin,manager,waiter,cashier,chef')->group(function () {
+                Route::apiResource('branches', BranchController::class)->only(['index']);
+            });
+
+            // Branches (write) & Staff (company_admin only)
             Route::middleware('role:company_admin')->group(function () {
-                Route::apiResource('branches', BranchController::class);
+                Route::apiResource('branches', BranchController::class)->except(['index']);
                 Route::apiResource('users', UserController::class);
             });
 

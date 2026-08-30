@@ -60,6 +60,41 @@ class Order extends Model
     }
 
     /**
+     * Money actually collected for this order: completed payments minus the
+     * change handed back. Cash overpayments must not count as revenue.
+     */
+    public function effectivePaidAmount(): string
+    {
+        $paid = $this->payments()->where('status', 'completed')->sum('amount');
+        $change = $this->payments()->where('status', 'completed')->sum('change_amount');
+
+        return bcsub(
+            number_format((float) $paid, 2, '.', ''),
+            number_format((float) $change, 2, '.', ''),
+            2
+        );
+    }
+
+    /**
+     * Amount still owed on this order (never negative).
+     */
+    public function remainingAmount(): string
+    {
+        $remaining = bcsub(
+            number_format((float) $this->total, 2, '.', ''),
+            $this->effectivePaidAmount(),
+            2
+        );
+
+        return bccomp($remaining, '0.00', 2) < 0 ? '0.00' : $remaining;
+    }
+
+    public function isFullyPaid(): bool
+    {
+        return bccomp($this->remainingAmount(), '0.00', 2) <= 0;
+    }
+
+    /**
      * Compact payload used for KDS / waiter real-time broadcasts.
      */
     public function toBroadcastArray(): array

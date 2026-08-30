@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\CashShift;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +17,13 @@ class PaymentController extends Controller
 {
     use ApiResponse;
 
-    public function store(Request $request): JsonResponse
+    /**
+     * Statuses that can no longer receive a payment. "paid" is included so a
+     * settled order cannot be charged a second time.
+     */
+    private const NOT_PAYABLE_STATUSES = ['cancelled', 'closed', 'paid'];
+
+    public function store(Request $request, OrderService $orderService): JsonResponse
     {
         $data = $request->validate([
             'order_id' => 'required|exists:orders,id',
@@ -27,8 +35,12 @@ class PaymentController extends Controller
         $user = $request->user();
         $order = Order::where('company_id', $user->company_id)->findOrFail($data['order_id']);
 
-        if (in_array($order->status, ['cancelled', 'closed'])) {
-            return $this->error('ORDER_NOT_PAYABLE', 'Cannot add payment to a cancelled or closed order.', 422);
+        if (in_array($order->status, self::NOT_PAYABLE_STATUSES, true)) {
+            return $this->error(
+                'ORDER_NOT_PAYABLE',
+                'Cannot add payment to a cancelled, closed, or already paid order.',
+                422
+            );
         }
 
         $cashShiftId = null;
@@ -45,52 +57,73 @@ class PaymentController extends Controller
             $cashShiftId = $cashShift->id;
         }
 
-        $payment = DB::transaction(function () use ($data, $order, $user, $cashShiftId) {
-            $changeAmount = 0;
+        $previousStatus = $order->status;
 
-            if ($data['method'] === 'cash') {
-                $totalPaid = $order->payments()
-                    ->where('status', 'completed')
-                    ->sum('amount');
-                $remaining = bcsub($order->total, $totalPaid, 2);
+        $result = DB::transaction(function () use ($data, $order, $user, $cashShiftId, $orderService) {
+            // Lock the order row: read-compute-write of the remaining balance
+            // must not interleave with a second concurrent payment.
+            $locked = Order::where('id', $order->id)->lockForUpdate()->firstOrFail();
 
-                if ($data['amount'] > $remaining) {
-                    $changeAmount = bcsub($data['amount'], $remaining, 2);
+            if (in_array($locked->status, self::NOT_PAYABLE_STATUSES, true)) {
+                return ['error' => ['ORDER_NOT_PAYABLE', 'Cannot add payment to a cancelled, closed, or already paid order.']];
+            }
+
+            $amount = $orderService->decimal($data['amount'], 2);
+            $remaining = $locked->remainingAmount();
+
+            if (bccomp($remaining, '0.00', 2) <= 0) {
+                return ['error' => ['ORDER_ALREADY_PAID', 'This order is already fully paid.']];
+            }
+
+            $changeAmount = '0.00';
+
+            if (bccomp($amount, $remaining, 2) > 0) {
+                if ($data['method'] !== 'cash') {
+                    // A card overpayment cannot be handed back as change; it
+                    // would inflate takings, so refuse it outright.
+                    return ['error' => [
+                        'AMOUNT_EXCEEDS_REMAINING',
+                        "Card payment cannot exceed the remaining balance ({$remaining}).",
+                    ]];
                 }
+
+                $changeAmount = bcsub($amount, $remaining, 2);
             }
 
             $payment = Payment::create([
                 'company_id' => $user->company_id,
-                'order_id' => $order->id,
+                'order_id' => $locked->id,
                 'order_check_id' => $data['order_check_id'] ?? null,
                 'cash_shift_id' => $cashShiftId,
                 'method' => $data['method'],
-                'amount' => $data['amount'],
+                'amount' => $amount,
                 'change_amount' => $changeAmount,
                 'status' => 'completed',
                 'paid_at' => now(),
             ]);
 
-            // Check if order is fully paid
-            $totalPaid = $order->payments()
-                ->where('status', 'completed')
-                ->sum('amount');
+            $becamePaid = false;
 
-            // For cash, subtract change amounts to get effective payment
-            $totalChange = $order->payments()
-                ->where('status', 'completed')
-                ->sum('change_amount');
-
-            $effectivePaid = bcsub($totalPaid, $totalChange, 2);
-
-            if ($effectivePaid >= $order->total) {
-                $order->update(['status' => 'paid']);
+            if ($locked->isFullyPaid()) {
+                $locked->update(['status' => 'paid']);
+                $orderService->releaseTableIfIdle($locked);
+                $becamePaid = true;
             }
 
-            return $payment;
+            return ['payment' => $payment, 'became_paid' => $becamePaid];
         });
 
-        return $this->success($payment->load('order'), 201);
+        if (isset($result['error'])) {
+            return $this->error($result['error'][0], $result['error'][1], 422);
+        }
+
+        if ($result['became_paid']) {
+            // Let the KDS / waiter screens close the order out in real time.
+            $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
+            OrderStatusUpdated::dispatch($order, $previousStatus);
+        }
+
+        return $this->success($result['payment']->load('order'), 201);
     }
 
     public function show(Payment $payment): JsonResponse
