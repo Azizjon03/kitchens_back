@@ -9,10 +9,24 @@ use App\Models\Table;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class TableController extends Controller
 {
     use ApiResponse;
+
+    /**
+     * Order statuses that mean the order is finished and no longer "owns"
+     * the table it was placed on. Anything not in this list is considered
+     * an active order for the purposes of table transfer/merge/free/delete.
+     */
+    private const TERMINAL_ORDER_STATUSES = ['paid', 'closed', 'cancelled'];
+
+    /**
+     * Table statuses a table may be merged INTO. A table already merged,
+     * reserved, or being cleaned is not a valid merge target.
+     */
+    private const MERGEABLE_TARGET_STATUSES = ['free', 'occupied'];
 
     public function index(Request $request): JsonResponse
     {
@@ -33,8 +47,17 @@ class TableController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $companyId = $request->user()->company_id;
+
         $data = $request->validate([
-            'number' => 'required|integer',
+            'number' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('tables')->where(fn ($query) => $query
+                    ->where('company_id', $companyId)
+                    ->where('branch_id', $request->input('branch_id'))),
+            ],
             'seats' => 'required|integer|min:1',
             'zone' => 'nullable|string|max:255',
             'branch_id' => 'required|exists:branches,id',
@@ -52,8 +75,17 @@ class TableController extends Controller
 
     public function update(Request $request, Table $table): JsonResponse
     {
+        $companyId = $table->company_id;
+
         $data = $request->validate([
-            'number' => 'sometimes|integer',
+            'number' => [
+                'sometimes',
+                'string',
+                'max:20',
+                Rule::unique('tables')->ignore($table->id)->where(fn ($query) => $query
+                    ->where('company_id', $companyId)
+                    ->where('branch_id', $request->input('branch_id', $table->branch_id))),
+            ],
             'seats' => 'sometimes|integer|min:1',
             'zone' => 'nullable|string|max:255',
             'branch_id' => 'sometimes|exists:branches,id',
@@ -67,6 +99,10 @@ class TableController extends Controller
 
     public function destroy(Table $table): JsonResponse
     {
+        if ($this->hasActiveOrder($table)) {
+            return $this->error('TABLE_HAS_ACTIVE_ORDERS', 'Table has active orders and cannot be deleted.', 422);
+        }
+
         $table->delete();
 
         return $this->success(null);
@@ -77,6 +113,10 @@ class TableController extends Controller
         $request->validate([
             'status' => 'required|string|in:free,occupied,reserved,cleaning',
         ]);
+
+        if ($request->status === 'free' && $this->hasActiveOrder($table)) {
+            return $this->error('TABLE_HAS_ACTIVE_ORDERS', 'Table has active orders and cannot be freed.', 422);
+        }
 
         $table->update(['status' => $request->status]);
 
@@ -98,7 +138,7 @@ class TableController extends Controller
 
         DB::transaction(function () use ($table, $targetTable) {
             Order::where('table_id', $table->id)
-                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereNotIn('status', self::TERMINAL_ORDER_STATUSES)
                 ->update(['table_id' => $targetTable->id]);
 
             $targetTable->update(['status' => 'occupied']);
@@ -113,12 +153,33 @@ class TableController extends Controller
 
     public function merge(Request $request, Table $table): JsonResponse
     {
+        $companyId = $request->user()->company_id;
+
         $request->validate([
-            'target_table_id' => 'required|exists:tables,id',
+            'target_table_id' => [
+                'required',
+                'integer',
+                Rule::exists('tables', 'id')->where(fn ($query) => $query
+                    ->where('company_id', $companyId)
+                    ->where('branch_id', $table->branch_id)),
+            ],
         ]);
 
-        $targetTable = Table::where('company_id', $request->user()->company_id)
+        if ((int) $request->target_table_id === $table->id) {
+            return $this->error('CANNOT_MERGE_SELF', 'A table cannot be merged with itself.', 422);
+        }
+
+        if ($table->status === 'merged' || $table->merged_with_table_id !== null) {
+            return $this->error('TABLE_ALREADY_MERGED', 'This table is already merged with another table.', 422);
+        }
+
+        $targetTable = Table::where('company_id', $companyId)
+            ->where('branch_id', $table->branch_id)
             ->findOrFail($request->target_table_id);
+
+        if (! in_array($targetTable->status, self::MERGEABLE_TARGET_STATUSES, true)) {
+            return $this->error('TARGET_TABLE_NOT_AVAILABLE', 'Target table is not available to merge into.', 422);
+        }
 
         $table->update([
             'status' => 'merged',
@@ -130,11 +191,24 @@ class TableController extends Controller
 
     public function unmerge(Table $table): JsonResponse
     {
+        if ($table->merged_with_table_id === null) {
+            return $this->error('TABLE_NOT_MERGED', 'This table is not merged with another table.', 422);
+        }
+
+        $status = $this->hasActiveOrder($table) ? 'occupied' : 'free';
+
         $table->update([
-            'status' => 'free',
+            'status' => $status,
             'merged_with_table_id' => null,
         ]);
 
         return $this->success($table->fresh());
+    }
+
+    private function hasActiveOrder(Table $table): bool
+    {
+        return Order::where('table_id', $table->id)
+            ->whereNotIn('status', self::TERMINAL_ORDER_STATUSES)
+            ->exists();
     }
 }
