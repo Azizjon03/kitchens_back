@@ -5,10 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
-use App\Models\Addon;
-use App\Models\MenuItem;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Services\MenuService;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
@@ -82,6 +79,8 @@ class OrderController extends Controller
 
         $user = $request->user();
 
+        // sell_type / min_weight / weight_step rules are enforced inside the
+        // service and surface as a 422 ValidationException.
         $order = $orderService->create($data, $user->company_id, $user->id);
 
         return $this->success(
@@ -97,7 +96,7 @@ class OrderController extends Controller
         );
     }
 
-    public function update(Request $request, Order $order): JsonResponse
+    public function update(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
         $data = $request->validate([
             'items' => 'required|array|min:1',
@@ -112,89 +111,53 @@ class OrderController extends Controller
             'note' => 'nullable|string|max:1000',
         ]);
 
-        if (in_array($order->status, ['paid', 'closed', 'cancelled'])) {
+        if (in_array($order->status, OrderService::TERMINAL_STATUSES, true)) {
             return $this->error('ORDER_NOT_EDITABLE', 'Cannot update an order that is paid, closed, or cancelled.', 422);
         }
 
         $company = $request->user()->company;
 
-        DB::transaction(function () use ($order, $data, $company) {
-            // Remove old items and related records
+        DB::transaction(function () use ($order, $data, $company, $orderService) {
+            // Remove old items; modifier / add-on rows cascade with them.
             $order->orderItems()->delete();
 
-            $subtotal = 0;
+            $subtotal = $orderService->syncItems($order, $data['items'], $company->id);
 
-            foreach ($data['items'] as $itemData) {
-                $menuItem = MenuItem::findOrFail($itemData['menu_item_id']);
-                $unitPrice = $menuItem->price;
-                $quantity = $itemData['quantity'];
-                $weightKg = $itemData['weight_kg'] ?? null;
+            $serviceChargeAmount = bcmul(
+                $subtotal,
+                bcdiv($orderService->decimal($order->service_charge_pct, 2), '100', 4),
+                2
+            );
 
-                $totalPrice = $weightKg
-                    ? bcmul($unitPrice, $weightKg, 2)
-                    : bcmul($unitPrice, $quantity, 2);
-
-                $addonTotal = 0;
-                if (! empty($itemData['addon_ids'])) {
-                    $addonTotal = Addon::whereIn('id', $itemData['addon_ids'])->sum('price');
-                    $totalPrice = bcadd($totalPrice, bcmul($addonTotal, $quantity, 2), 2);
-                }
-
-                $orderItem = OrderItem::create([
-                    'order_id' => $order->id,
-                    'menu_item_id' => $menuItem->id,
-                    'quantity' => $quantity,
-                    'weight_kg' => $weightKg,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                    'note' => $itemData['note'] ?? null,
-                ]);
-
-                if (! empty($itemData['modifier_ids'])) {
-                    foreach ($itemData['modifier_ids'] as $modifierId) {
-                        DB::table('order_item_modifiers')->insert([
-                            'order_item_id' => $orderItem->id,
-                            'modifier_id' => $modifierId,
-                        ]);
-                    }
-                }
-
-                if (! empty($itemData['addon_ids'])) {
-                    $addons = Addon::whereIn('id', $itemData['addon_ids'])->get();
-                    foreach ($addons as $addon) {
-                        DB::table('order_item_addons')->insert([
-                            'order_item_id' => $orderItem->id,
-                            'addon_id' => $addon->id,
-                            'price' => $addon->price,
-                        ]);
-                    }
-                }
-
-                $subtotal = bcadd($subtotal, $totalPrice, 2);
-            }
-
-            $serviceChargePct = $order->service_charge_pct;
-            $serviceChargeAmount = bcmul($subtotal, bcdiv($serviceChargePct, 100, 4), 2);
-            $discountAmount = $order->discount_type === 'percentage'
-                ? bcmul($subtotal, bcdiv($order->discount_value, 100, 4), 2)
-                : ($order->discount_value ?? 0);
-            $total = bcsub(bcadd($subtotal, $serviceChargeAmount, 2), $discountAmount, 2);
+            // Re-clamp the stored discount against the new (possibly smaller)
+            // subtotal so the total can never go negative.
+            $totals = $orderService->computeTotals(
+                $subtotal,
+                $serviceChargeAmount,
+                $order->discount_type,
+                $order->discount_value,
+                $company->getMaxDiscountPct()
+            );
 
             $order->update([
                 'subtotal' => $subtotal,
                 'service_charge_amount' => $serviceChargeAmount,
-                'discount_amount' => $discountAmount,
-                'total' => $total,
+                'discount_amount' => $totals['discount_amount'],
+                'total' => $totals['total'],
                 'note' => $data['note'] ?? $order->note,
             ]);
         });
 
-        return $this->success(
-            $order->fresh()->load(['table', 'user', 'orderItems.menuItem'])
-        );
+        $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
+
+        // The kitchen display is still showing the old item list. previous
+        // status === current status marks a content-only update.
+        OrderStatusUpdated::dispatch($order, $order->status);
+
+        return $this->success($order);
     }
 
-    public function updateStatus(Request $request, Order $order): JsonResponse
+    public function updateStatus(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
         $data = $request->validate([
             'status' => 'required|string',
@@ -244,14 +207,33 @@ class OrderController extends Controller
             );
         }
 
-        $order->update(['status' => $newStatus]);
+        // Money must exist before an order may be called paid; otherwise the
+        // cash shift report would never see it. PaymentController is the only
+        // place that can legitimately reach this status.
+        if ($newStatus === 'paid' && ! $order->isFullyPaid()) {
+            return $this->error(
+                'PAYMENT_REQUIRED',
+                "Order cannot be marked as paid: {$order->remainingAmount()} is still unpaid.",
+                422
+            );
+        }
 
-        OrderStatusUpdated::dispatch($order->fresh(), $currentStatus);
+        DB::transaction(function () use ($order, $newStatus, $orderService) {
+            $order->update(['status' => $newStatus]);
 
-        return $this->success($order->fresh()->load(['table', 'user', 'orderItems.menuItem']));
+            if (in_array($newStatus, OrderService::TERMINAL_STATUSES, true)) {
+                $orderService->releaseTableIfIdle($order);
+            }
+        });
+
+        $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
+
+        OrderStatusUpdated::dispatch($order, $currentStatus);
+
+        return $this->success($order);
     }
 
-    public function cancel(Request $request, Order $order): JsonResponse
+    public function cancel(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
         $user = $request->user();
 
@@ -263,7 +245,7 @@ class OrderController extends Controller
             return $this->error('FORBIDDEN', 'You do not have permission to cancel orders.', 403);
         }
 
-        if (in_array($order->status, ['paid', 'closed', 'cancelled'])) {
+        if (in_array($order->status, OrderService::TERMINAL_STATUSES, true)) {
             return $this->error('ORDER_NOT_CANCELLABLE', 'This order cannot be cancelled.', 422);
         }
 
@@ -283,7 +265,9 @@ class OrderController extends Controller
             'reason' => 'required|string|max:1000',
         ]);
 
-        DB::transaction(function () use ($order, $user, $data, $company) {
+        $previousStatus = $order->status;
+
+        DB::transaction(function () use ($order, $user, $data, $company, $orderService) {
             $order->update(['status' => 'cancelled']);
 
             DB::table('order_cancellations')->insert([
@@ -295,12 +279,19 @@ class OrderController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            $orderService->releaseTableIfIdle($order);
         });
 
-        return $this->success($order->fresh()->load(['table', 'user', 'orderItems.menuItem']));
+        $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
+
+        // Tell the kitchen display to drop the order instead of cooking it.
+        OrderStatusUpdated::dispatch($order, $previousStatus);
+
+        return $this->success($order);
     }
 
-    public function applyDiscount(Request $request, Order $order): JsonResponse
+    public function applyDiscount(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
         if ($order->company_id !== $request->user()->company_id) {
             return $this->error('FORBIDDEN', 'Order does not belong to your company.', 403);
@@ -311,7 +302,7 @@ class OrderController extends Controller
             'discount_value' => 'required|numeric|min:0',
         ]);
 
-        if (in_array($order->status, ['paid', 'closed', 'cancelled'])) {
+        if (in_array($order->status, OrderService::TERMINAL_STATUSES, true)) {
             return $this->error('ORDER_NOT_EDITABLE', 'Cannot apply discount to a paid, closed, or cancelled order.', 422);
         }
 
@@ -337,21 +328,19 @@ class OrderController extends Controller
             }
         }
 
-        $discountAmount = $data['discount_type'] === 'percentage'
-            ? bcmul($order->subtotal, bcdiv($data['discount_value'], 100, 4), 2)
-            : $data['discount_value'];
-
-        $total = bcsub(
-            bcadd($order->subtotal, $order->service_charge_amount, 2),
-            $discountAmount,
-            2
+        $totals = $orderService->computeTotals(
+            $orderService->decimal($order->subtotal, 2),
+            $orderService->decimal($order->service_charge_amount, 2),
+            $data['discount_type'],
+            $data['discount_value'],
+            $maxDiscountPct
         );
 
         $order->update([
             'discount_type' => $data['discount_type'],
             'discount_value' => $data['discount_value'],
-            'discount_amount' => $discountAmount,
-            'total' => $total,
+            'discount_amount' => $totals['discount_amount'],
+            'total' => $totals['total'],
         ]);
 
         return $this->success($order->fresh()->load(['table', 'user', 'orderItems.menuItem']));
