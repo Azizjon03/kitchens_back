@@ -38,7 +38,7 @@ class UserController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -50,6 +50,8 @@ class UserController extends Controller
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
+
+        $this->normalizePhoneInput($request);
 
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -92,6 +94,8 @@ class UserController extends Controller
         $this->authorizeSameCompany($request, $user);
 
         $companyId = $request->user()->company_id;
+
+        $this->normalizePhoneInput($request);
 
         $data = $request->validate([
             'name' => 'sometimes|string|max:255',
@@ -143,6 +147,19 @@ class UserController extends Controller
 
     private function normalizePhone(string $phone): string
     {
-        return '+' . preg_replace('/\D/', '', $phone);
+        return User::normalizePhone($phone);
+    }
+
+    /**
+     * Normalize the submitted phone before validation runs, so the
+     * per-company uniqueness rule compares the same string that will be
+     * written to the DB (otherwise "+998 90 111 22 33" would pass the rule
+     * and then hit the unique index as a 500).
+     */
+    private function normalizePhoneInput(Request $request): void
+    {
+        if ($request->has('phone') && is_string($request->input('phone'))) {
+            $request->merge(['phone' => User::normalizePhone($request->input('phone'))]);
+        }
     }
 }

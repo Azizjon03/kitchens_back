@@ -42,6 +42,17 @@ class User extends Authenticatable
         return $this->belongsTo(Branch::class);
     }
 
+    /**
+     * Canonical storage form for a phone number: a leading "+" and digits only.
+     *
+     * Shared by AuthController and UserController so the value written to the
+     * DB and the value checked for uniqueness can never drift apart.
+     */
+    public static function normalizePhone(string $phone): string
+    {
+        return '+'.preg_replace('/\D/', '', $phone);
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->role === 'super_admin';
