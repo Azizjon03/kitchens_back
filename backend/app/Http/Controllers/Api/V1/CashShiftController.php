@@ -9,6 +9,8 @@ use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class CashShiftController extends Controller
 {
@@ -33,12 +35,12 @@ class CashShiftController extends Controller
 
     public function open(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $data = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
+            'branch_id' => ['required', $this->existsInCompany('branches', $user->company_id)],
             'opening_amount' => 'required|numeric|min:0',
         ]);
-
-        $user = $request->user();
 
         $existingShift = CashShift::where('branch_id', $data['branch_id'])
             ->where('status', 'open')
@@ -192,5 +194,22 @@ class CashShiftController extends Controller
         ];
 
         return $this->success($report);
+    }
+
+    /**
+     * A Rule::exists() scoped to the given company, so a raw `exists:` check
+     * (which bypasses the CompanyScope global scope) can never validate an
+     * id that belongs to another tenant. When $companyId is null (only
+     * possible for a super_admin, who has no company and legitimately works
+     * cross-tenant) the check is left unscoped rather than forced to match
+     * nothing.
+     */
+    private function existsInCompany(string $table, ?int $companyId): Exists
+    {
+        return Rule::exists($table, 'id')->where(function ($query) use ($companyId) {
+            if ($companyId !== null) {
+                $query->where('company_id', $companyId);
+            }
+        });
     }
 }

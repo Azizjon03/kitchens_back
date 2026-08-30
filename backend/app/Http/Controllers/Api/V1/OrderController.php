@@ -11,6 +11,8 @@ use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class OrderController extends Controller
 {
@@ -61,9 +63,12 @@ class OrderController extends Controller
 
     public function store(Request $request, OrderService $orderService): JsonResponse
     {
+        $user = $request->user();
+        $companyId = $user->company_id;
+
         $data = $request->validate([
-            'branch_id' => 'required|exists:branches,id',
-            'table_id' => 'nullable|exists:tables,id',
+            'branch_id' => ['required', $this->existsInCompany('branches', $companyId)],
+            'table_id' => ['nullable', $this->existsInCompany('tables', $companyId)],
             'type' => 'required|in:dine_in,takeaway,delivery',
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
@@ -71,13 +76,11 @@ class OrderController extends Controller
             'items.*.weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'nullable|array',
-            'items.*.modifier_ids.*' => 'exists:modifiers,id',
+            'items.*.modifier_ids.*' => $this->existsInCompany('modifiers', $companyId),
             'items.*.addon_ids' => 'nullable|array',
-            'items.*.addon_ids.*' => 'exists:addons,id',
+            'items.*.addon_ids.*' => $this->existsInCompany('addons', $companyId),
             'note' => 'nullable|string|max:1000',
         ]);
-
-        $user = $request->user();
 
         // sell_type / min_weight / weight_step rules are enforced inside the
         // service and surface as a 422 ValidationException.
@@ -98,6 +101,8 @@ class OrderController extends Controller
 
     public function update(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
+        $companyId = $request->user()->company_id;
+
         $data = $request->validate([
             'items' => 'required|array|min:1',
             'items.*.menu_item_id' => 'required|exists:menu_items,id',
@@ -105,9 +110,9 @@ class OrderController extends Controller
             'items.*.weight_kg' => 'nullable|numeric|min:0',
             'items.*.note' => 'nullable|string|max:500',
             'items.*.modifier_ids' => 'nullable|array',
-            'items.*.modifier_ids.*' => 'exists:modifiers,id',
+            'items.*.modifier_ids.*' => $this->existsInCompany('modifiers', $companyId),
             'items.*.addon_ids' => 'nullable|array',
-            'items.*.addon_ids.*' => 'exists:addons,id',
+            'items.*.addon_ids.*' => $this->existsInCompany('addons', $companyId),
             'note' => 'nullable|string|max:1000',
         ]);
 
@@ -344,5 +349,22 @@ class OrderController extends Controller
         ]);
 
         return $this->success($order->fresh()->load(['table', 'user', 'orderItems.menuItem']));
+    }
+
+    /**
+     * A Rule::exists() scoped to the given company, so a raw `exists:` check
+     * (which bypasses the CompanyScope global scope) can never validate an
+     * id that belongs to another tenant. When $companyId is null (only
+     * possible for a super_admin, who has no company and legitimately works
+     * cross-tenant) the check is left unscoped rather than forced to match
+     * nothing.
+     */
+    private function existsInCompany(string $table, ?int $companyId): Exists
+    {
+        return Rule::exists($table, 'id')->where(function ($query) use ($companyId) {
+            if ($companyId !== null) {
+                $query->where('company_id', $companyId);
+            }
+        });
     }
 }

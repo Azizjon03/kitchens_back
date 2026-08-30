@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class TableController extends Controller
 {
@@ -60,7 +61,7 @@ class TableController extends Controller
             ],
             'seats' => 'required|integer|min:1',
             'zone' => 'nullable|string|max:255',
-            'branch_id' => 'required|exists:branches,id',
+            'branch_id' => ['required', $this->existsInCompany('branches', $companyId)],
         ]);
 
         $table = Table::create($data);
@@ -88,8 +89,8 @@ class TableController extends Controller
             ],
             'seats' => 'sometimes|integer|min:1',
             'zone' => 'nullable|string|max:255',
-            'branch_id' => 'sometimes|exists:branches,id',
-            'assigned_waiter_id' => 'nullable|exists:users,id',
+            'branch_id' => ['sometimes', $this->existsInCompany('branches', $companyId)],
+            'assigned_waiter_id' => ['nullable', $this->existsWaiterInCompany($companyId)],
         ]);
 
         $table->update($data);
@@ -210,5 +211,38 @@ class TableController extends Controller
         return Order::where('table_id', $table->id)
             ->whereNotIn('status', self::TERMINAL_ORDER_STATUSES)
             ->exists();
+    }
+
+    /**
+     * A Rule::exists() scoped to the given company, so a raw `exists:` check
+     * (which bypasses the CompanyScope global scope) can never validate an
+     * id that belongs to another tenant. When $companyId is null (only
+     * possible for a super_admin, who has no company and legitimately works
+     * cross-tenant) the check is left unscoped rather than forced to match
+     * nothing.
+     */
+    private function existsInCompany(string $table, ?int $companyId): Exists
+    {
+        return Rule::exists($table, 'id')->where(function ($query) use ($companyId) {
+            if ($companyId !== null) {
+                $query->where('company_id', $companyId);
+            }
+        });
+    }
+
+    /**
+     * Like existsInCompany(), but additionally requires the user to hold
+     * the "waiter" role and to not be soft-deleted - a table can only be
+     * assigned to an active waiter of its own company.
+     */
+    private function existsWaiterInCompany(?int $companyId): Exists
+    {
+        return Rule::exists('users', 'id')->where(function ($query) use ($companyId) {
+            $query->whereNull('deleted_at')->where('role', 'waiter');
+
+            if ($companyId !== null) {
+                $query->where('company_id', $companyId);
+            }
+        });
     }
 }

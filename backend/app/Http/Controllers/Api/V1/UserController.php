@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class UserController extends Controller
 {
@@ -49,7 +50,8 @@ class UserController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $companyId = $request->user()->company_id;
+        $authUser = $request->user();
+        $companyId = $authUser->company_id;
 
         $this->normalizePhoneInput($request);
 
@@ -61,10 +63,14 @@ class UserController extends Controller
             ],
             'email' => 'nullable|email|max:255',
             'role' => ['required', Rule::in(self::STAFF_ROLES)],
-            'branch_id' => 'nullable|exists:branches,id',
+            'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'required|string|min:8',
             'is_active' => 'boolean',
         ]);
+
+        if ($limitError = $this->checkStaffLimit($authUser)) {
+            return $limitError;
+        }
 
         $phone = $this->normalizePhone($data['phone']);
 
@@ -107,7 +113,7 @@ class UserController extends Controller
             ],
             'email' => 'nullable|email|max:255',
             'role' => ['sometimes', Rule::in(self::STAFF_ROLES)],
-            'branch_id' => 'nullable|exists:branches,id',
+            'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'nullable|string|min:8',
             'is_active' => 'boolean',
         ]);
@@ -143,6 +149,65 @@ class UserController extends Controller
                 && in_array($user->role, self::STAFF_ROLES, true),
             404
         );
+    }
+
+    /**
+     * A Rule::exists() scoped to the given company, so a raw `exists:` check
+     * (which bypasses the CompanyScope global scope) can never validate an
+     * id that belongs to another tenant. When $companyId is null (only
+     * possible for a super_admin, who has no company and legitimately works
+     * cross-tenant) the check is left unscoped rather than forced to match
+     * nothing.
+     */
+    private function existsInCompany(string $table, ?int $companyId): Exists
+    {
+        return Rule::exists($table, 'id')->where(function ($query) use ($companyId) {
+            if ($companyId !== null) {
+                $query->where('company_id', $companyId);
+            }
+        });
+    }
+
+    /**
+     * Enforce the company's plan `max_staff` limit before a new staff
+     * account is created. Returns a ready-to-send 422 response when the
+     * limit is reached, or null when creation may proceed.
+     *
+     * -1 (or a missing plan/subscription) means "unlimited" - a company
+     * with incomplete billing data must never be blocked from managing its
+     * own staff. super_admin is exempt (and has no company to limit).
+     */
+    private function checkStaffLimit(User $requestingUser): ?JsonResponse
+    {
+        if ($requestingUser->role === 'super_admin' || ! $requestingUser->company_id) {
+            return null;
+        }
+
+        $plan = $requestingUser->company?->subscription?->plan;
+
+        if (! $plan) {
+            return null;
+        }
+
+        $maxStaff = $plan->max_staff;
+
+        if ($maxStaff === null || $maxStaff === -1) {
+            return null;
+        }
+
+        $currentStaffCount = User::where('company_id', $requestingUser->company_id)
+            ->whereIn('role', self::STAFF_ROLES)
+            ->count();
+
+        if ($currentStaffCount >= $maxStaff) {
+            return $this->error(
+                'PLAN_LIMIT_REACHED',
+                "Xodimlar soni bo'yicha tarif chegarasiga yetdingiz (maksimal: {$maxStaff}).",
+                422
+            );
+        }
+
+        return null;
     }
 
     private function normalizePhone(string $phone): string
