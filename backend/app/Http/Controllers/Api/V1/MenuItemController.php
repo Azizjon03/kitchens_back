@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\MenuItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,10 @@ class MenuItemController extends Controller
         $query = MenuItem::with('category');
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            // Asosiy kategoriya tanlansa — uning sub-menyulari taomlari ham (#23, ikki darajali menyu)
+            $categoryId = (int) $request->category_id;
+            $ids = Category::where('parent_id', $categoryId)->pluck('id')->push($categoryId);
+            $query->whereIn('category_id', $ids);
         }
 
         if ($request->has('is_available')) {
@@ -35,7 +39,8 @@ class MenuItemController extends Controller
             });
         }
 
-        $menuItems = $query->orderBy('sort_order')->paginate(20);
+        // per_page: admin menyusi va buyurtma oynasi barcha taomlarni bitta so'rovda oladi (standart menyu ~180 taom)
+        $menuItems = $query->orderBy('sort_order')->paginate(min(max($request->integer('per_page', 20), 1), 500));
 
         return $this->success($menuItems);
     }

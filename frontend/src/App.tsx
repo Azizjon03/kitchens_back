@@ -8,6 +8,7 @@ import CompaniesPage from './pages/CompaniesPage';
 import CompanyDetailPage from './pages/CompanyDetailPage';
 import HistoryPage from './pages/HistoryPage';
 import PlansPage from './pages/PlansPage';
+import CatalogPage from './pages/CatalogPage';
 import MenuPage from './pages/MenuPage';
 import ModifiersPage from './pages/ModifiersPage';
 import TablesPage from './pages/TablesPage';
@@ -76,6 +77,15 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="super_admin">
                   <PlansPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/catalog"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <CatalogPage />
                 </ProtectedRoute>
               }
             />

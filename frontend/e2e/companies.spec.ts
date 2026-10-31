@@ -161,7 +161,7 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     // Har label o'z inputiga bog'langan (htmlFor/id); majburiylarida "*"
     const fields: [string, string, boolean][] = [
       ['company-name', 'Kompaniya nomi', true],
-      ['company-slug', 'Slug', true],
+      ['company-slug', 'Manzil nomi', true],
       ['company-phone', 'Telefon', true],
       ['company-owner_full_name', "To'liq ism", true],
       ['company-owner_phone', 'Telefon raqam', true],
@@ -173,7 +173,7 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
       await expect(modal.locator(`#${id}`)).toBeVisible();
       await expect(label.locator('span', { hasText: '*' })).toHaveCount(required ? 1 : 0);
     }
-    await expect(modal.getByText('Egasi (Owner)')).toBeVisible();
+    await expect(modal.getByText('Korxona rahbari (admin)')).toBeVisible();
 
     await expect(modal.getByPlaceholder('Milliy taomlar')).toBeVisible();
     await expect(modal.getByPlaceholder('milliy-taomlar')).toBeVisible();

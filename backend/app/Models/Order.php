@@ -118,7 +118,8 @@ class Order extends Model
                 'id' => $tableRel->id,
                 'number' => $tableRel->number,
             ] : null,
-            'items' => $this->orderItems->map(fn (OrderItem $item) => [
+            // Stol to'plami qatorlari (#24) oshxonaga tegishli emas — KDS ularni ko'rsatmaydi
+            'items' => $this->orderItems->reject(fn (OrderItem $item) => $item->is_table_set)->values()->map(fn (OrderItem $item) => [
                 'id' => $item->id,
                 'name_uz' => $item->menuItem?->name_uz,
                 'name_ru' => $item->menuItem?->name_ru,

@@ -230,7 +230,7 @@ export default function KitchenPage() {
           status: string; note?: string; total?: number; created_at?: string;
           table?: { id: number; number: number } | null;
           order_items?: Array<{
-            id: number; quantity: number; weight_kg?: number; note?: string;
+            id: number; quantity: number; weight_kg?: number; note?: string; is_table_set?: boolean;
             menu_item?: { name_uz?: string; name_ru?: string };
             modifiers?: KdsModifier[]; addons?: KdsModifier[];
           }>;
@@ -247,7 +247,8 @@ export default function KitchenPage() {
         total: o.total,
         created_at: o.created_at,
         table: o.table,
-        items: (o.order_items ?? []).map((it) => ({
+        // Stol to'plami qatorlari (#24) oshxonaga tegishli emas
+        items: (o.order_items ?? []).filter((it) => !it.is_table_set).map((it) => ({
           id: it.id,
           name_uz: it.menu_item?.name_uz,
           name_ru: it.menu_item?.name_ru,

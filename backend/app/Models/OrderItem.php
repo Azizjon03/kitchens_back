@@ -13,7 +13,7 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id', 'menu_item_id', 'quantity', 'weight_kg',
-        'unit_price', 'total_price', 'note',
+        'unit_price', 'total_price', 'note', 'is_table_set',
     ];
 
     protected $casts = [
@@ -21,6 +21,7 @@ class OrderItem extends Model
         'weight_kg' => 'decimal:3',
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'is_table_set' => 'boolean',
     ];
 
     public function order(): BelongsTo

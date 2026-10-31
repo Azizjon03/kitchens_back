@@ -33,7 +33,7 @@ class TableController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Table::with('assignedWaiter');
+        $query = Table::with(['assignedWaiter', 'template:id,name']);
 
         if ($request->filled('branch_id')) {
             $query->where('branch_id', $request->branch_id);
@@ -65,6 +65,7 @@ class TableController extends Controller
             'seats' => 'required|integer|min:1',
             'zone' => 'nullable|string|max:255',
             'branch_id' => ['required', $this->existsInCompany('branches', $companyId)],
+            'table_template_id' => ['nullable', $this->existsInCompany('table_templates', $companyId)],
         ]);
 
         $table = Table::create($data);
@@ -92,6 +93,7 @@ class TableController extends Controller
             ],
             'seats' => 'sometimes|integer|min:1',
             'zone' => 'nullable|string|max:255',
+            'table_template_id' => ['nullable', $this->existsInCompany('table_templates', $request->user()->company_id)],
             'branch_id' => ['sometimes', $this->existsInCompany('branches', $companyId)],
             'assigned_waiter_id' => ['nullable', $this->existsWaiterInCompany($companyId)],
         ]);

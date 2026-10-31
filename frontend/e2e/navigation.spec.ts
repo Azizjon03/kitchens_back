@@ -11,7 +11,7 @@ async function openSidebarIfCollapsed(page: Page) {
   }
 }
 
-const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Tarix'];
+const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Tarix'];
 const COMPANY_ADMIN_LINKS = [
   'Dashboard', 'Menyu', "Qo'shimchalar", 'Stollar', 'Ofitsiant',
   'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Filiallar',
@@ -35,7 +35,7 @@ test.describe('Sidebar navigatsiya (super admin)', () => {
     const nav = page.locator('aside nav');
     await expect(nav.getByRole('link')).toHaveText(SUPER_ADMIN_LINKS);
     // Kompaniya bo'limlari super adminga ko'rinmaydi
-    await expect(nav.getByRole('link', { name: 'Menyu' })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Menyu', exact: true })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Buyurtmalar' })).toHaveCount(0);
   });
 
@@ -144,6 +144,7 @@ test.describe('Company admin navigatsiyasi', () => {
     await expect(nav.getByRole('link')).toHaveText(COMPANY_ADMIN_LINKS);
     await expect(nav.getByRole('link', { name: 'Kompaniyalar' })).toHaveCount(0);
     await expect(nav.getByRole('link', { name: 'Tariflar' })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Standart menyu' })).toHaveCount(0);
   });
 
   test('company admin dashboard da kompaniya bloki ko\'rsatilishi kerak', async ({ page }) => {

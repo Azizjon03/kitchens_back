@@ -143,34 +143,18 @@ class OrderController extends Controller
         $company = $request->user()->company;
 
         DB::transaction(function () use ($order, $data, $company, $orderService) {
-            // Remove old items; modifier / add-on rows cascade with them.
-            $order->orderItems()->delete();
+            // Remove old items; modifier / add-on rows cascade with them. Stol to'plamidan
+            // belgilangan qatorlar (#24) bu formada yo'q — ular saqlanadi.
+            $order->orderItems()->where('is_table_set', false)->delete();
 
-            $subtotal = $orderService->syncItems($order, $data['items'], $company->id);
+            $orderService->syncItems($order, $data['items'], $company->id);
 
-            $serviceChargeAmount = bcmul(
-                $subtotal,
-                bcdiv($orderService->decimal($order->service_charge_pct, 2), '100', 4),
-                2
-            );
+            if (array_key_exists('note', $data)) {
+                $order->update(['note' => $data['note'] ?? $order->note]);
+            }
 
-            // Re-clamp the stored discount against the new (possibly smaller)
-            // subtotal so the total can never go negative.
-            $totals = $orderService->computeTotals(
-                $subtotal,
-                $serviceChargeAmount,
-                $order->discount_type,
-                $order->discount_value,
-                $company->getMaxDiscountPct()
-            );
-
-            $order->update([
-                'subtotal' => $subtotal,
-                'service_charge_amount' => $serviceChargeAmount,
-                'discount_amount' => $totals['discount_amount'],
-                'total' => $totals['total'],
-                'note' => $data['note'] ?? $order->note,
-            ]);
+            // Summa barcha qatorlardan (to'plam qatorlari ham), chegirma qayta cheklanadi
+            $orderService->recalculateTotals($order, $company);
         });
 
         $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);

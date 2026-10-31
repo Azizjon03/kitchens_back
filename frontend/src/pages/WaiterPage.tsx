@@ -5,10 +5,12 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch, Table, Order, Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
+import TableSetModal from '../components/TableSetModal';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
-import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3 } from 'lucide-react';
+import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
+import { buildMenuTree } from '../lib/menuTree';
 
 
 const inputClass =
@@ -36,7 +38,9 @@ function OrderComposer({
 }) {
   const queryClient = useQueryClient();
   const [cart, setCart] = useState<CartLine[]>([]);
-  const [activeCat, setActiveCat] = useState<number | null>(null);
+  // Ikki darajali menyu (#23): kategoriya → sub-menyu → taomlar
+  const [activeTop, setActiveTop] = useState<number | null>(null);
+  const [activeSub, setActiveSub] = useState<number | null>(null);
   const [error, setError] = useState('');
 
   const {
@@ -54,9 +58,10 @@ function OrderComposer({
     },
   });
 
-  useEffect(() => {
-    if (activeCat === null && categories.length > 0) setActiveCat(categories[0].id);
-  }, [categories, activeCat]);
+  const tree = useMemo(() => buildMenuTree<MenuItem>(categories), [categories]);
+  // Tanlov yo'q yoki eskirgan bo'lsa — birinchi kategoriya / birinchi sub-menyu
+  const topNode = tree.find((n) => n.category.id === activeTop) ?? tree[0];
+  const subCat = topNode?.children.find((c) => c.id === activeSub) ?? topNode?.children[0];
 
   const addItem = (item: MenuItem) => {
     setCart((prev) => [
@@ -124,7 +129,7 @@ function OrderComposer({
     },
   });
 
-  const activeItems = categories.find((c) => c.id === activeCat)?.menu_items ?? [];
+  const activeItems = subCat?.menu_items ?? [];
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -143,18 +148,51 @@ function OrderComposer({
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
           {/* Menu */}
           <div className="border-r border-gray-100 flex flex-col overflow-hidden">
-            <div className="flex gap-1 p-2 overflow-x-auto border-b border-gray-100">
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCat(c.id)}
-                  className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                    activeCat === c.id ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {c.name_uz}
-                </button>
-              ))}
+            <div className="border-b border-gray-100">
+              <div className="flex gap-1 p-2 overflow-x-auto" role="tablist" aria-label="Kategoriyalar">
+                {tree.map(({ category: c }) => {
+                  const active = topNode?.category.id === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => {
+                        setActiveTop(c.id);
+                        setActiveSub(null);
+                      }}
+                      className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                        active ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
+                      }`}
+                    >
+                      {c.name_uz}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Sub-menyular: kategoriyada bittadan ko'p bo'lsa ko'rsatiladi */}
+              {topNode && topNode.children.length > 1 && (
+                <div className="flex gap-1 px-2 pb-2 overflow-x-auto" role="tablist" aria-label="Sub-menyular">
+                  {topNode.children.map((c) => {
+                    const active = subCat?.id === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setActiveSub(c.id)}
+                        className={`min-h-11 px-3 py-2 rounded-full text-sm whitespace-nowrap border ${
+                          active
+                            ? 'bg-amber-50 border-amber-600 text-amber-800 font-medium'
+                            : 'bg-white border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {c.name_uz}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
               {menuLoading && <LoadingState label="Menyu yuklanmoqda..." />}
@@ -175,7 +213,7 @@ function OrderComposer({
                 </button>
               ))}
               {!menuLoading && !menuFailed && activeItems.length === 0 && (
-                <p className="text-sm text-gray-500 p-4 text-center">Bu kategoriyada taom yo'q</p>
+                <p className="text-sm text-gray-500 p-4 text-center">{tree.length === 0 ? "Menyuda hali taom yo'q — admin \"Menyu\" bo'limida taom qo'shadi" : "Bu bo'limda taom yo'q"}</p>
               )}
             </div>
           </div>
@@ -345,6 +383,8 @@ export default function WaiterPage() {
   const [composerTable, setComposerTable] = useState<Table | null>(null);
   const [alerts, setAlerts] = useState<{ id: number; label: string }[]>([]);
   const [actionError, setActionError] = useState('');
+  // Stol to'plami (#24): stoldagi narsalardan ochilganini belgilash
+  const [tableSetOrder, setTableSetOrder] = useState<Order | null>(null);
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -568,7 +608,7 @@ export default function WaiterPage() {
                   {STATUS_MAP[o.status]?.label ?? o.status}
                 </span>
               </div>
-              <div className={`flex items-center justify-between text-sm ${o.status === 'ready' && o.type === 'dine_in' ? 'mb-3' : ''}`}>
+              <div className={`flex items-center justify-between text-sm ${(o.status === 'ready' && o.type === 'dine_in') || o.table?.table_template_id ? 'mb-3' : ''}`}>
                 <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
                 <span className="font-medium text-gray-900 tabular-nums">{formatMoney(Number(o.total))}</span>
               </div>
@@ -581,9 +621,21 @@ export default function WaiterPage() {
                   <Check size={18} /> {serveMutation.isPending && serveMutation.variables === o.id ? 'Saqlanmoqda...' : 'Berildi'}
                 </button>
               )}
+              {o.table?.table_template_id && (
+                <button
+                  onClick={() => setTableSetOrder(o)}
+                  className="mt-2 w-full min-h-11 px-3 py-2 border border-gray-300 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-50 inline-flex items-center justify-center gap-1"
+                >
+                  <LayoutTemplate size={16} aria-hidden="true" /> Stoldagi narsalar
+                </button>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {tableSetOrder && (
+        <TableSetModal orderId={tableSetOrder.id} tableLabel={tableLabel(tableSetOrder)} onClose={() => setTableSetOrder(null)} />
       )}
 
       {composerTable && branchId !== null && (

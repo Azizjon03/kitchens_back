@@ -120,9 +120,12 @@ export interface Table {
   id: number;
   company_id: number;
   branch_id: number;
-  number: number;
+  number: string;
   seats: number;
   zone?: string;
+  /** Stolga oldindan qo'yiladigan narsalar shabloni (#24) */
+  table_template_id?: number | null;
+  template?: { id: number; name: string } | null;
   status: 'free' | 'occupied' | 'reserved' | 'cleaning' | 'merged';
   assigned_waiter_id?: number;
   assigned_waiter?: User;

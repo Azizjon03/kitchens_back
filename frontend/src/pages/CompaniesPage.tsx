@@ -15,7 +15,19 @@ interface CreateCompanyForm {
   owner_phone: string;
   owner_password: string;
   owner_full_name: string;
+  menu_template: MenuTemplate;
 }
+
+type MenuTemplate = 'oshxona' | 'fast_food' | 'kafe' | 'hammasi' | 'bosh';
+
+// Yangi korxonaga standart menyudan (#23) qaysi qism nusxa qilinadi
+const MENU_TEMPLATES: { value: MenuTemplate; label: string; hint: string }[] = [
+  { value: 'oshxona', label: 'Oshxona', hint: "Milliy taomlar: osh, sho'rva, kabob, somsa, salat, non, suv va ichimliklar" },
+  { value: 'fast_food', label: 'Fast food', hint: "Lavash, burger, hot-dog, pitsa, kartoshka fri, souslar, suv va ichimliklar" },
+  { value: 'kafe', label: 'Kafe', hint: "Qahva, desert, nonushta, limonad, shirinliklar, suv va ichimliklar" },
+  { value: 'hammasi', label: "To'liq menyu", hint: "Yuqoridagi barcha taomlar birga — keyin keraksizini o'chirasiz" },
+  { value: 'bosh', label: "Bo'sh menyu", hint: "Hech narsa qo'shilmaydi — korxona menyuni o'zi to'ldiradi" },
+];
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -40,6 +52,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
     owner_phone: '',
     owner_password: '',
     owner_full_name: '',
+    menu_template: 'oshxona',
   });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateCompanyForm, string>>>({});
@@ -120,7 +133,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Slug <span className="text-red-600" aria-hidden="true">*</span></label>
+            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Manzil nomi (slug) <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
               id="company-slug"
               aria-invalid={!!fieldErrors.slug}
@@ -132,6 +145,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="milliy-taomlar"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            <p className="mt-1 text-xs text-gray-500">Lotin harflarida, bo'shliqsiz — Telegram menyu havolasida ishlatiladi (masalan: oliyaviy-restoran). Nomdan o'zi to'ldiriladi.</p>
             {fieldErrors.slug && (
               <p id="company-slug-error" className="mt-1 text-sm text-red-600">{fieldErrors.slug}</p>
             )}
@@ -155,8 +169,41 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
+          <fieldset aria-describedby={fieldErrors.menu_template ? 'company-menu_template-error' : undefined}>
+            <legend className="block text-sm font-medium text-gray-700 mb-1">Restoran turi</legend>
+            <p className="text-xs text-gray-500 mb-2">Tanlangan turga mos tayyor menyu korxonaga darhol qo'shiladi.</p>
+            <div className="space-y-2">
+              {MENU_TEMPLATES.map((t) => (
+                <label
+                  key={t.value}
+                  htmlFor={`company-menu_template-${t.value}`}
+                  className={`flex items-start gap-3 min-h-11 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    form.menu_template === t.value ? 'border-amber-500 bg-amber-50' : 'border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    id={`company-menu_template-${t.value}`}
+                    type="radio"
+                    name="menu_template"
+                    value={t.value}
+                    checked={form.menu_template === t.value}
+                    onChange={() => setForm((prev) => ({ ...prev, menu_template: t.value }))}
+                    className="mt-0.5 w-4 h-4 text-amber-500 focus:ring-amber-500"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-gray-900">{t.label}</span>
+                    <span className="block text-xs text-gray-600">{t.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            {fieldErrors.menu_template && (
+              <p id="company-menu_template-error" className="mt-1 text-sm text-red-600">{fieldErrors.menu_template}</p>
+            )}
+          </fieldset>
+
           <hr className="border-gray-200" />
-          <p className="text-sm font-medium text-gray-700">Egasi (Owner)</p>
+          <p className="text-sm font-medium text-gray-700">Korxona rahbari (admin)</p>
 
           <div>
             <label htmlFor="company-owner_full_name" className="block text-sm font-medium text-gray-700 mb-1">To'liq ism <span className="text-red-600" aria-hidden="true">*</span></label>

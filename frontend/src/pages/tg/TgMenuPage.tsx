@@ -6,6 +6,7 @@ import { useTgCart, cartTotal, cartCount, minWeightKg } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
 import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
+import { buildMenuTree } from '../../lib/menuTree';
 
 
 interface TgMenuResponse {
@@ -17,7 +18,9 @@ interface TgMenuResponse {
 export default function TgMenuPage() {
   const navigate = useNavigate();
   const { cart, add } = useTgCart();
-  const [activeCat, setActiveCat] = useState<number | null>(null);
+  // Ikki darajali menyu (#23): kategoriya → sub-menyu → taomlar
+  const [activeTop, setActiveTop] = useState<number | null>(null);
+  const [activeSub, setActiveSub] = useState<number | null>(null);
 
   useEffect(() => {
     tgInit();
@@ -31,14 +34,13 @@ export default function TgMenuPage() {
     },
   });
 
-  const categories = useMemo(() => data?.menu ?? [], [data]);
+  const tree = useMemo(() => buildMenuTree<MenuItem>(data?.menu ?? []), [data]);
   const primary = data?.company.primary_color || '#F59E0B';
 
-  useEffect(() => {
-    if (activeCat === null && categories.length > 0) setActiveCat(categories[0].id);
-  }, [categories, activeCat]);
-
-  const items: MenuItem[] = categories.find((c) => c.id === activeCat)?.menu_items ?? [];
+  // Tanlov yo'q yoki eskirgan bo'lsa — birinchi kategoriya / birinchi sub-menyu
+  const topNode = tree.find((n) => n.category.id === activeTop) ?? tree[0];
+  const subCat = topNode?.children.find((c) => c.id === activeSub) ?? topNode?.children[0];
+  const items: MenuItem[] = subCat?.menu_items ?? [];
   const count = cartCount(cart);
   const total = cartTotal(cart);
 
@@ -84,23 +86,53 @@ export default function TgMenuPage() {
         <p className="text-sm opacity-90">Menyu</p>
       </div>
 
-      {/* Category tabs */}
+      {/* Kategoriya va sub-menyu tablari */}
       <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-        <div className="flex gap-1 px-3 py-2 overflow-x-auto">
-          {categories.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => setActiveCat(c.id)}
-              className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                activeCat === c.id ? 'text-white' : 'bg-gray-100 text-gray-700'
-              }`}
-              // style faqat faol (brend rangi) holatda — nofaol holat Tailwind palitrasidan
-              style={activeCat === c.id ? { backgroundColor: primary } : undefined}
-            >
-              {c.name_uz}
-            </button>
-          ))}
+        <div className="flex gap-1 px-3 py-2 overflow-x-auto" role="tablist" aria-label="Kategoriyalar">
+          {tree.map(({ category: c }) => {
+            const active = topNode?.category.id === c.id;
+            return (
+              <button
+                key={c.id}
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  setActiveTop(c.id);
+                  setActiveSub(null);
+                }}
+                className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                  active ? 'text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+                // style faqat faol (brend rangi) holatda — nofaol holat Tailwind palitrasidan
+                style={active ? { backgroundColor: primary } : undefined}
+              >
+                {c.name_uz}
+              </button>
+            );
+          })}
         </div>
+        {/* Sub-menyular: kategoriyada bittadan ko'p bo'lsa ko'rsatiladi */}
+        {topNode && topNode.children.length > 1 && (
+          <div className="flex gap-1 px-3 pb-2 overflow-x-auto" role="tablist" aria-label="Sub-menyular">
+            {topNode.children.map((c) => {
+              const active = subCat?.id === c.id;
+              return (
+                <button
+                  key={c.id}
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActiveSub(c.id)}
+                  className={`min-h-11 px-3 py-2 rounded-full text-sm whitespace-nowrap border ${
+                    active ? 'text-white border-transparent font-medium' : 'bg-white border-gray-300 text-gray-700'
+                  }`}
+                  style={active ? { backgroundColor: primary } : undefined}
+                >
+                  {c.name_uz}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Items */}
@@ -133,14 +165,14 @@ export default function TgMenuPage() {
             </button>
           </div>
         ))}
-        {categories.length === 0 ? (
+        {tree.length === 0 ? (
           <div className="text-center py-12">
             <UtensilsCrossed size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
             <p className="text-gray-600">Menyu hozircha bo'sh</p>
           </div>
         ) : (
           items.length === 0 && (
-            <p className="text-center text-sm text-gray-500 py-8">Bu kategoriyada taom yo'q</p>
+            <p className="text-center text-sm text-gray-500 py-8">Bu bo'limda taom yo'q</p>
           )
         )}
       </div>

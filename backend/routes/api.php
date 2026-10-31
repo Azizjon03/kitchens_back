@@ -10,10 +10,13 @@ use App\Http\Controllers\Api\V1\ModifierController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\SuperAdmin\AuditLogController;
+use App\Http\Controllers\Api\V1\SuperAdmin\CatalogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
+use App\Http\Controllers\Api\V1\TableSetController;
+use App\Http\Controllers\Api\V1\TableTemplateController;
 use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -73,6 +76,8 @@ Route::prefix('v1')->group(function () {
                 Route::apiResource('menu-items', MenuItemController::class);
                 Route::apiResource('modifiers', ModifierController::class);
                 Route::apiResource('addons', AddonController::class);
+                // Stol shablonlari (#24)
+                Route::apiResource('table-templates', TableTemplateController::class)->except(['show']);
             });
 
             // Tables
@@ -97,6 +102,9 @@ Route::prefix('v1')->group(function () {
             Route::get('pos/menu', [OrderController::class, 'menu']);
             Route::post('orders', [OrderController::class, 'store']);
             Route::put('orders/{order}', [OrderController::class, 'update']);
+            // Stol to'plami (#24): ishlatilgan narsalarni belgilash
+            Route::get('orders/{order}/table-set', [TableSetController::class, 'show']);
+            Route::put('orders/{order}/table-set', [TableSetController::class, 'update']);
             Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
             Route::post('orders/{order}/discount', [OrderController::class, 'applyDiscount']);
         });
@@ -124,6 +132,18 @@ Route::prefix('v1')->group(function () {
             Route::patch('companies/{company}/toggle', [CompanyController::class, 'toggle']);
             Route::patch('companies/{company}/plan', [CompanyController::class, 'changePlan']);
             Route::post('companies/{company}/admin', [CompanyController::class, 'assignAdmin']);
+
+            // Standart menyu katalogi (#23) — global, faqat super admin
+            Route::get('catalog', [CatalogController::class, 'index']);
+            Route::post('catalog/categories', [CatalogController::class, 'storeCategory']);
+            Route::put('catalog/categories/{category}', [CatalogController::class, 'updateCategory']);
+            Route::delete('catalog/categories/{category}', [CatalogController::class, 'destroyCategory']);
+            Route::post('catalog/items', [CatalogController::class, 'storeItem']);
+            Route::put('catalog/items/{item}', [CatalogController::class, 'updateItem']);
+            Route::delete('catalog/items/{item}', [CatalogController::class, 'destroyItem']);
+            Route::post('catalog/addons', [CatalogController::class, 'storeAddon']);
+            Route::put('catalog/addons/{addon}', [CatalogController::class, 'updateAddon']);
+            Route::delete('catalog/addons/{addon}', [CatalogController::class, 'destroyAddon']);
 
             Route::get('plans', [PlanController::class, 'index']);
             Route::post('plans', [PlanController::class, 'store']);
