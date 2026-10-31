@@ -69,19 +69,17 @@ class SuperAdminOwnerPhoneConflictTest extends TestCase
     /** store: egasi boshqa kompaniyada bor, parol bir xil → eski admin kira oladimi? */
     public function test_store_owner_existing_in_other_company_with_same_password_keeps_login_working(): void
     {
-        // Qaror (2026-10-31): bitta telefon bir nechta restoranga ruxsat etiladi, kirishda
-        // restoran tanlanadi. Bu alohida vazifa — shu tugaguncha login 409 qaytaradi.
-        $this->markTestSkipped('Kutilmoqda: login paytida restoran tanlash (multi-company login).');
-
+        // Qaror (2026-10-31): ruxsat etiladi, kirishda restoran tanlanadi (#10).
         $this->createCompany('a', '+998901112233', 'secret123')->assertCreated();
         $this->login('+998901112233', 'secret123')->assertOk();
 
         $res = $this->createCompany('b', '+998901112233', 'secret123');
 
         $this->assertNotSame(500, $res->status());
-        if ($res->status() === 201) {
-            $this->login('+998901112233', 'secret123')->assertOk();
-        }
+        $res->assertCreated();
+        $this->login('+998901112233', 'secret123')->assertOk()
+            ->assertJsonPath('data.requires_company_selection', true)
+            ->assertJsonCount(2, 'data.accounts');
     }
 
     /** store: egasi boshqa kompaniyada bor, parol boshqa → ikkalasi ham kira oladi (kutilgan ishlash) */

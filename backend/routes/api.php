@@ -26,6 +26,7 @@ Route::prefix('v1')->group(function () {
     // IP hisoblagichini bo'lishadi: login va menyu so'rovlari TG buyurtma limitini yeb qo'yardi.
     Route::middleware('throttle:60,1,auth')->group(function () {
         Route::post('auth/login', [AuthController::class, 'login']);
+        Route::post('auth/login/select', [AuthController::class, 'selectCompany']);
         Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     });

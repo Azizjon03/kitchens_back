@@ -125,8 +125,9 @@ class AuthFlowTest extends TestCase
         $this->user($this->company('beta'), self::PHONE, 'shared-secret-1');
 
         $this->postJson('/api/v1/auth/login', ['phone' => self::PHONE, 'password' => 'shared-secret-1'])
-            ->assertStatus(409)
-            ->assertJsonPath('error.code', 'AMBIGUOUS_CREDENTIALS');
+            ->assertOk()
+            ->assertJsonPath('data.requires_company_selection', true)
+            ->assertJsonMissingPath('data.token');   // taxmin qilmaydi — tanlovni so'raydi (#10)
     }
 
     public function test_a_shared_password_resolves_to_the_only_active_company(): void
