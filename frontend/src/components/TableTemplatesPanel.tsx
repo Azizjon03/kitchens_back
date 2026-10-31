@@ -131,7 +131,7 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
                       {groups.map(([group, opts]) => (
                         <optgroup key={group} label={group}>
                           {opts.map((o) => (
-                            <option key={o.id} value={o.id}>{o.label}</option>
+                            <option key={o.id} value={o.id}>{o.label} — {formatMoney(o.price)}</option>
                           ))}
                         </optgroup>
                       ))}
@@ -231,7 +231,10 @@ export default function TableTemplatesPanel() {
         <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
           <LayoutTemplate size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
           <p className="text-gray-700 font-medium">Hali shablon yo'q</p>
-          <p className="text-sm text-gray-500 mt-1">Stolga har doim bir xil narsalar qo'yilsa (masalan 3 sharbat, 4 mohito), "Yangi shablon" tugmasini bosing.</p>
+          <p className="text-sm text-gray-500 mt-1">Stolga har doim bir xil narsalar qo'yilsa (masalan 3 sharbat, 4 mohito), shablon tuzing.</p>
+          <button onClick={() => setEditing('new')} className="mt-4 inline-flex items-center gap-2 min-h-11 border border-amber-700 text-amber-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-50">
+            <Plus size={18} /> Yangi shablon
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

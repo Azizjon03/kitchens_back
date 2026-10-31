@@ -240,10 +240,12 @@ function DeleteConfirmModal({
   onClose: () => void;
   isPending: boolean;
 }) {
+  useEscape(onClose);
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div role="dialog" aria-modal="true" className="bg-white rounded-2xl w-full max-w-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="table-delete-title" className="bg-white rounded-2xl w-full max-w-sm p-6">
+        <h3 id="table-delete-title" className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-sm text-gray-500 mb-6">{message}</p>
         <div className="flex gap-3">
           <button
@@ -397,7 +399,8 @@ export default function TablesPage() {
       ) : tables.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
           <Grid3X3 size={40} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Stollar topilmadi</p>
+          <p className="text-gray-700 font-medium">Hozircha stol yo'q</p>
+          <p className="text-gray-500 text-sm mt-1 mb-1">Zaldagi stollarni qo'shing — ofitsiant ular orqali buyurtma qabul qiladi.</p>
           <button
             onClick={() => {
               setEditTable(undefined);
@@ -439,7 +442,7 @@ export default function TablesPage() {
                     </div>
                   )}
                   {table.template && (
-                    <div className="flex items-center gap-1.5 text-xs text-indigo-700">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-700">
                       <LayoutTemplate size={12} aria-hidden="true" />
                       <span>{table.template.name}</span>
                     </div>
@@ -454,7 +457,7 @@ export default function TablesPage() {
                       onClick={() => statusMutation.mutate({ id: table.id, status: s })}
                       disabled={table.status === s}
                       aria-pressed={table.status === s}
-                      className={`min-h-11 px-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`min-h-11 px-1.5 rounded-lg text-xs sm:text-sm font-medium leading-tight break-words transition-colors ${
                         table.status === s
                           ? `${STATUS_MAP[s].bg} ${STATUS_MAP[s].text}`
                           : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
