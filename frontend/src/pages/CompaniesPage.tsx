@@ -58,8 +58,9 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string } } };
-      setError(axiosErr.response?.data?.detail || 'Xatolik yuz berdi');
+      const data = (err as { response?: { data?: { error?: { message?: string }; message?: string } } })
+        .response?.data;
+      setError(data?.error?.message || data?.message || 'Xatolik yuz berdi');
     },
   });
 
@@ -175,10 +176,10 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
             <input
               type="password"
               required
-              minLength={6}
+              minLength={8}
               value={form.owner_password}
               onChange={(e) => setForm((prev) => ({ ...prev, owner_password: e.target.value }))}
-              placeholder="Kamida 6 ta belgi"
+              placeholder="Kamida 8 ta belgi"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
           </div>

@@ -89,6 +89,38 @@ class TelegramOrderTest extends TestCase
         ]);
     }
 
+    public function test_browsing_the_menu_does_not_use_up_the_order_rate_limit(): void
+    {
+        [, $branch, $item] = $this->seedCompany();
+        $headers = ['X-Telegram-Init-Data' => $this->makeInitData(555001)];
+
+        // Mijoz menyuni bir necha marta ochadi — bu buyurtma limitiga (10/daq) kirmasligi kerak
+        for ($i = 0; $i < 12; $i++) {
+            $this->withHeaders($headers)->getJson('/api/v1/tg/menu?company=oq-saroy')->assertOk();
+        }
+
+        $this->withHeaders($headers)->postJson('/api/v1/tg/orders?company=oq-saroy', [
+            'branch_id' => $branch->id,
+            'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
+        ])->assertCreated();
+    }
+
+    public function test_staff_logins_from_same_ip_do_not_block_telegram_orders(): void
+    {
+        [, $branch, $item] = $this->seedCompany();
+
+        // Restoran Wi-Fi: xodimlar bir IP dan login qiladi (muvaffaqiyatsiz bo'lsa ham)
+        for ($i = 0; $i < 11; $i++) {
+            $this->postJson('/api/v1/auth/login', ['phone' => '+998900000000', 'password' => 'x']);
+        }
+
+        $this->withHeaders(['X-Telegram-Init-Data' => $this->makeInitData(555002)])
+            ->postJson('/api/v1/tg/orders?company=oq-saroy', [
+                'branch_id' => $branch->id,
+                'items' => [['menu_item_id' => $item->id, 'quantity' => 1]],
+            ])->assertCreated();
+    }
+
     public function test_invalid_init_data_is_rejected(): void
     {
         $this->seedCompany();
