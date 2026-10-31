@@ -105,7 +105,8 @@ function CreateOrderModal({
 
   const { data: menuData } = useQuery({
     queryKey: ['menu-items'],
-    queryFn: async () => (await api.get('/menu-items')).data,
+    // per_page: standart menyuda ~180 taom bor — birinchi 20 tasi bilan cheklanmasin
+    queryFn: async () => (await api.get('/menu-items', { params: { per_page: 500, is_available: 1 } })).data,
   });
   // /menu-items is paginated → items live at data.data; tolerate a plain array too.
   const menuItems: MenuItem[] = Array.isArray(menuData?.data)

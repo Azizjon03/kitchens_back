@@ -74,4 +74,25 @@ class CategoryHierarchyTest extends TestCase
         $this->putJson("/api/v1/categories/{$top->id}", ['name_uz' => 'Top', 'name_ru' => 'Top', 'parent_id' => $other->id])
             ->assertStatus(422)->assertJsonValidationErrors('parent_id');
     }
+
+    public function test_filtering_by_top_category_includes_submenu_items_and_per_page_lifts_the_20_limit(): void
+    {
+        $admin = $this->admin('a');
+        Sanctum::actingAs($admin);
+        $top = Category::create(['company_id' => $admin->company_id, 'name_uz' => 'Suvlar', 'name_ru' => 'Воды', 'is_active' => true]);
+        $gazli = Category::create(['company_id' => $admin->company_id, 'parent_id' => $top->id, 'name_uz' => 'Gazli', 'name_ru' => 'Газ', 'is_active' => true]);
+        $gazsiz = Category::create(['company_id' => $admin->company_id, 'parent_id' => $top->id, 'name_uz' => 'Gazsiz', 'name_ru' => 'Без газа', 'is_active' => true]);
+        foreach ([$gazli, $gazsiz] as $sub) {
+            for ($i = 0; $i < 15; $i++) {
+                \App\Models\MenuItem::create(['company_id' => $admin->company_id, 'category_id' => $sub->id, 'name_uz' => "Suv {$sub->id}-{$i}", 'sell_type' => 'portion', 'price' => 5000, 'is_available' => true]);
+            }
+        }
+
+        $this->getJson("/api/v1/menu-items?category_id={$top->id}&per_page=500")
+            ->assertOk()->assertJsonPath('data.total', 30)->assertJsonCount(30, 'data.data');
+        $this->getJson("/api/v1/menu-items?category_id={$gazli->id}")
+            ->assertOk()->assertJsonPath('data.total', 15);
+        $this->getJson('/api/v1/menu-items')->assertOk()->assertJsonPath('data.per_page', 20);
+        $this->getJson('/api/v1/menu-items?per_page=100000')->assertOk()->assertJsonPath('data.per_page', 500);
+    }
 }

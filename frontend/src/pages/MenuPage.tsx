@@ -646,12 +646,6 @@ export default function MenuPage() {
   const tree = useMemo(() => buildCategoryTree(categories), [categories]);
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
 
-  // Asosiy kategoriya tanlansa — uning va barcha sub-menyularining taomlari
-  const filterIds = useMemo(() => {
-    if (selectedCategoryId === null) return null;
-    const node = tree.find((n) => n.top.id === selectedCategoryId);
-    return node ? [node.top.id, ...node.subs.map((c) => c.id)] : [selectedCategoryId];
-  }, [selectedCategoryId, tree]);
 
   // Fetch menu items
   const {
@@ -661,19 +655,14 @@ export default function MenuPage() {
     error: itemsError,
     refetch: refetchItems,
   } = useQuery<MenuItem[]>({
-    queryKey: ['menu-items', filterIds, search],
+    queryKey: ['menu-items', selectedCategoryId, search],
     queryFn: async () => {
-      const fetchPage = async (categoryId?: number) => {
-        const params: Record<string, string | number> = {};
-        if (categoryId) params.category_id = categoryId;
-        if (search) params.search = search;
-        const d = (await api.get('/menu-items', { params })).data.data;
-        return (d?.data ?? d ?? []) as MenuItem[];
-      };
-      if (!filterIds) return fetchPage();
-      // API bitta category_id bo'yicha filtrlaydi — sub-menyular parallel so'raladi
-      const pages = await Promise.all(filterIds.map((id) => fetchPage(id)));
-      return pages.flat();
+      // Backend asosiy kategoriya bo'yicha sub-menyular taomlarini ham qaytaradi; per_page — 20 cheklovisiz
+      const params: Record<string, string | number> = { per_page: 500 };
+      if (selectedCategoryId !== null) params.category_id = selectedCategoryId;
+      if (search) params.search = search;
+      const d = (await api.get('/menu-items', { params })).data.data;
+      return (d?.data ?? d ?? []) as MenuItem[];
     },
   });
 
