@@ -206,7 +206,6 @@ class AuthController extends Controller
                         : $query->where('company_id', $user->company_id))
                     ->ignore($user->id),
             ],
-            'email' => 'sometimes|nullable|email|max:255',
             'avatar' => 'sometimes|nullable|string|max:500',
         ]);
 

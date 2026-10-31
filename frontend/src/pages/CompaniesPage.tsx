@@ -13,7 +13,6 @@ interface CreateCompanyForm {
   slug: string;
   phone: string;
   owner_phone: string;
-  owner_email: string;
   owner_password: string;
   owner_full_name: string;
 }
@@ -39,7 +38,6 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
     slug: '',
     phone: '',
     owner_phone: '',
-    owner_email: '',
     owner_password: '',
     owner_full_name: '',
   });
@@ -193,23 +191,6 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
             />
             {fieldErrors.owner_phone && (
               <p id="company-owner_phone-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_phone}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="company-owner_email" className="block text-sm font-medium text-gray-700 mb-1">Email (ixtiyoriy)</label>
-            <input
-              id="company-owner_email"
-              aria-invalid={!!fieldErrors.owner_email}
-              aria-describedby={fieldErrors.owner_email ? 'company-owner_email-error' : undefined}
-              type="email"
-              value={form.owner_email}
-              onChange={(e) => setForm((prev) => ({ ...prev, owner_email: e.target.value }))}
-              placeholder="owner@example.com"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-            />
-            {fieldErrors.owner_email && (
-              <p id="company-owner_email-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_email}</p>
             )}
           </div>
 

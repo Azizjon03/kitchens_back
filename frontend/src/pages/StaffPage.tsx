@@ -85,7 +85,6 @@ function StaffModal({
   const [form, setForm] = useState({
     name: staff?.name || staff?.full_name || '',
     phone: staff?.phone || '',
-    email: staff?.email || '',
     role: (staff?.role as Role) || 'waiter',
     branch_id: staff?.branch_id ? String(staff.branch_id) : '',
     password: '',
@@ -98,7 +97,6 @@ function StaffModal({
       const payload: Record<string, unknown> = {
         name: form.name,
         phone: form.phone,
-        email: form.email || null,
         role: form.role,
         branch_id: form.branch_id ? Number(form.branch_id) : null,
         is_active: form.is_active,
@@ -166,19 +164,6 @@ function StaffModal({
               value={form.phone}
               onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
               placeholder="+998 90 123-45-67"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email <span className="text-gray-400">(ixtiyoriy)</span>
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-              placeholder="email@example.com"
               className={inputClass}
             />
           </div>

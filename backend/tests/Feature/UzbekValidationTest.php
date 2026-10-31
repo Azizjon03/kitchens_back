@@ -27,7 +27,7 @@ class UzbekValidationTest extends TestCase
     public function test_every_validation_rule_used_by_the_app_has_an_uzbek_message(): void
     {
         $rules = [
-            'required', 'string', 'max', 'min', 'email', 'unique', 'exists', 'in',
+            'required', 'string', 'max', 'min', 'unique', 'exists', 'in',
             'numeric', 'gt', 'integer', 'array', 'boolean', 'regex', 'confirmed',
         ];
 

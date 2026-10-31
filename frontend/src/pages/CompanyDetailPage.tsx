@@ -41,7 +41,6 @@ interface Company {
   name: string;
   slug: string;
   phone: string;
-  email?: string;
   address?: string;
   inn?: string;
   logo?: string;
@@ -78,7 +77,6 @@ interface EditCompanyForm {
   name: string;
   slug: string;
   phone: string;
-  email: string;
   address: string;
   inn: string;
   primary_color: string;
@@ -97,7 +95,6 @@ function EditCompanyModal({
     name: company.name,
     slug: company.slug,
     phone: formatPhone(company.phone || ''),
-    email: company.email || '',
     address: company.address || '',
     inn: company.inn || '',
     primary_color: company.primary_color || '#f59e0b',
@@ -111,7 +108,6 @@ function EditCompanyModal({
       const payload: Record<string, unknown> = {
         ...data,
         phone: unformatPhone(data.phone),
-        email: data.email || null,
       };
       if (!data.admin_password) delete payload.admin_password;
       const res = await api.put(`/super/companies/${company.id}`, payload);
@@ -181,17 +177,6 @@ function EditCompanyModal({
               value={form.phone}
               onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
               placeholder="+998 (90) 123-45-67"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email (ixtiyoriy)</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="info@company.uz"
               className={inputClass}
             />
           </div>
@@ -445,10 +430,6 @@ export default function CompanyDetailPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Telefon</p>
                   <p className="text-sm font-medium text-gray-900">{company.phone || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Email</p>
-                  <p className="text-sm font-medium text-gray-900">{company.email || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Manzil</p>

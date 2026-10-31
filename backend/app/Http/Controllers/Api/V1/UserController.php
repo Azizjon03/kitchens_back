@@ -67,7 +67,6 @@ class UserController extends Controller
                 'required', 'string', 'max:20',
                 Rule::unique('users', 'phone')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
-            'email' => 'nullable|email|max:255',
             'role' => ['required', Rule::in(self::STAFF_ROLES)],
             'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'required|string|min:8',
@@ -85,7 +84,6 @@ class UserController extends Controller
             'branch_id' => $data['branch_id'] ?? null,
             'name' => $data['name'],
             'phone' => $phone,
-            'email' => $data['email'] ?? null,
             'role' => $data['role'],
             'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
@@ -117,7 +115,6 @@ class UserController extends Controller
                     ->where(fn ($q) => $q->where('company_id', $companyId))
                     ->ignore($user->id),
             ],
-            'email' => 'nullable|email|max:255',
             'role' => ['sometimes', Rule::in(self::STAFF_ROLES)],
             'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'nullable|string|min:8',

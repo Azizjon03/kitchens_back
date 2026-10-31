@@ -54,7 +54,6 @@ class DatabaseSeeder extends Seeder
         // Super Admin
         User::updateOrCreate(['phone' => '+998906921469'], [
             'name' => 'Super Admin',
-            'email' => 'admin@kitchens.uz',
             'password' => Hash::make('password'),
             'role' => 'super_admin',
             'is_active' => true,

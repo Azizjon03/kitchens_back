@@ -34,7 +34,6 @@ class SuperAdminCompanyTest extends TestCase
             'phone' => '+998902783610',
             'owner_full_name' => 'Ali Valiyev',
             'owner_phone' => '+998 (90) 111-22-33',
-            'owner_email' => 'ali@example.com',
             'owner_password' => 'secret123',
         ], $overrides);
     }

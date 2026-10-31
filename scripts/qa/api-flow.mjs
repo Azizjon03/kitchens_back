@@ -89,9 +89,11 @@ async function waitFor(fn, ms = 5000) { const t = Date.now(); while (Date.now() 
   check('company_admin super endpointga kira olmaydi (403)', saOnly.status === 403, err(saOnly));
 
   // ── 3. Filial, xodimlar ───────────────────────────────
-  const br = await api('POST', '/branches', { name: 'Markaziy filial', address: 'Toshkent' }, A);
-  check('Filial yaratish', br.status === 201, err(br));
-  const branchId = br.data?.id;
+  // Kompaniya "Asosiy filial" bilan yaratiladi (#21)
+  const brs = await api('GET', '/branches', null, A);
+  const brList = brs.data?.data ?? brs.data ?? [];
+  check('Kompaniyada "Asosiy filial" avtomatik', brs.status === 200 && brList.length === 1 && brList[0].name === 'Asosiy filial', err(brs));
+  const branchId = brList[0]?.id;
   const br2 = await api('POST', '/branches', { name: 'Ikkinchi filial' }, A);
   check('Free tarif: 2-filial rad etiladi', br2.status >= 400 && br2.status < 500, err(br2));
 
