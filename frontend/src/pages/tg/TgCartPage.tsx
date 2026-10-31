@@ -5,10 +5,8 @@ import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
 import { useTgCart, cartTotal, lineTotal, minWeightKg, type TgCartLine } from '../../lib/tgCart';
 import type { Category } from '../../types';
 import { ArrowLeft, Minus, Plus, X } from 'lucide-react';
+import { formatMoney } from '../../lib/format';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 interface TgMenuResponse {
   company: { primary_color?: string };
@@ -183,14 +181,14 @@ export default function TgCartPage() {
                         : 'bg-white text-gray-600 border-gray-200'
                     }`}
                   >
-                    + {a.name_uz} ({formatPrice(Number(a.price))})
+                    + {a.name_uz} ({formatMoney(Number(a.price))})
                   </button>
                 ))}
               </div>
             )}
 
             <div className="mt-2 text-right text-sm font-semibold text-gray-800">
-              {formatPrice(lineTotal(l))}
+              {formatMoney(lineTotal(l))}
             </div>
           </div>
         ))}
@@ -217,17 +215,17 @@ export default function TgCartPage() {
           <div className="space-y-1">
             <div className="flex items-center justify-between text-sm text-gray-500">
               <span>Taomlar</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatMoney(subtotal)}</span>
             </div>
             {serviceChargeAmount > 0 && (
               <div className="flex items-center justify-between text-sm text-gray-500">
                 <span>Xizmat haqi ({serviceChargePct}%)</span>
-                <span>{formatPrice(serviceChargeAmount)}</span>
+                <span>{formatMoney(serviceChargeAmount)}</span>
               </div>
             )}
             <div className="flex items-center justify-between text-sm font-semibold text-gray-900 pt-1 border-t border-gray-100">
               <span>Jami</span>
-              <span>{formatPrice(total)}</span>
+              <span>{formatMoney(total)}</span>
             </div>
           </div>
           <button

@@ -2,6 +2,7 @@ export function Bad() {
   const onErr = (e: any) => setError(e.response?.data?.detail || 'Xatolik yuz berdi');
   const ok = confirm('Rostdan ham?');
   fetch('http://localhost:8000/api/v1/menu');
+  const link = <a className="text-amber-600 hover:text-amber-700">Ko'rish</a>;
   const btn = <button className="bg-amber-500 text-white px-4">Saqlash</button>;
   return <div className="bg-[#f59e0b]">{(1000).toLocaleString()}</div>;
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiResponse;
+use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\CashShift;
 use App\Models\Payment;
@@ -14,6 +15,7 @@ use Illuminate\Validation\Rules\Exists;
 
 class CashShiftController extends Controller
 {
+    use DefaultsToSingleBranch;
     use ApiResponse;
 
     public function index(Request $request): JsonResponse
@@ -36,6 +38,7 @@ class CashShiftController extends Controller
     public function open(Request $request): JsonResponse
     {
         $user = $request->user();
+        $this->defaultToSingleBranch($request, $user->company_id);
 
         $data = $request->validate([
             'branch_id' => ['required', $this->existsInCompany('branches', $user->company_id)],

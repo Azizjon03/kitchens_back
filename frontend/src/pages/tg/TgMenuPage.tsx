@@ -5,10 +5,8 @@ import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { useTgCart, cartTotal, cartCount, minWeightKg } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
 import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import { formatMoney } from '../../lib/format';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 interface TgMenuResponse {
   company: { id: number; name: string; logo?: string; primary_color?: string };
@@ -116,7 +114,7 @@ export default function TgMenuPage() {
               )}
               {/* Narx — o'qilishi uchun to'q matn; brend rangi tugmada (amber matn oq fonda ~2:1) */}
               <p className="text-base font-semibold mt-1 text-gray-900 tabular-nums">
-                {formatPrice(Number(item.price))}
+                {formatMoney(Number(item.price))}
                 {item.sell_type === 'weight' ? '/kg' : ''}
               </p>
               {item.sell_type === 'weight' && (
@@ -157,7 +155,7 @@ export default function TgMenuPage() {
           <span className="flex items-center gap-2 font-medium">
             <ShoppingCart size={18} /> Savat ({count})
           </span>
-          <span className="font-semibold">{formatPrice(total)}</span>
+          <span className="font-semibold">{formatMoney(total)}</span>
         </button>
       )}
     </div>

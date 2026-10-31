@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiResponse;
+use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,7 @@ use Illuminate\Validation\Rules\Exists;
 
 class UserController extends Controller
 {
+    use DefaultsToSingleBranch;
     use ApiResponse;
 
     /**
@@ -54,6 +56,10 @@ class UserController extends Controller
         $companyId = $authUser->company_id;
 
         $this->normalizePhoneInput($request);
+        // Filialga bog'langan rollar (KDS kanali branch bo'yicha) — bitta filial bo'lsa o'zi biriktiriladi
+        if (in_array($request->input('role'), ['waiter', 'chef', 'cashier'], true)) {
+            $this->defaultToSingleBranch($request, $companyId);
+        }
 
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -61,7 +67,6 @@ class UserController extends Controller
                 'required', 'string', 'max:20',
                 Rule::unique('users', 'phone')->where(fn ($q) => $q->where('company_id', $companyId)),
             ],
-            'email' => 'nullable|email|max:255',
             'role' => ['required', Rule::in(self::STAFF_ROLES)],
             'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'required|string|min:8',
@@ -79,7 +84,6 @@ class UserController extends Controller
             'branch_id' => $data['branch_id'] ?? null,
             'name' => $data['name'],
             'phone' => $phone,
-            'email' => $data['email'] ?? null,
             'role' => $data['role'],
             'password' => Hash::make($data['password']),
             'is_active' => $data['is_active'] ?? true,
@@ -111,7 +115,6 @@ class UserController extends Controller
                     ->where(fn ($q) => $q->where('company_id', $companyId))
                     ->ignore($user->id),
             ],
-            'email' => 'nullable|email|max:255',
             'role' => ['sometimes', Rule::in(self::STAFF_ROLES)],
             'branch_id' => ['nullable', $this->existsInCompany('branches', $companyId)],
             'password' => 'nullable|string|min:8',

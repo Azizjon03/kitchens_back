@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Events\OrderStatusUpdated;
 use App\Http\Controllers\Api\ApiResponse;
+use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\MenuService;
@@ -16,6 +17,7 @@ use Illuminate\Validation\Rules\Exists;
 
 class OrderController extends Controller
 {
+    use DefaultsToSingleBranch;
     use ApiResponse;
 
     /** Faol buyurtmalar uchun xavfsizlik chegarasi — oddiy restoranda bu son hech qachon yetmaydi. */
@@ -82,6 +84,7 @@ class OrderController extends Controller
     {
         $user = $request->user();
         $companyId = $user->company_id;
+        $this->defaultToSingleBranch($request, $companyId);
 
         $data = $request->validate([
             'branch_id' => ['required', $this->existsInCompany('branches', $companyId)],

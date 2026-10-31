@@ -5,13 +5,11 @@ import type { Modifier, Addon } from '../types';
 import Layout from '../components/Layout';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney } from '../lib/format';
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 // ─── Delete Confirm Modal ────────────────────────────────────────
 
@@ -388,7 +386,7 @@ export default function ModifiersPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`pb-3 text-sm font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'border-b-2 border-amber-500 text-amber-600'
+                  ? 'border-b-2 border-amber-500 text-amber-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -426,7 +424,7 @@ export default function ModifiersPage() {
                   setEditModifier(undefined);
                   setShowModifierModal(true);
                 }}
-                className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
               >
                 Yangi modifikator qo'shish
               </button>
@@ -465,7 +463,7 @@ export default function ModifiersPage() {
                               setEditModifier(mod);
                               setShowModifierModal(true);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                           >
                             <Pencil size={16} />
                           </button>
@@ -514,7 +512,7 @@ export default function ModifiersPage() {
                   setEditAddon(undefined);
                   setShowAddonModal(true);
                 }}
-                className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
               >
                 Yangi qo'shimcha qo'shish
               </button>
@@ -536,7 +534,7 @@ export default function ModifiersPage() {
                     <tr key={addon.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-900">{addon.name_uz}</td>
                       <td className="px-4 py-3 text-gray-500">{addon.name_ru || '—'}</td>
-                      <td className="px-4 py-3 text-gray-900 font-medium">{formatPrice(addon.price)}</td>
+                      <td className="px-4 py-3 text-gray-900 font-medium">{formatMoney(addon.price)}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -555,7 +553,7 @@ export default function ModifiersPage() {
                               setEditAddon(addon);
                               setShowAddonModal(true);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                           >
                             <Pencil size={16} />
                           </button>

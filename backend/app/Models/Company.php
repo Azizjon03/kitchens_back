@@ -12,7 +12,7 @@ class Company extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'slug', 'logo', 'primary_color', 'phone', 'email',
+        'name', 'slug', 'logo', 'primary_color', 'phone',
         'address', 'inn', 'subdomain_enabled', 'is_active', 'settings_json',
     ];
 

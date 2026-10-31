@@ -14,7 +14,7 @@ class AuditLogController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = AuditLog::with(['user:id,name,email', 'company:id,name'])
+        $query = AuditLog::with(['user:id,name,phone', 'company:id,name'])
             ->orderByDesc('created_at');
 
         if ($companyId = $request->query('company_id')) {

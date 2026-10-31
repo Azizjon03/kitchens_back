@@ -14,16 +14,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney, formatDateTime } from '../lib/format';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-}
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('uz-UZ');
-}
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
@@ -111,21 +106,24 @@ function OpenShiftModal({
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-            <select
-              required
-              value={form.branch_id}
-              onChange={(e) => setForm((p) => ({ ...p, branch_id: parseInt(e.target.value) }))}
-              className={inputClass}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+          {branches.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+              <select
+                required
+                value={form.branch_id}
+                onChange={(e) => setForm((p) => ({ ...p, branch_id: parseInt(e.target.value) }))}
+                className={inputClass}
+              >
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -236,7 +234,7 @@ function CloseShiftModal({
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Kutilgan summa:</span>
-              <span className="font-medium text-gray-900">{formatAmount(expectedAmount)}</span>
+              <span className="font-medium text-gray-900">{formatMoney(expectedAmount)}</span>
             </div>
           </div>
 
@@ -265,7 +263,7 @@ function CloseShiftModal({
               }`}
             >
               Farq: {difference >= 0 ? '+' : ''}
-              {formatAmount(difference)}
+              {formatMoney(difference)}
             </div>
           )}
 
@@ -356,12 +354,12 @@ function ReportModal({
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 mb-1">Ochilgan vaqt</div>
-                <div className="text-sm font-medium text-gray-900">{formatDate(report.opened_at)}</div>
+                <div className="text-sm font-medium text-gray-900">{formatDateTime(report.opened_at)}</div>
               </div>
               {report.closed_at && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="text-xs text-gray-500 mb-1">Yopilgan vaqt</div>
-                  <div className="text-sm font-medium text-gray-900">{formatDate(report.closed_at)}</div>
+                  <div className="text-sm font-medium text-gray-900">{formatDateTime(report.closed_at)}</div>
                 </div>
               )}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -374,18 +372,18 @@ function ReportModal({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-amber-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Boshlang'ich</div>
-                <div className="text-sm font-bold text-gray-900">{formatAmount(report.opening_amount)}</div>
+                <div className="text-sm font-bold text-gray-900">{formatMoney(report.opening_amount)}</div>
               </div>
               {report.closing_amount != null && (
                 <div className="bg-amber-50 rounded-lg p-4 text-center">
                   <div className="text-xs text-gray-500 mb-1">Yopish summasi</div>
-                  <div className="text-sm font-bold text-gray-900">{formatAmount(report.closing_amount)}</div>
+                  <div className="text-sm font-bold text-gray-900">{formatMoney(report.closing_amount)}</div>
                 </div>
               )}
               {report.expected_amount != null && (
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <div className="text-xs text-gray-500 mb-1">Kutilgan</div>
-                  <div className="text-sm font-bold text-gray-900">{formatAmount(report.expected_amount)}</div>
+                  <div className="text-sm font-bold text-gray-900">{formatMoney(report.expected_amount)}</div>
                 </div>
               )}
               {report.difference != null && (
@@ -409,7 +407,7 @@ function ReportModal({
                     }`}
                   >
                     {report.difference >= 0 ? '+' : ''}
-                    {formatAmount(report.difference)}
+                    {formatMoney(report.difference)}
                   </div>
                 </div>
               )}
@@ -419,11 +417,11 @@ function ReportModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Jami tushum</div>
-                <div className="text-sm font-bold text-green-700">{formatAmount(report.total_revenue)}</div>
+                <div className="text-sm font-bold text-green-700">{formatMoney(report.total_revenue)}</div>
               </div>
               <div className="bg-red-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Qaytarilgan</div>
-                <div className="text-sm font-bold text-red-700">{formatAmount(report.refunds_total)}</div>
+                <div className="text-sm font-bold text-red-700">{formatMoney(report.refunds_total)}</div>
               </div>
             </div>
 
@@ -459,10 +457,10 @@ function ReportModal({
                         <tr key={rm.method} className="border-b border-gray-100">
                           <td className="py-2 px-3 font-medium text-gray-900">{rm.method}</td>
                           <td className="py-2 px-3 text-right text-gray-600">{rm.count}</td>
-                          <td className="py-2 px-3 text-right text-gray-900">{formatAmount(rm.total)}</td>
-                          <td className="py-2 px-3 text-right text-gray-500">{formatAmount(rm.change)}</td>
+                          <td className="py-2 px-3 text-right text-gray-900">{formatMoney(rm.total)}</td>
+                          <td className="py-2 px-3 text-right text-gray-500">{formatMoney(rm.change)}</td>
                           <td className="py-2 px-3 text-right font-medium text-gray-900">
-                            {formatAmount(rm.net)}
+                            {formatMoney(rm.net)}
                           </td>
                         </tr>
                       ))}
@@ -572,17 +570,19 @@ export default function CashShiftsPage() {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                <span className="flex items-center gap-1.5">
-                  <Building2 size={14} className="text-gray-400" />
-                  {currentShift.branch?.name ?? `Filial #${currentShift.branch_id}`}
-                </span>
+                {branches.length > 1 && (
+                  <span className="flex items-center gap-1.5">
+                    <Building2 size={14} className="text-gray-400" />
+                    {currentShift.branch?.name ?? `Filial #${currentShift.branch_id}`}
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <Clock size={14} className="text-gray-400" />
-                  {formatDate(currentShift.opened_at)}
+                  {formatDateTime(currentShift.opened_at)}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Banknote size={14} className="text-gray-400" />
-                  {formatAmount(currentShift.opening_amount)}
+                  {formatMoney(currentShift.opening_amount)}
                 </span>
               </div>
             </div>
@@ -598,21 +598,23 @@ export default function CashShiftsPage() {
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-4">
-        <select
-          value={filterBranch}
-          onChange={(e) => {
-            setFilterBranch(e.target.value);
-            setPage(1);
-          }}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-        >
-          <option value="">Barcha filiallar</option>
-          {branches.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        {branches.length > 1 && (
+          <select
+            value={filterBranch}
+            onChange={(e) => {
+              setFilterBranch(e.target.value);
+              setPage(1);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+          >
+            <option value="">Barcha filiallar</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         <select
           value={filterStatus}
@@ -650,9 +652,11 @@ export default function CashShiftsPage() {
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
                     Kassir
                   </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
-                    Filial
-                  </th>
+                  {branches.length > 1 && (
+                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
+                      Filial
+                    </th>
+                  )}
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">
                     Holat
                   </th>
@@ -673,13 +677,15 @@ export default function CashShiftsPage() {
               <tbody>
                 {shifts.map((shift) => (
                   <tr key={shift.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900">{formatDate(shift.opened_at)}</td>
+                    <td className="py-3 px-4 text-gray-900">{formatDateTime(shift.opened_at)}</td>
                     <td className="py-3 px-4 text-gray-600">
                       {shift.user?.name ?? `#${shift.user_id}`}
                     </td>
-                    <td className="py-3 px-4 text-gray-600">
-                      {shift.branch?.name ?? `#${shift.branch_id}`}
-                    </td>
+                    {branches.length > 1 && (
+                      <td className="py-3 px-4 text-gray-600">
+                        {shift.branch?.name ?? `#${shift.branch_id}`}
+                      </td>
+                    )}
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -692,10 +698,10 @@ export default function CashShiftsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right text-gray-900">
-                      {formatAmount(shift.opening_amount)}
+                      {formatMoney(shift.opening_amount)}
                     </td>
                     <td className="py-3 px-4 text-right text-gray-900">
-                      {shift.closing_amount != null ? formatAmount(shift.closing_amount) : '—'}
+                      {shift.closing_amount != null ? formatMoney(shift.closing_amount) : '—'}
                     </td>
                     <td className="py-3 px-4 text-right">
                       {shift.difference != null ? (
@@ -709,7 +715,7 @@ export default function CashShiftsPage() {
                           }
                         >
                           {shift.difference >= 0 ? '+' : ''}
-                          {formatAmount(shift.difference)}
+                          {formatMoney(shift.difference)}
                         </span>
                       ) : (
                         '—'
@@ -718,7 +724,7 @@ export default function CashShiftsPage() {
                     <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => setReportShiftId(shift.id)}
-                        className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 font-medium"
                       >
                         <FileText size={14} />
                         Hisobot

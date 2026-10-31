@@ -165,7 +165,6 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
       ['company-phone', 'Telefon', true],
       ['company-owner_full_name', "To'liq ism", true],
       ['company-owner_phone', 'Telefon raqam', true],
-      ['company-owner_email', 'Email (ixtiyoriy)', false],
       ['company-owner_password', 'Parol', true],
     ];
     for (const [id, text, required] of fields) {
@@ -181,7 +180,6 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     // Kompaniya telefoni va egasi telefoni — ikkita maskali input
     await expect(modal.getByPlaceholder('+998 (90) 123-45-67')).toHaveCount(2);
     await expect(modal.getByPlaceholder('Ism Familiya')).toBeVisible();
-    await expect(modal.getByPlaceholder('owner@example.com')).toBeVisible();
     const password = modal.getByPlaceholder('Kamida 8 ta belgi');
     await expect(password).toBeVisible();
     await expect(password).toHaveAttribute('minlength', '8');
@@ -254,7 +252,6 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     await phones.nth(0).fill(companyPhone);
     await modal.getByPlaceholder('Ism Familiya').fill('QA E2E Owner');
     await phones.nth(1).fill(ownerPhone);
-    await modal.getByPlaceholder('owner@example.com').fill(`qa-e2e-${ts}@example.com`);
     await modal.getByPlaceholder('Kamida 8 ta belgi').fill('password123');
 
     const createResponse = page.waitForResponse(

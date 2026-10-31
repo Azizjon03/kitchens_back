@@ -4,6 +4,7 @@ import api from '../lib/api';
 import type { DashboardStats } from '../types';
 import { Building2, Users, ClipboardList, DollarSign, TrendingUp } from 'lucide-react';
 import Layout from '../components/Layout';
+import { formatMoney } from '../lib/format';
 
 function StatCard({
   title,
@@ -71,12 +72,12 @@ function SuperAdminDashboard() {
         <StatCard
           title="Jami buyurtmalar"
           value={stats?.total_orders ?? 0}
-          icon={<ClipboardList size={24} className="text-amber-600" />}
+          icon={<ClipboardList size={24} className="text-amber-700" />}
           color="bg-amber-50"
         />
         <StatCard
           title="Jami daromad"
-          value={`${(stats?.total_revenue ?? 0).toLocaleString()} so'm`}
+          value={formatMoney(stats?.total_revenue ?? 0)}
           icon={<DollarSign size={24} className="text-purple-600" />}
           color="bg-purple-50"
         />

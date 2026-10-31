@@ -85,7 +85,6 @@ function StaffModal({
   const [form, setForm] = useState({
     name: staff?.name || staff?.full_name || '',
     phone: staff?.phone || '',
-    email: staff?.email || '',
     role: (staff?.role as Role) || 'waiter',
     branch_id: staff?.branch_id ? String(staff.branch_id) : '',
     password: '',
@@ -98,7 +97,6 @@ function StaffModal({
       const payload: Record<string, unknown> = {
         name: form.name,
         phone: form.phone,
-        email: form.email || null,
         role: form.role,
         branch_id: form.branch_id ? Number(form.branch_id) : null,
         is_active: form.is_active,
@@ -170,19 +168,6 @@ function StaffModal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email <span className="text-gray-400">(ixtiyoriy)</span>
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-              placeholder="email@example.com"
-              className={inputClass}
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Rol</label>
@@ -198,21 +183,24 @@ function StaffModal({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-              <select
-                value={form.branch_id}
-                onChange={(e) => setForm((p) => ({ ...p, branch_id: e.target.value }))}
-                className={inputClass}
-              >
-                <option value="">— Tanlanmagan —</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+            {branches.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+                <select
+                  value={form.branch_id}
+                  onChange={(e) => setForm((p) => ({ ...p, branch_id: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">— Tanlanmagan —</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
@@ -331,7 +319,7 @@ export default function StaffPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">F.I.O.</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Telefon</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Rol</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Filial</th>
+                {branches.length > 1 && <th className="text-left px-4 py-3 font-medium text-gray-600">Filial</th>}
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Holat</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Amallar</th>
               </tr>
@@ -346,7 +334,7 @@ export default function StaffPage() {
                       {roleLabel(u.role)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{u.branch?.name || '—'}</td>
+                  {branches.length > 1 && <td className="px-4 py-3 text-gray-500">{u.branch?.name || '—'}</td>}
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -363,7 +351,7 @@ export default function StaffPage() {
                           setEditStaff(u);
                           setShowModal(true);
                         }}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                       >
                         <Pencil size={16} />
                       </button>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiResponse;
+use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Table;
@@ -14,6 +15,7 @@ use Illuminate\Validation\Rules\Exists;
 
 class TableController extends Controller
 {
+    use DefaultsToSingleBranch;
     use ApiResponse;
 
     /**
@@ -49,6 +51,7 @@ class TableController extends Controller
     public function store(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;
+        $this->defaultToSingleBranch($request, $companyId);
 
         $data = $request->validate([
             'number' => [

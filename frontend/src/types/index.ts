@@ -10,7 +10,6 @@ export type Role =
 export interface User {
   id: number;
   phone: string;
-  email?: string;
   /** Backend field. `full_name` kept for backwards compatibility with older UI. */
   name?: string;
   full_name?: string;

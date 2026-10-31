@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import Layout from '../components/Layout';
 import { History, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDateTime } from '../lib/format';
 
 interface AuditLog {
   id: number;
@@ -15,7 +16,7 @@ interface AuditLog {
   new_values: Record<string, unknown> | null;
   ip_address: string | null;
   created_at: string;
-  user?: { id: number; name: string; email?: string; phone?: string } | null;
+  user?: { id: number; name: string; phone?: string } | null;
   company?: { id: number; name: string } | null;
 }
 
@@ -145,7 +146,7 @@ export default function HistoryPage() {
                 {logs.map((log) => (
                   <tr key={log.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 text-gray-500 whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString('uz-UZ')}
+                      {formatDateTime(log.created_at)}
                     </td>
                     <td className="px-6 py-4">
                       {log.user ? (

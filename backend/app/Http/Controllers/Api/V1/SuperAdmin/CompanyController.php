@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\SuperAdmin;
 
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -47,23 +48,20 @@ class CompanyController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:100|unique:companies,slug',
             'phone' => 'required|string|max:20',
-            'email' => 'nullable|email|max:255',
             'logo' => 'nullable|string|max:500',
             'primary_color' => 'nullable|string|max:20',
             // Kompaniya egasi (company_admin) — usiz kompaniyaga hech kim kira olmaydi
             'owner_full_name' => 'required|string|max:255',
             'owner_phone' => ['required', 'string', 'max:30', 'regex:/^\+?[\d\s()\-]{9,30}$/', $this->notSuperAdminPhone()],
-            'owner_email' => 'nullable|email|max:255',
             'owner_password' => 'required|string|min:8',
         ]);
 
         $owner = [
             'name' => $data['owner_full_name'],
             'phone' => User::normalizePhone($data['owner_phone']),
-            'email' => $data['owner_email'] ?? null,
             'password' => $data['owner_password'],
         ];
-        unset($data['owner_full_name'], $data['owner_phone'], $data['owner_email'], $data['owner_password']);
+        unset($data['owner_full_name'], $data['owner_phone'], $data['owner_password']);
 
         // Kompaniya, obuna va admin birga yaratiladi: biri yiqilsa, hech biri qolmaydi
         $company = DB::transaction(function () use ($data, $owner) {
@@ -81,6 +79,15 @@ class CompanyController extends Controller
                     'current_period_end' => now()->addYear(),
                 ]);
             }
+
+            // Stol, buyurtma, kassa filialsiz ishlamaydi — bitta joyli restoran uchun
+            // filial avtomatik; UI bitta filialda filial maydonini ko'rsatmaydi (#21)
+            Branch::create([
+                'company_id' => $company->id,
+                'name' => 'Asosiy filial',
+                'phone' => $company->phone,
+                'is_active' => true,
+            ]);
 
             User::create($owner + [
                 'company_id' => $company->id,
@@ -116,7 +123,6 @@ class CompanyController extends Controller
             'name' => 'sometimes|string|max:255',
             'slug' => 'sometimes|string|max:100|unique:companies,slug,' . $company->id,
             'phone' => 'sometimes|required|string|max:20',
-            'email' => 'nullable|email|max:255',
             'logo' => 'nullable|string|max:500',
             'primary_color' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
@@ -181,7 +187,6 @@ class CompanyController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => ['required', 'string', 'max:30', 'regex:/^\+?[\d\s()\-]{9,30}$/', $this->notSuperAdminPhone()],
-            'email' => 'nullable|email|max:255',
             'password' => 'required|string|min:8',
         ]);
 
@@ -204,7 +209,6 @@ class CompanyController extends Controller
                 'company_id' => $company->id,
                 'name' => $data['name'],
                 'phone' => $phone,
-                'email' => $data['email'] ?? null,
                 'password' => $data['password'],
                 'role' => 'company_admin',
                 'is_active' => true,

@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney, formatDate } from '../lib/format';
 
 interface Plan {
   id: number;
@@ -40,7 +41,6 @@ interface Company {
   name: string;
   slug: string;
   phone: string;
-  email?: string;
   address?: string;
   inn?: string;
   logo?: string;
@@ -77,7 +77,6 @@ interface EditCompanyForm {
   name: string;
   slug: string;
   phone: string;
-  email: string;
   address: string;
   inn: string;
   primary_color: string;
@@ -96,7 +95,6 @@ function EditCompanyModal({
     name: company.name,
     slug: company.slug,
     phone: formatPhone(company.phone || ''),
-    email: company.email || '',
     address: company.address || '',
     inn: company.inn || '',
     primary_color: company.primary_color || '#f59e0b',
@@ -110,7 +108,6 @@ function EditCompanyModal({
       const payload: Record<string, unknown> = {
         ...data,
         phone: unformatPhone(data.phone),
-        email: data.email || null,
       };
       if (!data.admin_password) delete payload.admin_password;
       const res = await api.put(`/super/companies/${company.id}`, payload);
@@ -180,17 +177,6 @@ function EditCompanyModal({
               value={form.phone}
               onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
               placeholder="+998 (90) 123-45-67"
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email (ixtiyoriy)</label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="info@company.uz"
               className={inputClass}
             />
           </div>
@@ -343,11 +329,11 @@ function ChangePlanModal({
                 <p className="text-sm font-semibold text-gray-700">
                   {Number(plan.price_monthly) === 0
                     ? 'Bepul'
-                    : `${Number(plan.price_monthly).toLocaleString()} so'm/oy`}
+                    : `${formatMoney(plan.price_monthly)}/oy`}
                 </p>
               </div>
               {currentPlanId === plan.id && (
-                <span className="inline-block mt-1 text-xs text-amber-600 font-medium">
+                <span className="inline-block mt-1 text-xs text-amber-700 font-medium">
                   Hozirgi tarif
                 </span>
               )}
@@ -423,7 +409,7 @@ export default function CompanyDetailPage() {
                 <div className="ml-auto flex items-center gap-2">
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors"
                   >
                     <Pencil size={14} />
                     Tahrirlash
@@ -446,10 +432,6 @@ export default function CompanyDetailPage() {
                   <p className="text-sm font-medium text-gray-900">{company.phone || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 mb-1">Email</p>
-                  <p className="text-sm font-medium text-gray-900">{company.email || '—'}</p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Manzil</p>
                   <p className="text-sm font-medium text-gray-900">{company.address || '—'}</p>
                 </div>
@@ -470,7 +452,7 @@ export default function CompanyDetailPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Yaratilgan sana</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {new Date(company.created_at).toLocaleDateString('uz-UZ')}
+                    {formatDate(company.created_at)}
                   </p>
                 </div>
               </div>
@@ -499,7 +481,7 @@ export default function CompanyDetailPage() {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
                   <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-                    <ClipboardList size={20} className="text-amber-600" />
+                    <ClipboardList size={20} className="text-amber-700" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Buyurtmalar</p>
@@ -518,7 +500,7 @@ export default function CompanyDetailPage() {
                 </div>
                 <button
                   onClick={() => setShowPlanModal(true)}
-                  className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                  className="text-sm text-amber-700 hover:text-amber-800 font-medium"
                 >
                   O'zgartirish
                 </button>
@@ -538,7 +520,7 @@ export default function CompanyDetailPage() {
                     <p className="text-sm font-medium text-gray-900">
                       {Number(company.subscription.plan.price_monthly) === 0
                         ? 'Bepul'
-                        : `${Number(company.subscription.plan.price_monthly).toLocaleString()} so'm/oy`}
+                        : `${formatMoney(company.subscription.plan.price_monthly)}/oy`}
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -546,7 +528,7 @@ export default function CompanyDetailPage() {
                     <div className="flex items-center gap-1">
                       <Calendar size={14} className="text-gray-400" />
                       <p className="text-sm font-medium text-gray-900">
-                        {new Date(company.subscription.current_period_end).toLocaleDateString('uz-UZ')}
+                        {formatDate(company.subscription.current_period_end)}
                       </p>
                     </div>
                     <p className={`text-xs mt-0.5 ${
@@ -561,7 +543,7 @@ export default function CompanyDetailPage() {
                   <p className="text-gray-500 text-sm">Tarif biriktirilmagan</p>
                   <button
                     onClick={() => setShowPlanModal(true)}
-                    className="mt-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                    className="mt-2 text-sm text-amber-700 hover:text-amber-800 font-medium"
                   >
                     Tarif biriktirish
                   </button>

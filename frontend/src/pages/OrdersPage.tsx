@@ -19,6 +19,8 @@ import {
   Filter,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { useAuth } from '../lib/auth';
+import { formatMoney, formatDateTime } from '../lib/format';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -26,6 +28,8 @@ const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = 
   preparing: { label: 'Tayyorlanmoqda', bg: 'bg-amber-100', text: 'text-amber-700' },
   ready: { label: 'Tayyor', bg: 'bg-blue-100', text: 'text-blue-700' },
   served: { label: 'Berildi', bg: 'bg-purple-100', text: 'text-purple-700' },
+  delivering: { label: 'Yetkazilmoqda', bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  delivered: { label: 'Yetkazildi', bg: 'bg-teal-100', text: 'text-teal-700' },
   paid: { label: "To'langan", bg: 'bg-green-100', text: 'text-green-700' },
   closed: { label: 'Yopilgan', bg: 'bg-gray-100', text: 'text-gray-600' },
   cancelled: { label: 'Bekor qilingan', bg: 'bg-red-100', text: 'text-red-700' },
@@ -40,8 +44,15 @@ const TYPE_LABELS: Record<string, string> = {
 const NEXT_STATUS: Record<string, Record<string, string>> = {
   dine_in: { preparing: 'ready', ready: 'served', served: 'paid', paid: 'closed' },
   takeaway: { preparing: 'ready', ready: 'paid', paid: 'closed' },
-  delivery: { preparing: 'ready', ready: 'paid', paid: 'closed' },
+  // Backend OrderController::updateStatus bilan bir xil (yetkazish: ready → delivering → delivered)
+  delivery: { preparing: 'ready', ready: 'delivering', delivering: 'delivered', delivered: 'paid', paid: 'closed' },
 };
+
+// To'lov, chegirma, bekor qilish endi mumkin bo'lmagan holatlar (backend TERMINAL_STATUSES)
+const TERMINAL_STATUSES = ['paid', 'closed', 'cancelled'];
+// routes/api.php: payments — company_admin, manager, cashier; discount/cancel — + waiter
+const CAN_PAY = ['company_admin', 'manager', 'cashier'];
+const CAN_EDIT = ['company_admin', 'manager', 'waiter', 'cashier'];
 
 // Phase 1: cash + card only (online methods come later).
 const PAYMENT_METHODS: { value: Payment['method']; label: string }[] = [
@@ -52,9 +63,6 @@ const PAYMENT_METHODS: { value: Payment['method']; label: string }[] = [
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 // ─── Create Order Modal ──────────────────────────────────────────
 
@@ -204,18 +212,21 @@ function CreateOrderModal({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-              <select
-                value={form.branch_id}
-                onChange={(e) => setForm((p) => ({ ...p, branch_id: Number(e.target.value), table_id: '' }))}
-                className={inputClass}
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+            {branches.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+                <select
+                  value={form.branch_id}
+                  onChange={(e) => setForm((p) => ({ ...p, branch_id: Number(e.target.value), table_id: '' }))}
+                  className={inputClass}
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Turi</label>
               <select
@@ -261,7 +272,7 @@ function CreateOrderModal({
                   <option value="">Taom tanlang...</option>
                   {availableItems.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name_uz} — {formatPrice(m.price)}{m.sell_type === 'weight' ? '/kg' : ''}
+                      {m.name_uz} — {formatMoney(m.price)}{m.sell_type === 'weight' ? '/kg' : ''}
                     </option>
                   ))}
                 </select>
@@ -324,7 +335,7 @@ function CreateOrderModal({
                         <td className="px-4 py-2 text-center text-gray-700">
                           {mi?.sell_type === 'weight' ? `${c.weight_kg ?? 0} kg` : c.quantity}
                         </td>
-                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice(lineTotal(c))}</td>
+                        <td className="px-4 py-2 text-right text-gray-900">{formatMoney(lineTotal(c))}</td>
                         <td className="px-4 py-2">
                           <button type="button" onClick={() => removeFromCart(idx)} className="text-red-400 hover:text-red-600">
                             <Trash2 size={16} />
@@ -336,7 +347,7 @@ function CreateOrderModal({
                 </tbody>
               </table>
               <div className="px-4 py-2 bg-gray-50 text-right font-semibold text-gray-900">
-                Jami: {formatPrice(cartTotal)}
+                Jami: {formatMoney(cartTotal)}
               </div>
             </div>
           )}
@@ -429,7 +440,7 @@ function PaymentModal({
 
           <div className="bg-amber-50 rounded-lg p-4 text-center">
             <p className="text-sm text-gray-600">Buyurtma summasi</p>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{formatPrice(order.total)}</p>
+            <p className="text-2xl font-bold text-amber-700 mt-1">{formatMoney(order.total)}</p>
           </div>
 
           <div>
@@ -678,9 +689,16 @@ function OrderDetailModal({
   const [showCancel, setShowCancel] = useState(false);
   const [error, setError] = useState('');
 
+  const { user } = useAuth();
+  const role = user?.role ?? '';
   const statusInfo = STATUS_MAP[order.status] ?? STATUS_MAP.preparing;
   const nextStatus = NEXT_STATUS[order.type]?.[order.status];
   const nextStatusLabel = nextStatus ? STATUS_MAP[nextStatus]?.label : null;
+  const isTerminal = TERMINAL_STATUSES.includes(order.status);
+  // "To'langan" holati faqat to'lov orqali o'rnatiladi — qo'lda o'tkazish tugmasi ko'rsatilmaydi
+  const showNext = !!nextStatus && !!nextStatusLabel && nextStatus !== 'paid';
+  const showPay = !isTerminal && CAN_PAY.includes(role);
+  const showEdit = !isTerminal && CAN_EDIT.includes(role);
 
   const statusMutation = useMutation({
     mutationFn: async () => {
@@ -712,7 +730,7 @@ function OrderDetailModal({
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Buyurtma #{order.id}</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              {new Date(order.created_at).toLocaleString('uz-UZ')}
+              {formatDateTime(order.created_at)}
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -782,9 +800,9 @@ function OrderDetailModal({
                         {item.weight_kg ? `${Number(item.weight_kg)} kg` : Number(item.quantity)}
                       </td>
                       <td className="px-4 py-2 text-right text-gray-700">
-                        {formatPrice(item.unit_price)}{item.weight_kg ? '/kg' : ''}
+                        {formatMoney(item.unit_price)}{item.weight_kg ? '/kg' : ''}
                       </td>
-                      <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatPrice(item.total_price)}</td>
+                      <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatMoney(item.total_price)}</td>
                     </tr>
                   ))}
                   {(!order.order_items || order.order_items.length === 0) && (
@@ -803,12 +821,12 @@ function OrderDetailModal({
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-600">
               <span>Oraliq summa</span>
-              <span>{formatPrice(order.subtotal)}</span>
+              <span>{formatMoney(order.subtotal)}</span>
             </div>
             {order.service_charge_pct > 0 && (
               <div className="flex justify-between text-gray-600">
                 <span>Xizmat haqi ({order.service_charge_pct}%)</span>
-                <span>{formatPrice(order.service_charge_amount)}</span>
+                <span>{formatMoney(order.service_charge_amount)}</span>
               </div>
             )}
             {order.discount_amount && order.discount_amount > 0 && (
@@ -819,12 +837,12 @@ function OrderDetailModal({
                     ? ` (${order.discount_value}%)`
                     : ''}
                 </span>
-                <span>-{formatPrice(order.discount_amount)}</span>
+                <span>-{formatMoney(order.discount_amount)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-2">
               <span>Jami</span>
-              <span>{formatPrice(order.total)}</span>
+              <span>{formatMoney(order.total)}</span>
             </div>
           </div>
 
@@ -848,10 +866,10 @@ function OrderDetailModal({
                         <td className="px-4 py-2 text-gray-900">
                           {PAYMENT_METHODS.find((pm) => pm.value === p.method)?.label ?? p.method}
                         </td>
-                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice(p.amount)}</td>
-                        <td className="px-4 py-2 text-right text-gray-500">{formatPrice(p.change_amount)}</td>
+                        <td className="px-4 py-2 text-right text-gray-900">{formatMoney(p.amount)}</td>
+                        <td className="px-4 py-2 text-right text-gray-500">{formatMoney(p.change_amount)}</td>
                         <td className="px-4 py-2 text-gray-500 text-xs">
-                          {new Date(p.paid_at).toLocaleString('uz-UZ')}
+                          {formatDateTime(p.paid_at)}
                         </td>
                       </tr>
                     ))}
@@ -862,40 +880,50 @@ function OrderDetailModal({
           )}
         </div>
 
-        {/* Action buttons */}
-        {order.status !== 'closed' && order.status !== 'cancelled' && (
+        {/* Amallar: holat va rolga qarab (#15). Bitta asosiy tugma — to'lov bo'lsa u, aks holda keyingi holat */}
+        {(showNext || showPay || showEdit) && (
           <div className="p-6 border-t border-gray-200 flex flex-wrap gap-2">
-            {nextStatus && nextStatusLabel && (
+            {showPay && (
+              <button
+                onClick={() => setShowPayment(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
+              >
+                <CreditCard size={16} />
+                To'lov
+              </button>
+            )}
+            {showNext && (
               <button
                 onClick={() => statusMutation.mutate()}
                 disabled={statusMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
+                className={`inline-flex items-center gap-1.5 min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                  showPay
+                    ? 'border border-amber-700 text-amber-800 hover:bg-amber-50'
+                    : 'bg-amber-700 text-white hover:bg-amber-800'
+                }`}
               >
                 <ArrowRight size={16} />
                 {statusMutation.isPending ? 'Saqlanmoqda...' : nextStatusLabel}
               </button>
             )}
-            <button
-              onClick={() => setShowPayment(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
-            >
-              <CreditCard size={16} />
-              To'lov
-            </button>
-            <button
-              onClick={() => setShowDiscount(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Percent size={16} />
-              Chegirma
-            </button>
-            <button
-              onClick={() => setShowCancel(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-            >
-              <Ban size={16} />
-              Bekor qilish
-            </button>
+            {showEdit && (
+              <button
+                onClick={() => setShowDiscount(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Percent size={16} />
+                Chegirma
+              </button>
+            )}
+            {showEdit && (
+              <button
+                onClick={() => setShowCancel(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors sm:ml-auto"
+              >
+                <Ban size={16} />
+                Bekor qilish
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -976,6 +1004,8 @@ export default function OrdersPage() {
             <option value="preparing">Tayyorlanmoqda</option>
             <option value="ready">Tayyor</option>
             <option value="served">Berildi</option>
+            <option value="delivering">Yetkazilmoqda</option>
+            <option value="delivered">Yetkazildi</option>
             <option value="paid">To'langan</option>
             <option value="closed">Yopilgan</option>
             <option value="cancelled">Bekor qilingan</option>
@@ -992,16 +1022,18 @@ export default function OrdersPage() {
             <option value="delivery">Yetkazib berish</option>
           </select>
 
-          <select
-            value={branchFilter}
-            onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
-            className={inputClass}
-          >
-            <option value="">Barcha filiallar</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
+          {branches.length > 1 && (
+            <select
+              value={branchFilter}
+              onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
+              className={inputClass}
+            >
+              <option value="">Barcha filiallar</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
 
           <input
             type="date"
@@ -1077,10 +1109,10 @@ export default function OrdersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatPrice(order.total)}
+                          {formatMoney(order.total)}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
-                          {new Date(order.created_at).toLocaleString('uz-UZ')}
+                          {formatDateTime(order.created_at)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <button
@@ -1088,7 +1120,7 @@ export default function OrdersPage() {
                               e.stopPropagation();
                               setSelectedOrder(order);
                             }}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-medium transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg text-xs font-medium transition-colors"
                           >
                             <Eye size={14} />
                             Ko'rish

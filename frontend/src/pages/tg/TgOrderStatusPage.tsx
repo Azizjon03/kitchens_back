@@ -3,10 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { Check, Clock } from 'lucide-react';
+import { formatMoney } from '../../lib/format';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 interface TgOrder {
   id: number;
@@ -166,24 +164,24 @@ export default function TgOrderStatusPage() {
                     {it.weight_kg ? `${it.weight_kg} kg` : `× ${Number(it.quantity)}`}
                   </span>
                 </span>
-                <span className="text-gray-900">{formatPrice(Number(it.total_price))}</span>
+                <span className="text-gray-900">{formatMoney(Number(it.total_price))}</span>
               </div>
             ))}
           </div>
           <div className="border-t border-gray-100 mt-3 pt-3 space-y-1 text-sm">
             <div className="flex justify-between text-gray-500">
               <span>Taomlar</span>
-              <span>{formatPrice(Number(order.subtotal))}</span>
+              <span>{formatMoney(Number(order.subtotal))}</span>
             </div>
             {Number(order.service_charge_amount) > 0 && (
               <div className="flex justify-between text-gray-500">
                 <span>Xizmat haqi</span>
-                <span>{formatPrice(Number(order.service_charge_amount))}</span>
+                <span>{formatMoney(Number(order.service_charge_amount))}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-gray-900 pt-1">
               <span>Jami</span>
-              <span>{formatPrice(Number(order.total))}</span>
+              <span>{formatMoney(Number(order.total))}</span>
             </div>
           </div>
         </div>

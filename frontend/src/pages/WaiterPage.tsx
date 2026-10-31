@@ -8,10 +8,8 @@ import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
 import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3 } from 'lucide-react';
+import { formatMoney, formatTime } from '../lib/format';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
@@ -171,7 +169,7 @@ function OrderComposer({
                 >
                   <span className="text-base text-gray-900">{item.name_uz}</span>
                   <span className="text-sm text-gray-600 tabular-nums">
-                    {formatPrice(Number(item.price))}
+                    {formatMoney(Number(item.price))}
                     {item.sell_type === 'weight' ? '/kg' : ''}
                   </span>
                 </button>
@@ -278,14 +276,14 @@ function OrderComposer({
                               : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
-                          + {a.name_uz} ({formatPrice(Number(a.price))})
+                          + {a.name_uz} ({formatMoney(Number(a.price))})
                         </button>
                       ))}
                     </div>
                   )}
 
                   <div className="mt-1 text-right text-xs font-medium text-gray-700">
-                    {formatPrice(lineTotal(l))}
+                    {formatMoney(lineTotal(l))}
                   </div>
                 </div>
               ))}
@@ -295,7 +293,7 @@ function OrderComposer({
               {error && <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{error}</div>}
               <div className="flex items-center justify-between text-sm font-semibold">
                 <span>Jami</span>
-                <span>{formatPrice(total)}</span>
+                <span>{formatMoney(total)}</span>
               </div>
               <button
                 onClick={() => mutation.mutate()}
@@ -339,11 +337,6 @@ const TYPE_LABELS: Record<string, string> = {
   delivery: 'Yetkazib berish',
 };
 
-function formatTime(iso?: string) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
 
 export default function WaiterPage() {
   const { user } = useAuth();
@@ -577,7 +570,7 @@ export default function WaiterPage() {
               </div>
               <div className={`flex items-center justify-between text-sm ${o.status === 'ready' && o.type === 'dine_in' ? 'mb-3' : ''}`}>
                 <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
-                <span className="font-medium text-gray-900 tabular-nums">{formatPrice(Number(o.total))}</span>
+                <span className="font-medium text-gray-900 tabular-nums">{formatMoney(Number(o.total))}</span>
               </div>
               {o.status === 'ready' && o.type === 'dine_in' && (
                 <button
