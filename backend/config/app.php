@@ -65,7 +65,9 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // O'zbekiston vaqti (UTC+5): "bugun", sana filtrlari, smena va hisobotlar Toshkent kuni bo'yicha.
+    // Bazadagi timestamp ustunlari ham shu vaqtda (2026_10_31 migratsiyasi UTC'dan ko'chirgan).
+    'timezone' => env('APP_TIMEZONE', 'Asia/Tashkent'),
 
     /*
     |--------------------------------------------------------------------------

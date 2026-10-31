@@ -96,6 +96,8 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
+            // Sessiya vaqt zonasi ilova bilan bir xil — DB now()/CURRENT_TIMESTAMP ham Toshkent vaqtida
+            'timezone' => env('DB_TIMEZONE', env('APP_TIMEZONE', 'Asia/Tashkent')),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
