@@ -1,0 +1,29 @@
+# Lokal QA uchun override (kitchens-qa-expert §2). Ishlatish:
+#   docker compose -f docker-compose.yml -f scripts/qa/compose.qa.yml up -d
+# - DB: production kabi PostgreSQL (asosiy .env sqlite bo'lsa ham)
+# - Portlar: 3000/8080 shu mashinada boshqa loyihalarda band -> 3001 (SPA), 8082 (Reverb)
+x-pg-env: &pgenv
+  DB_CONNECTION: pgsql
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_DATABASE: kitchens
+  DB_USERNAME: kitchens
+  DB_PASSWORD: secret
+  REVERB_HOST: reverb
+services:
+  app:
+    environment: *pgenv
+  reverb:
+    environment: *pgenv
+    ports: !override
+      - "8082:8080"
+  redis:
+    ports: !override []
+  frontend:
+    ports: !override
+      - "3001:5173"
+    environment:
+      VITE_REVERB_APP_KEY: kitchens-key
+      VITE_REVERB_HOST: localhost
+      VITE_REVERB_PORT: "8082"
+      VITE_REVERB_SCHEME: http

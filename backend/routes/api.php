@@ -22,16 +22,18 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     // Public auth routes (rate-limited)
-    Route::middleware('throttle:60,1')->group(function () {
+    // throttle'ning 3-argumenti — kalit prefiksi. Usiz barcha `throttle:N,M` lar bitta
+    // IP hisoblagichini bo'lishadi: login va menyu so'rovlari TG buyurtma limitini yeb qo'yardi.
+    Route::middleware('throttle:60,1,auth')->group(function () {
         Route::post('auth/login', [AuthController::class, 'login']);
         Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     });
 
     // Telegram Mini App (customer-facing, authenticated via Telegram initData)
-    Route::prefix('tg')->middleware(['telegram', 'throttle:60,1'])->group(function () {
+    Route::prefix('tg')->middleware(['telegram', 'throttle:60,1,tg'])->group(function () {
         Route::get('menu', [TgMenuController::class, 'index']);
-        Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1');
+        Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1,tg-orders');
         Route::get('orders/{order}', [TgOrderController::class, 'show']);
     });
 
