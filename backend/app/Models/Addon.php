@@ -12,7 +12,7 @@ class Addon extends Model
     use HasFactory, BelongsToCompany;
 
     protected $fillable = [
-        'company_id', 'name_uz', 'name_ru', 'price', 'is_active',
+        'company_id', 'catalog_addon_id', 'name_uz', 'name_ru', 'price', 'is_active',
     ];
 
     protected $casts = [
