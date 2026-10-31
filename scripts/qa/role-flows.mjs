@@ -225,6 +225,8 @@ if (orderId) {
   await p.goto(`${BASE}/menu`);
   await p.waitForTimeout(1200);
   await p.getByRole('button', { name: /^Taom$/ }).click();
+  // #29: avval standart katalog — undan "Yangisini yaratish"
+  await p.getByRole('dialog').getByRole('button', { name: /Yangisini yaratish/ }).click();
   const dlg = p.locator('div.fixed.inset-0').last();
   await dlg.getByPlaceholder('Osh', { exact: true }).fill('QA Somsa ' + T);
   await dlg.getByPlaceholder('Плов', { exact: true }).fill('QA Самса ' + T);

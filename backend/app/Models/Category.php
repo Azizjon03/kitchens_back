@@ -14,7 +14,7 @@ class Category extends Model
     use HasFactory, BelongsToCompany, SoftDeletes;
 
     protected $fillable = [
-        'company_id', 'parent_id', 'name_uz', 'name_ru',
+        'company_id', 'parent_id', 'catalog_category_id', 'name_uz', 'name_ru',
         'icon', 'sort_order', 'is_active',
     ];
 

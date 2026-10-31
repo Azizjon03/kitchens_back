@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CashShiftController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\MenuCatalogController;
 use App\Http\Controllers\Api\V1\MenuItemController;
 use App\Http\Controllers\Api\V1\ModifierController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -76,6 +77,9 @@ Route::prefix('v1')->group(function () {
                 Route::apiResource('menu-items', MenuItemController::class);
                 Route::apiResource('modifiers', ModifierController::class);
                 Route::apiResource('addons', AddonController::class);
+                // Standart katalogdan tanlab qo'shish (#29)
+                Route::get('menu/catalog', [MenuCatalogController::class, 'index']);
+                Route::post('menu/catalog/import', [MenuCatalogController::class, 'import']);
                 // Stol shablonlari (#24)
                 Route::apiResource('table-templates', TableTemplateController::class)->except(['show']);
             });

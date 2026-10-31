@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
+import CatalogPickerModal from '../components/CatalogPickerModal';
 import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import {
@@ -624,6 +625,8 @@ export default function MenuPage() {
   // Modals
   const [categoryModal, setCategoryModal] = useState<{ category?: Category; parentId?: number } | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
+  // #29: qo'shishda avval standart katalogdan tanlash
+  const [picker, setPicker] = useState<'items' | 'categories' | null>(null);
   const [editItem, setEditItem] = useState<MenuItem | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [actionError, setActionError] = useState('');
@@ -707,10 +710,13 @@ export default function MenuPage() {
     setExpanded((prev) => new Set(prev).add(id));
   };
 
-  const openNewItem = () => {
+  /** Oddiy forma — standartda yo'q yangi taom */
+  const openItemForm = () => {
     setEditItem(undefined);
     setShowItemModal(true);
   };
+  /** "Taom qo'shish" — avval standart katalog (#29) */
+  const openNewItem = () => setPicker('items');
 
   /** "Milliy taomlar › Palov" — sub-menyu bo'lsa ota nomi bilan */
   const categoryLabel = (id: number) => {
@@ -768,7 +774,7 @@ export default function MenuPage() {
             Avval kategoriya qo'shing (masalan, «Milliy taomlar»), keyin uning ichida sub-menyu («Palov»).
           </p>
           <button
-            onClick={() => setCategoryModal({})}
+            onClick={() => setPicker('categories')}
             className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
           >
             + Kategoriya qo'shish
@@ -831,7 +837,7 @@ export default function MenuPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setCategoryModal({})}
+            onClick={() => setPicker('categories')}
             className="inline-flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             <Plus size={18} />
@@ -953,7 +959,7 @@ export default function MenuPage() {
                     <FolderOpen size={24} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Kategoriya yo'q</p>
                     <button
-                      onClick={() => setCategoryModal({})}
+                      onClick={() => setPicker('categories')}
                       className="mt-2 text-sm text-amber-700 hover:text-amber-800 font-medium"
                     >
                       + Birinchi kategoriyani qo'shish
@@ -1105,6 +1111,19 @@ export default function MenuPage() {
             Math.max(0, ...categories.filter((c) => (c.parent_id ?? null) === parentId).map((c) => c.sort_order ?? 0)) + 1
           }
           onClose={() => setCategoryModal(null)}
+        />
+      )}
+
+      {picker && (
+        <CatalogPickerModal
+          mode={picker}
+          onClose={() => setPicker(null)}
+          onCreateNew={() => {
+            const mode = picker;
+            setPicker(null);
+            if (mode === 'items') openItemForm();
+            else setCategoryModal({});
+          }}
         />
       )}
 
