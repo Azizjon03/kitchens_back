@@ -7,7 +7,7 @@ import type { Branch, Table, Order, Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
-import { Plus, Minus, X, Bell, Check } from 'lucide-react';
+import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3 } from 'lucide-react';
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
@@ -186,7 +186,7 @@ function OrderComposer({
           <div className="flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {cart.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-8">Savat bo'sh</p>
+                <p className="text-sm text-gray-500 text-center py-8">Savat bo'sh</p>
               )}
               {cart.map((l) => (
                 <div key={l.key} className="border border-gray-200 rounded-lg p-2">
@@ -274,7 +274,7 @@ function OrderComposer({
                           onClick={() => toggleId(l, 'addon_ids', a.id)}
                           className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
                             l.addon_ids.includes(a.id)
-                              ? 'bg-green-700 text-white border-green-700'
+                              ? 'bg-amber-700 text-white border-amber-700'
                               : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
@@ -523,7 +523,7 @@ export default function WaiterPage() {
                   ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
                   : t.status === 'occupied'
                     ? 'border-amber-300 bg-amber-50 text-amber-700 cursor-not-allowed'
-                    : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                    : 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed'
               }`}
             >
               #{t.number}
@@ -538,6 +538,7 @@ export default function WaiterPage() {
         )}
         {!tablesLoading && !tablesFailed && tables.length === 0 && (
           <div className="col-span-full bg-white rounded-xl border border-gray-200 p-6 text-center text-sm text-gray-500">
+            <Grid3X3 size={32} className="text-gray-300 mx-auto mb-2" aria-hidden="true" />
             Bu filialda hali stol yo'q
           </div>
         )}
@@ -557,6 +558,7 @@ export default function WaiterPage() {
         <ErrorState error={ordersError} onRetry={() => refetchOrders()} title="Buyurtmalarni yuklab bo'lmadi" />
       ) : sortedOrders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-500">
+          <ClipboardList size={36} className="text-gray-300 mx-auto mb-2" aria-hidden="true" />
           Faol buyurtmalar yo'q
         </div>
       ) : (
@@ -573,7 +575,7 @@ export default function WaiterPage() {
                   {STATUS_MAP[o.status]?.label ?? o.status}
                 </span>
               </div>
-              <div className="flex items-center justify-between mb-3 text-sm">
+              <div className={`flex items-center justify-between text-sm ${o.status === 'ready' && o.type === 'dine_in' ? 'mb-3' : ''}`}>
                 <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
                 <span className="font-medium text-gray-900 tabular-nums">{formatPrice(Number(o.total))}</span>
               </div>

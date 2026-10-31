@@ -169,7 +169,7 @@ function OrderCard({
         </button>
       )}
       {order.status === 'ready' && (
-        <div className="m-3 mt-0 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
+        <div className="m-3 mt-0 min-h-12 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
           <Check size={18} aria-hidden="true" />
           Berishni kutmoqda
         </div>
