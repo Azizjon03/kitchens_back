@@ -52,7 +52,10 @@ class ActiveOrdersTest extends TestCase
 
         $orders = $res->json('data');
         $this->assertCount(25, $orders, 'Barcha 25 ta faol buyurtma qaytishi kerak');
-        $this->assertSame('2026-10-31T12:00:00.000000Z', $orders[0]['created_at'], 'Eng eski buyurtma birinchi');
+        $this->assertTrue(
+            Carbon::parse($orders[0]['created_at'])->equalTo(Carbon::parse('2026-10-31 12:00')),
+            'Eng eski buyurtma birinchi',
+        );
     }
 
     public function test_active_mode_accepts_several_statuses_and_skips_terminal_ones(): void
