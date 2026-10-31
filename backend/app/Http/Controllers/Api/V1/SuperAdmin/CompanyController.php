@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\SuperAdmin;
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Services\MenuTemplate\MenuTemplateService;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -42,7 +43,7 @@ class CompanyController extends Controller
         return $this->success($companies);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, MenuTemplateService $menuTemplates): JsonResponse
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -54,7 +55,11 @@ class CompanyController extends Controller
             'owner_full_name' => 'required|string|max:255',
             'owner_phone' => ['required', 'string', 'max:30', 'regex:/^\+?[\d\s()\-]{9,30}$/', $this->notSuperAdminPhone()],
             'owner_password' => 'required|string|min:8',
+            // Standart menyu turi (#23); yuborilmasa — bo'sh menyu (eski API mijozlari)
+            'menu_template' => ['nullable', 'string', \Illuminate\Validation\Rule::in(MenuTemplateService::TYPES)],
         ]);
+        $menuTemplate = $data['menu_template'] ?? 'bosh';
+        unset($data['menu_template']);
 
         $owner = [
             'name' => $data['owner_full_name'],
@@ -64,7 +69,7 @@ class CompanyController extends Controller
         unset($data['owner_full_name'], $data['owner_phone'], $data['owner_password']);
 
         // Kompaniya, obuna va admin birga yaratiladi: biri yiqilsa, hech biri qolmaydi
-        $company = DB::transaction(function () use ($data, $owner) {
+        $company = DB::transaction(function () use ($data, $owner, $menuTemplate, $menuTemplates) {
             $company = Company::create($data);
 
             // Auto-create Free subscription
@@ -88,6 +93,9 @@ class CompanyController extends Controller
                 'phone' => $company->phone,
                 'is_active' => true,
             ]);
+
+            // Restoran turi bo'yicha standart menyu — global katalogdan nusxa (#23)
+            $menuTemplates->apply($company, $menuTemplate);
 
             User::create($owner + [
                 'company_id' => $company->id,

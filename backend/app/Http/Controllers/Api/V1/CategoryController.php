@@ -30,7 +30,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name_uz' => 'required|string|max:255',
             'name_ru' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
+            'parent_id' => ['nullable', 'integer', $this->validParent($request->user()->company_id)],
             'icon' => 'nullable|string|max:255',
             'sort_order' => 'nullable|integer',
         ]);
@@ -50,7 +50,7 @@ class CategoryController extends Controller
         $data = $request->validate([
             'name_uz' => 'sometimes|string|max:255',
             'name_ru' => 'sometimes|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
+            'parent_id' => ['nullable', 'integer', $this->validParent($request->user()->company_id, $category)],
             'icon' => 'nullable|string|max:255',
             'sort_order' => 'nullable|integer',
             'is_active' => 'sometimes|boolean',
@@ -81,5 +81,29 @@ class CategoryController extends Controller
         }
 
         return $this->success(null);
+    }
+
+    /**
+     * Menyu ikki darajali (#23): ota kategoriya o'z kompaniyasidan (avval faqat
+     * `exists` tekshirilardi — begona tenant kategoriyasini ota qilish mumkin edi),
+     * yuqori darajada, o'zi emas; sub-menyusi bor kategoriya boshqasiga ko'chmaydi.
+     */
+    private function validParent(?int $companyId, ?Category $self = null): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($companyId, $self): void {
+            $parent = Category::withoutGlobalScopes()
+                ->where('company_id', $companyId)
+                ->find($value);
+
+            if (! $parent) {
+                $fail('Tanlangan kategoriya topilmadi.');
+            } elseif ($parent->parent_id !== null) {
+                $fail("Sub-menyu ichida yana sub-menyu bo'lmaydi — yuqori darajadagi kategoriyani tanlang.");
+            } elseif ($self && $parent->id === $self->id) {
+                $fail("Kategoriya o'ziga ota bo'la olmaydi.");
+            } elseif ($self && $self->children()->exists()) {
+                $fail("Sub-menyulari bor kategoriyani boshqa kategoriya ichiga ko'chirib bo'lmaydi.");
+            }
+        };
     }
 }
