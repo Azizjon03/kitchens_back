@@ -17,6 +17,7 @@ class Order extends Model
         'type', 'status', 'subtotal', 'discount_type', 'discount_value',
         'discount_amount', 'service_charge_pct', 'service_charge_amount',
         'delivery_fee', 'total', 'promo_id', 'note',
+        'delivery_address', 'delivery_lat', 'delivery_lng', 'client_key',
     ];
 
     protected $casts = [

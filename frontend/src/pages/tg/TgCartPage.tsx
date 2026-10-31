@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
@@ -6,6 +6,8 @@ import { useTgCart, cartTotal, lineTotal, minWeightKg, type TgCartLine } from '.
 import type { Category } from '../../types';
 import { ArrowLeft, Minus, Plus, X } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
+import { useOnline } from '../../lib/useOnline';
+import TgOfflineBanner from './TgOfflineBanner';
 
 
 interface TgMenuResponse {
@@ -22,6 +24,15 @@ export default function TgCartPage() {
   const tableId = tgTableId();
   const [branchId, setBranchId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const online = useOnline();
+  // #26: olib ketish yoki yetkazib berish; manzil bot ro'yxatidan oldindan to'ldiriladi
+  const [orderType, setOrderType] = useState<'takeaway' | 'delivery'>('takeaway');
+  const [address, setAddress] = useState<string | null>(null);
+  // #26: bitta buyurtma uchun bitta kalit — tarmoq uzilib qayta yuborilsa ikki buyurtma bo'lmaydi
+  const clientKey = useRef<string | null>(null);
+  useEffect(() => {
+    clientKey.current = null; // savat o'zgarsa — yangi buyurtma
+  }, [cart, orderType, branchId]);
 
   useEffect(() => {
     tgInit();
@@ -31,6 +42,13 @@ export default function TgCartPage() {
     queryKey: ['tg-menu'],
     queryFn: async () => (await tgApi.get('/menu')).data.data as TgMenuResponse,
   });
+
+  const { data: me } = useQuery<{ address: string | null; latitude: number | null; registered: boolean }>({
+    queryKey: ['tg-me'],
+    queryFn: async () => (await tgApi.get('/me')).data.data,
+  });
+  const addressValue = address ?? me?.address ?? '';
+  const hasLocation = me?.latitude != null;
 
   const primary = data?.company.primary_color || '#F59E0B';
   const branches = data?.branches ?? [];
@@ -58,11 +76,20 @@ export default function TgCartPage() {
         })),
       };
       if (tableId) payload.table_id = tableId;
-      else payload.branch_id = branchId;
+      else {
+        payload.branch_id = branchId;
+        payload.type = orderType;
+        if (orderType === 'delivery' && addressValue.trim()) payload.delivery_address = addressValue.trim();
+      }
+      clientKey.current ??= typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      payload.client_key = clientKey.current;
       return (await tgApi.post('/orders', payload)).data;
     },
     onSuccess: (res) => {
       const order = res?.data;
+      clientKey.current = null;
       clear();
       navigate(`/tg/order/${order.id}${window.location.search}`);
     },
@@ -81,6 +108,7 @@ export default function TgCartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-28">
+      <TgOfflineBanner />
       <div className="px-4 py-4 text-white flex items-center gap-3" style={{ backgroundColor: primary }}>
         <button onClick={() => navigate(`/tg${window.location.search}`)} aria-label="Orqaga">
           <ArrowLeft size={22} />
@@ -193,9 +221,46 @@ export default function TgCartPage() {
           </div>
         ))}
 
-        {cart.length > 0 && !tableId && branches.length > 0 && (
+        {cart.length > 0 && !tableId && (
           <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filial (olib ketish)</label>
+            <div role="radiogroup" aria-label="Qanday olasiz?" className="grid grid-cols-2 gap-2">
+              {([['takeaway', 'Olib ketaman'], ['delivery', 'Yetkazib bering']] as const).map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  role="radio"
+                  aria-checked={orderType === val}
+                  onClick={() => setOrderType(val)}
+                  className="min-h-11 rounded-lg border text-sm font-medium"
+                  style={orderType === val ? { backgroundColor: primary, borderColor: primary, color: 'white' } : { borderColor: '#d1d5db', color: '#374151' }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {orderType === 'delivery' && (
+              <div className="mt-3">
+                <label htmlFor="tg-address" className="block text-sm font-medium text-gray-700 mb-1">Manzil</label>
+                <input
+                  id="tg-address"
+                  value={addressValue}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Ko'cha, uy, mo'ljal"
+                  className="w-full min-h-11 px-3 border border-gray-300 rounded-lg text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-600">
+                  {hasLocation
+                    ? "📍 Botga yuborgan joylashuvingiz kuryerga xarita sifatida boradi."
+                    : "Manzilni aniq yozing — kuryer shu bo'yicha keladi."}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {cart.length > 0 && !tableId && branches.length > 1 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
             <select
               value={branchId ?? ''}
               onChange={(e) => setBranchId(Number(e.target.value))}
@@ -229,12 +294,12 @@ export default function TgCartPage() {
             </div>
           </div>
           <button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
+            onClick={() => { setError(''); mutation.mutate(); }}
+            disabled={mutation.isPending || !online || (orderType === 'delivery' && !tableId && !hasLocation && !addressValue.trim())}
             className="w-full px-4 py-3 rounded-xl text-white text-sm font-medium disabled:opacity-50"
             style={{ backgroundColor: primary }}
           >
-            {mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
+            {!online ? "Aloqa yo'q" : mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
           </button>
         </div>
       )}

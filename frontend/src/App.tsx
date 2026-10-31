@@ -1,3 +1,5 @@
+import TelegramBotPage from './pages/TelegramBotPage';
+import SuperTelegramBotsPage from './pages/SuperTelegramBotsPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './lib/auth';
@@ -180,6 +182,22 @@ function App() {
               }
             />
 
+            <Route
+              path="/telegram-bot"
+              element={
+                <ProtectedRoute requiredRole="company_admin">
+                  <TelegramBotPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/telegram-bots"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SuperTelegramBotsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/" element={<ProtectedRoute><RoleHome /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

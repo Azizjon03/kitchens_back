@@ -8,6 +8,7 @@ use App\Models\Branch;
 use App\Models\Order;
 use App\Models\Table;
 use App\Services\OrderService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -42,7 +43,23 @@ class OrderController extends Controller
             'items.*.addon_ids' => 'nullable|array',
             'items.*.addon_ids.*' => 'integer',
             'note' => 'nullable|string|max:1000',
+            // #26: yetkazib berish — manzil yoki xarita nuqtasi (bot ro'yxatidagi joylashuv avtomatik)
+            'type' => 'nullable|in:takeaway,delivery',
+            'delivery_address' => 'nullable|string|max:255',
+            'delivery_lat' => 'nullable|numeric|between:-90,90',
+            'delivery_lng' => 'nullable|numeric|between:-180,180',
+            // #26: tarmoq uzilib qayta yuborilsa ikki buyurtma bo'lmasin
+            'client_key' => 'nullable|string|max:64',
         ]);
+
+        if (! empty($data['client_key'])) {
+            $existing = Order::where('company_id', $company->id)->where('client_key', $data['client_key'])->first();
+            if ($existing) {
+                abort_unless($existing->customer_id === $customer->id, 409, 'Duplicate client key.');
+
+                return $this->success($this->serialize($existing), 200);
+            }
+        }
 
         // Determine branch/type. A table (from a QR deep link) forces dine-in.
         if (! empty($data['table_id'])) {
@@ -60,12 +77,47 @@ class OrderController extends Controller
                 return $this->error('BRANCH_REQUIRED', 'A valid branch is required for takeaway orders.', 422);
             }
             $data['branch_id'] = $branch->id;
-            $data['type'] = 'takeaway';
+            $data['type'] = ($data['type'] ?? null) === 'delivery' ? 'delivery' : 'takeaway';
         }
 
-        $order = $orderService->create($data, $company->id, null, $customer->id);
+        if ($data['type'] === 'delivery') {
+            $data['delivery_lat'] ??= $customer->latitude;
+            $data['delivery_lng'] ??= $customer->longitude;
+            if (empty($data['delivery_address']) && $data['delivery_lat'] === null) {
+                return $this->error('ADDRESS_REQUIRED', 'Yetkazib berish uchun manzil yoki joylashuv kerak.', 422);
+            }
+            if (! empty($data['delivery_address'])) {
+                $customer->update(['address' => $data['delivery_address']]);
+            }
+        } else {
+            unset($data['delivery_address'], $data['delivery_lat'], $data['delivery_lng']);
+        }
+
+        try {
+            $order = $orderService->create($data, $company->id, null, $customer->id);
+        } catch (UniqueConstraintViolationException) {
+            // Bir vaqtda ikki marta yuborilgan (client_key) — birinchisini qaytaramiz
+            $order = Order::where('company_id', $company->id)->where('client_key', $data['client_key'])->firstOrFail();
+
+            return $this->success($this->serialize($order), 200);
+        }
 
         return $this->success($this->serialize($order->fresh()), 201);
+    }
+
+    /** #26: bot orqali ro'yxatdan o'tgan mijoz ma'lumotlari — Mini App manzilni oldindan to'ldiradi */
+    public function me(Request $request): JsonResponse
+    {
+        $customer = $request->attributes->get('tg_customer');
+
+        return $this->success([
+            'name' => $customer->name,
+            'phone' => $customer->phone,
+            'address' => $customer->address,
+            'latitude' => $customer->latitude,
+            'longitude' => $customer->longitude,
+            'registered' => $customer->isRegistered(),
+        ]);
     }
 
     public function show(Request $request, Order $order): JsonResponse
@@ -95,6 +147,7 @@ class OrderController extends Controller
             'subtotal' => $order->subtotal,
             'service_charge_amount' => $order->service_charge_amount,
             'total' => $order->total,
+            'delivery_address' => $order->delivery_address,
             'created_at' => optional($order->created_at)->toIso8601String(),
             'table' => $order->table ? ['id' => $order->table->id, 'number' => $order->table->number] : null,
             'items' => $order->orderItems->map(fn ($it) => [
