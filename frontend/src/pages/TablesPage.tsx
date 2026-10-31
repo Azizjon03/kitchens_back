@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Table, Branch } from '../types';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
 import PageGuide from '../components/PageGuide';
 import TableTemplatesPanel from '../components/TableTemplatesPanel';
@@ -152,7 +154,7 @@ function TableModal({
               {fieldErrors.number && <p className="mt-1 text-sm text-red-600">{fieldErrors.number}</p>}
             </div>
             <div>
-              <label htmlFor="table-seats" className="block text-sm font-medium text-gray-700 mb-1">O'rindiqlar <span className="text-red-600" aria-hidden="true">*</span></label>
+              <label htmlFor="table-seats" className="block text-sm font-medium text-gray-700 mb-1">O'rindiqlar <span className="text-red-600" aria-hidden="true">*</span> <HelpHint text={FIELD_HINTS.seats} label="O'rindiqlar haqida" /></label>
               <input
               id="table-seats"
               aria-invalid={!!fieldErrors.seats}
@@ -184,7 +186,7 @@ function TableModal({
 
           <div>
             <label htmlFor="table-template" className="block text-sm font-medium text-gray-700 mb-1">
-              Stolga oldindan qo'yiladigan narsalar
+              Stolga oldindan qo'yiladigan narsalar <HelpHint text={FIELD_HINTS.tableTemplate} label="Stol shabloni haqida" />
             </label>
             <select
               id="table-template"
@@ -333,17 +335,7 @@ export default function TablesPage() {
         )}
       </div>
 
-      <PageGuide
-        id="tables"
-        title="Stollar bo'limi nima uchun?"
-        intro="Bu yerda zaldagi stollaringiz turadi. Ofitsiant bo'sh stolni tanlab buyurtma qabul qiladi."
-        steps={[
-          '"Yangi stol" tugmasini bosing va stol raqamini yozing (masalan 1, 2 yoki A1).',
-          "Nechta odam sig'ishini (o'rindiq) kiriting.",
-          'Stolga har doim bir xil narsalar qo\'yilsa (masalan 3 sharbat, 4 mohito) — "Stol shablonlari" bo\'limida shablon tuzing va stolga tanlang.',
-          "Mehmon ketayotganda ofitsiant nechtasi ochilganini belgilaydi — faqat o'shalar hisobga qo'shiladi.",
-        ]}
-      />
+      <PageGuide id="tables" />
 
       <div role="tablist" className="mb-6 flex gap-1 border-b border-gray-200">
         {([['tables', 'Stollar'], ['templates', 'Stol shablonlari']] as const).map(([key, label]) => (

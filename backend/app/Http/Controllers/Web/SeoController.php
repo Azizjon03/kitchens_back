@@ -116,10 +116,12 @@ class SeoController extends Controller
         return md5((string) Plan::max('updated_at').'|'.Company::max('updated_at'));
     }
 
-    /** #26 (Telegram bot) merge qilingach bot username'i; undan oldin — yo'q */
+    /** #26: ulangan bot bo'lsa — "Telegram orqali buyurtma" tugmasi */
     private function telegramUsername(Company $company): ?string
     {
-        return method_exists($company, 'telegramBot') ? $company->telegramBot?->username : null;
+        $bot = $company->telegramBot;
+
+        return $bot?->isConnected() ? $bot->username : null;
     }
 
     private function html(string $html): Response

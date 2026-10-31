@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Order, OrderItem, Table, MenuItem, Branch, Payment } from '../types';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import {
   Plus,
@@ -1010,6 +1011,8 @@ export default function OrdersPage() {
         </button>
       </div>
 
+      <PageGuide id="orders" />
+
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
@@ -1089,9 +1092,9 @@ export default function OrdersPage() {
           <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShoppingBag size={32} className="text-amber-500" />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Buyurtmalar topilmadi</h2>
-          <p className="text-gray-500 text-sm">
-            Hozircha buyurtmalar mavjud emas yoki filtrlar bo'yicha natija topilmadi.
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Buyurtma topilmadi</h2>
+          <p className="text-gray-600 text-sm">
+            Filtr tanlangan bo'lsa — uni tozalab ko'ring. Yangi buyurtma «Yangi buyurtma» tugmasi yoki «Ofitsiant» ekrani orqali olinadi.
           </p>
         </div>
       ) : (

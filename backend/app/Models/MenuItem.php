@@ -14,7 +14,7 @@ class MenuItem extends Model
     use HasFactory, BelongsToCompany, SoftDeletes;
 
     protected $fillable = [
-        'company_id', 'category_id', 'name_uz', 'name_ru',
+        'company_id', 'category_id', 'catalog_item_id', 'name_uz', 'name_ru',
         'description_uz', 'description_ru', 'sell_type', 'price',
         'min_weight', 'weight_step', 'image', 'cooking_time',
         'is_available', 'is_popular', 'sort_order', 'allergens',

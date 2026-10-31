@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\CashShiftController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\MenuCatalogController;
 use App\Http\Controllers\Api\V1\MenuItemController;
 use App\Http\Controllers\Api\V1\ModifierController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -13,6 +14,9 @@ use App\Http\Controllers\Api\V1\SuperAdmin\AuditLogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CatalogController;
 use App\Http\Controllers\Api\V1\PublicPageController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
+use App\Http\Controllers\Api\V1\SuperAdmin\TelegramBotController as SuperTelegramBotController;
+use App\Http\Controllers\Api\V1\TelegramBotController;
+use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
@@ -40,7 +44,12 @@ Route::prefix('v1')->group(function () {
         Route::get('menu', [TgMenuController::class, 'index']);
         Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1,tg-orders');
         Route::get('orders/{order}', [TgOrderController::class, 'show']);
+        Route::get('me', [TgOrderController::class, 'me']);
     });
+
+    // #26: Telegram webhook — sirli kalit bilan himoyalangan, Telegram IP'laridan keladi
+    Route::post('telegram/webhook/{bot}', TelegramWebhookController::class)
+        ->whereNumber('bot')->middleware('throttle:600,1,tg-webhook');
 
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -65,6 +74,11 @@ Route::prefix('v1')->group(function () {
 
             // Branches (write) & Staff (company_admin only)
             Route::middleware('role:company_admin')->group(function () {
+                // #26: restoranning Telegram boti
+                Route::get('telegram-bot', [TelegramBotController::class, 'show']);
+                Route::post('telegram-bot', [TelegramBotController::class, 'store'])->middleware('throttle:10,1,tg-connect');
+                Route::post('telegram-bot/reconnect', [TelegramBotController::class, 'reconnect'])->middleware('throttle:10,1,tg-connect');
+                Route::delete('telegram-bot', [TelegramBotController::class, 'destroy']);
                 // #27: restoranning ochiq menyu sahifasi (SEO)
                 Route::get('public-page', [PublicPageController::class, 'show']);
                 Route::put('public-page', [PublicPageController::class, 'update']);
@@ -81,6 +95,9 @@ Route::prefix('v1')->group(function () {
                 Route::apiResource('menu-items', MenuItemController::class);
                 Route::apiResource('modifiers', ModifierController::class);
                 Route::apiResource('addons', AddonController::class);
+                // Standart katalogdan tanlab qo'shish (#29)
+                Route::get('menu/catalog', [MenuCatalogController::class, 'index']);
+                Route::post('menu/catalog/import', [MenuCatalogController::class, 'import']);
                 // Stol shablonlari (#24)
                 Route::apiResource('table-templates', TableTemplateController::class)->except(['show']);
             });
@@ -140,6 +157,7 @@ Route::prefix('v1')->group(function () {
 
             // Standart menyu katalogi (#23) — global, faqat super admin
             Route::get('catalog', [CatalogController::class, 'index']);
+            Route::get('telegram-bots', [SuperTelegramBotController::class, 'index']); // #26
             Route::post('catalog/categories', [CatalogController::class, 'storeCategory']);
             Route::put('catalog/categories/{category}', [CatalogController::class, 'updateCategory']);
             Route::delete('catalog/categories/{category}', [CatalogController::class, 'destroyCategory']);

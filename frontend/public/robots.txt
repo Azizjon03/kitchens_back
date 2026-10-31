@@ -21,6 +21,8 @@ Disallow: /plans
 Disallow: /catalog
 Disallow: /history
 Disallow: /public-page
+Disallow: /telegram-bot
+Disallow: /telegram-bots
 Disallow: /tg
 
 Sitemap: https://kitchens.uz/sitemap.xml

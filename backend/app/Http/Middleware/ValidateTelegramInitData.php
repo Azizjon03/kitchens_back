@@ -44,7 +44,7 @@ class ValidateTelegramInitData
             $telegramId = $devId;
             $name = $request->header('X-Telegram-Dev-Name', 'Test mijoz');
         } else {
-            $botToken = $company->getSetting('telegram_bot_token');
+            $botToken = $company->telegramToken();
 
             if (! $botToken) {
                 return response()->json(['success' => false, 'error' => [

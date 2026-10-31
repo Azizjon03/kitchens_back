@@ -23,11 +23,11 @@ const log = (ok, m) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAI
 const PAGES = {
   '/dashboard': 'Dashboard', '/menu': 'Menyu', '/modifiers': "Qo'shimchalar", '/tables': 'Stollar',
   '/waiter': 'Ofitsiant', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/cash-shifts': 'Kassa',
-  '/staff': 'Xodimlar', '/branches': 'Filiallar', '/public-page': 'Restoran sahifasi',
+  '/staff': 'Xodimlar', '/branches': 'Filiallar', '/public-page': 'Restoran sahifasi', '/telegram-bot': 'Telegram bot',
 };
 // Layout.tsx allNav va App.tsx requiredRole dan
 const NAV = {
-  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/public-page', '/branches'],
+  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/public-page', '/branches', '/telegram-bot'],
   manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen'],
   waiter: ['/tables', '/waiter', '/orders'],
   chef: ['/kitchen'],
@@ -227,6 +227,8 @@ if (orderId) {
   await p.goto(`${BASE}/menu`);
   await p.waitForTimeout(1200);
   await p.getByRole('button', { name: /^Taom$/ }).click();
+  // #29: avval standart katalog — undan "Yangisini yaratish"
+  await p.getByRole('dialog').getByRole('button', { name: /Yangisini yaratish/ }).click();
   const dlg = p.locator('div.fixed.inset-0').last();
   await dlg.getByPlaceholder('Osh', { exact: true }).fill('QA Somsa ' + T);
   await dlg.getByPlaceholder('Плов', { exact: true }).fill('QA Самса ' + T);

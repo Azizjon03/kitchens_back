@@ -6,6 +6,8 @@ import { LoadingState } from './components/QueryState';
 // #27: har sahifa alohida yuklanadi (code-splitting) — birinchi ochilish tezroq
 import { lazy, Suspense } from 'react';
 const PublicPageSettingsPage = lazy(() => import('./pages/PublicPageSettingsPage'));
+const TelegramBotPage = lazy(() => import('./pages/TelegramBotPage'));
+const SuperTelegramBotsPage = lazy(() => import('./pages/SuperTelegramBotsPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
@@ -194,6 +196,22 @@ function App() {
               }
             />
 
+            <Route
+              path="/telegram-bot"
+              element={
+                <ProtectedRoute requiredRole="company_admin">
+                  <TelegramBotPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/telegram-bots"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SuperTelegramBotsPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/" element={<ProtectedRoute><RoleHome /></ProtectedRoute>} />
             {/* #27: production'da "/" — serverdagi landing; kirgan foydalanuvchi /home ga yo'naltiriladi */}
             <Route path="/home" element={<ProtectedRoute><RoleHome /></ProtectedRoute>} />

@@ -2,7 +2,10 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Category, MenuItem } from '../types';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
+import CatalogPickerModal from '../components/CatalogPickerModal';
 import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import {
@@ -473,6 +476,7 @@ function MenuItemModal({
             <div>
               <label htmlFor="item-price" className="block text-sm font-medium text-gray-700 mb-1">
                 {form.sell_type === 'weight' ? "1 kg narxi (so'm)" : "Narxi (so'm)"} <span className="text-red-500">*</span>
+                {form.sell_type === 'weight' && <HelpHint text={FIELD_HINTS.weightPrice} label="1 kg narxi haqida" />}
               </label>
               <input
                 id="item-price"
@@ -598,14 +602,6 @@ function DeleteConfirmModal({
 
 // ─── Main Menu Page ───────────────────────────────────────────────
 
-const GUIDE_STEPS = [
-  "«Kategoriya» tugmasini bosib asosiy kategoriya qo'shing — masalan, «Milliy taomlar» yoki «Suvlar».",
-  "Kategoriya yonidagi papka belgisini bosib, uning ichida sub-menyu qo'shing — masalan, «Palov» yoki «Gazli suv».",
-  "«Taom» tugmasini bosing va taomni kerakli sub-menyuga qo'shing.",
-  "Narxini yozing. Vazn bilan sotilsa (osh, kabob) — «Vazn bilan» ni tanlab, 1 kg narxini yozing.",
-  "Osh uchun qo'shimchalar (qazi, bedana tuxumi, limon) — chap menyudagi «Qo'shimchalar» bo'limida qo'shiladi va taomga biriktiriladi.",
-];
-
 type DeleteTarget = {
   type: 'category' | 'item';
   id: number;
@@ -624,6 +620,8 @@ export default function MenuPage() {
   // Modals
   const [categoryModal, setCategoryModal] = useState<{ category?: Category; parentId?: number } | null>(null);
   const [showItemModal, setShowItemModal] = useState(false);
+  // #29: qo'shishda avval standart katalogdan tanlash
+  const [picker, setPicker] = useState<'items' | 'categories' | null>(null);
   const [editItem, setEditItem] = useState<MenuItem | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [actionError, setActionError] = useState('');
@@ -707,10 +705,13 @@ export default function MenuPage() {
     setExpanded((prev) => new Set(prev).add(id));
   };
 
-  const openNewItem = () => {
+  /** Oddiy forma — standartda yo'q yangi taom */
+  const openItemForm = () => {
     setEditItem(undefined);
     setShowItemModal(true);
   };
+  /** "Taom qo'shish" — avval standart katalog (#29) */
+  const openNewItem = () => setPicker('items');
 
   /** "Milliy taomlar › Palov" — sub-menyu bo'lsa ota nomi bilan */
   const categoryLabel = (id: number) => {
@@ -768,7 +769,7 @@ export default function MenuPage() {
             Avval kategoriya qo'shing (masalan, «Milliy taomlar»), keyin uning ichida sub-menyu («Palov»).
           </p>
           <button
-            onClick={() => setCategoryModal({})}
+            onClick={() => setPicker('categories')}
             className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
           >
             + Kategoriya qo'shish
@@ -831,7 +832,7 @@ export default function MenuPage() {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => setCategoryModal({})}
+            onClick={() => setPicker('categories')}
             className="inline-flex items-center gap-2 border border-gray-300 text-gray-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
           >
             <Plus size={18} />
@@ -847,12 +848,7 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <PageGuide
-        id="menu"
-        title="Menyu bo'limi nima uchun?"
-        intro="Bu yerda restoraningiz menyusini tuzasiz. Ofitsiant, kassa va Telegram mijozlari aynan shu menyuni ko'radi. Menyu ikki qavatli: kategoriya (masalan, «Suvlar») → uning ichida sub-menyu («Gazli suv») → taomlar."
-        steps={GUIDE_STEPS}
-      />
+      <PageGuide id="menu" />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Categories tree */}
@@ -953,7 +949,7 @@ export default function MenuPage() {
                     <FolderOpen size={24} className="text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">Kategoriya yo'q</p>
                     <button
-                      onClick={() => setCategoryModal({})}
+                      onClick={() => setPicker('categories')}
                       className="mt-2 text-sm text-amber-700 hover:text-amber-800 font-medium"
                     >
                       + Birinchi kategoriyani qo'shish
@@ -1105,6 +1101,19 @@ export default function MenuPage() {
             Math.max(0, ...categories.filter((c) => (c.parent_id ?? null) === parentId).map((c) => c.sort_order ?? 0)) + 1
           }
           onClose={() => setCategoryModal(null)}
+        />
+      )}
+
+      {picker && (
+        <CatalogPickerModal
+          mode={picker}
+          onClose={() => setPicker(null)}
+          onCreateNew={() => {
+            const mode = picker;
+            setPicker(null);
+            if (mode === 'items') openItemForm();
+            else setCategoryModal({});
+          }}
         />
       )}
 

@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    // #26: restoran botlari — webhook manzili (API) va Mini App manzili (SPA)
+    'telegram' => [
+        'webhook_base' => env('TELEGRAM_WEBHOOK_BASE', env('APP_URL')),
+        'frontend_url' => env('FRONTEND_URL', env('APP_URL')),
+    ],
+
 ];

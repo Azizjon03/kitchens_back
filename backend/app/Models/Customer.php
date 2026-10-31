@@ -11,8 +11,20 @@ class Customer extends Model
     use HasFactory;
 
     protected $fillable = [
-        'telegram_id', 'name', 'phone',
+        'telegram_id', 'name', 'phone', 'latitude', 'longitude', 'address', 'registered_at',
     ];
+
+    protected $casts = [
+        'registered_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
+    ];
+
+    /** #26: telefon, F.I.SH va joylashuv berilgan — buyurtma tugmasi ochiladi */
+    public function isRegistered(): bool
+    {
+        return $this->registered_at !== null;
+    }
 
     public function favorites(): HasMany
     {

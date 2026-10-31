@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { Check, Clock } from 'lucide-react';
+import TgOfflineBanner from './TgOfflineBanner';
 import { formatMoney } from '../../lib/format';
 
 
@@ -19,6 +20,7 @@ interface TgOrder {
 
 const STEPS_DINE_IN = ['preparing', 'ready', 'served', 'paid'];
 const STEPS_TAKEAWAY = ['preparing', 'ready', 'paid'];
+const STEPS_DELIVERY = ['preparing', 'ready', 'delivering', 'delivered'];
 
 // Statuses that will never change again — once here, polling for updates is pointless.
 const TERMINAL_STATUSES = ['paid', 'closed', 'cancelled'];
@@ -30,6 +32,8 @@ const LABELS: Record<string, string> = {
   paid: "To'landi",
   closed: 'Yakunlandi',
   cancelled: 'Bekor qilindi',
+  delivering: "Yo'lda",
+  delivered: 'Yetkazildi',
 };
 
 /**
@@ -101,12 +105,13 @@ export default function TgOrderStatusPage() {
     );
   }
 
-  const steps = order.type === 'dine_in' ? STEPS_DINE_IN : STEPS_TAKEAWAY;
+  const steps = order.type === 'dine_in' ? STEPS_DINE_IN : order.type === 'delivery' ? STEPS_DELIVERY : STEPS_TAKEAWAY;
   const cancelled = order.status === 'cancelled';
   const currentIdx = progressIndex(steps, order.status);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
+      <TgOfflineBanner />
       <div className="max-w-md mx-auto space-y-4">
         <div className="bg-white rounded-2xl border border-gray-200 p-5 text-center">
           <p className="text-sm text-gray-500">Buyurtma</p>

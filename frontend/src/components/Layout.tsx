@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building2,
   Globe,
+  Send,
   CreditCard,
   History,
   UtensilsCrossed,
@@ -195,6 +196,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: 'Kompaniyalar', path: '/companies', icon: <Building2 size={20} />, roles: ['super_admin'] },
     { label: 'Tariflar', path: '/plans', icon: <CreditCard size={20} />, roles: ['super_admin'] },
     { label: 'Standart menyu', path: '/catalog', icon: <BookMarked size={20} />, roles: ['super_admin'] },
+    { label: 'Telegram botlar', path: '/telegram-bots', icon: <Send size={20} />, roles: ['super_admin'] },
     { label: 'Tarix', path: '/history', icon: <History size={20} />, roles: ['super_admin'] },
     // Company
     { label: 'Menyu', path: '/menu', icon: <UtensilsCrossed size={20} />, roles: ['company_admin', 'manager'] },
@@ -207,6 +209,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: 'Xodimlar', path: '/staff', icon: <Users size={20} />, roles: ['company_admin'] },
     { label: 'Restoran sahifasi', path: '/public-page', icon: <Globe size={20} />, roles: ['company_admin'] },
     { label: 'Filiallar', path: '/branches', icon: <Building2 size={20} />, roles: ['company_admin'] },
+    { label: 'Telegram bot', path: '/telegram-bot', icon: <Send size={20} />, roles: ['company_admin'] },
   ];
 
   const navItems = allNav.filter((item) => item.roles.includes(role));

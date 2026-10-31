@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { User, Branch, Role } from '../types';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 
@@ -303,13 +304,25 @@ export default function StaffPage() {
         </button>
       </div>
 
+      <PageGuide id="staff" />
+
       {isLoading ? (
         <div className="p-8 text-center">
           <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
         </div>
       ) : staff.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <p className="text-gray-500 text-sm">Xodimlar topilmadi</p>
+          <p className="text-gray-800 font-medium">Hali xodim yo'q</p>
+          <p className="mt-1 text-sm text-gray-600">Ofitsiant, oshpaz va kassirga alohida login bering — har biri faqat o'z ishini ko'radi.</p>
+          <button
+            onClick={() => {
+              setEditStaff(undefined);
+              setShowModal(true);
+            }}
+            className="mt-4 min-h-11 px-4 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
+          >
+            Birinchi xodimni qo'shish
+          </button>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">

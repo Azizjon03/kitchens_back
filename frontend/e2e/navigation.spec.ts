@@ -13,10 +13,10 @@ async function openSidebarIfCollapsed(page: Page) {
   }
 }
 
-const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Tarix'];
+const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Telegram botlar', 'Tarix'];
 const COMPANY_ADMIN_LINKS = [
   'Dashboard', 'Menyu', "Qo'shimchalar", 'Stollar', 'Ofitsiant',
-  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Restoran sahifasi', 'Filiallar',
+  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Restoran sahifasi', 'Filiallar', 'Telegram bot',
 ];
 
 // authenticatedPage — super admin
@@ -150,7 +150,8 @@ test.describe('Company admin navigatsiyasi', () => {
   });
 
   test('company admin dashboard da kompaniya bloki ko\'rsatilishi kerak', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Kompaniya Dashboard' })).toBeVisible();
+    // #25: "Bugungi ish" bloki doim; "Birinchi qadamlar" — restoran to'liq sozlanmaguncha
+    await expect(page.getByRole('heading', { name: 'Bugungi ish' })).toBeVisible();
     await expect(page.getByText('Jami kompaniyalar')).toHaveCount(0);
   });
 
