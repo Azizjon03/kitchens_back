@@ -17,9 +17,11 @@ import {
   Trash2,
   ShoppingBag,
   Filter,
+  LayoutTemplate,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { useAuth } from '../lib/auth';
+import TableSetModal from '../components/TableSetModal';
 import { formatMoney, formatDateTime } from '../lib/format';
 
 // ─── Constants ───────────────────────────────────────────────────
@@ -688,6 +690,7 @@ function OrderDetailModal({
   const [showPayment, setShowPayment] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showTableSet, setShowTableSet] = useState(false);
   const [error, setError] = useState('');
 
   const { user } = useAuth();
@@ -719,6 +722,15 @@ function OrderDetailModal({
   }
   if (showDiscount) {
     return <DiscountModal order={order} onClose={() => setShowDiscount(false)} />;
+  }
+  if (showTableSet) {
+    return (
+      <TableSetModal
+        orderId={order.id}
+        tableLabel={order.table ? `Stol #${order.table.number}` : `#${order.id}`}
+        onClose={() => setShowTableSet(false)}
+      />
+    );
   }
   if (showCancel) {
     return <CancelModal order={order} onClose={() => setShowCancel(false)} />;
@@ -905,6 +917,15 @@ function OrderDetailModal({
               >
                 <ArrowRight size={16} />
                 {statusMutation.isPending ? 'Saqlanmoqda...' : nextStatusLabel}
+              </button>
+            )}
+            {showEdit && order.table?.table_template_id && (
+              <button
+                onClick={() => setShowTableSet(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <LayoutTemplate size={16} />
+                Stoldagi narsalar
               </button>
             )}
             {showEdit && (

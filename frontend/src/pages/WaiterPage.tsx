@@ -5,9 +5,10 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch, Table, Order, Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
+import TableSetModal from '../components/TableSetModal';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
-import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3 } from 'lucide-react';
+import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
 import { buildMenuTree } from '../lib/menuTree';
 
@@ -382,6 +383,8 @@ export default function WaiterPage() {
   const [composerTable, setComposerTable] = useState<Table | null>(null);
   const [alerts, setAlerts] = useState<{ id: number; label: string }[]>([]);
   const [actionError, setActionError] = useState('');
+  // Stol to'plami (#24): stoldagi narsalardan ochilganini belgilash
+  const [tableSetOrder, setTableSetOrder] = useState<Order | null>(null);
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -605,7 +608,7 @@ export default function WaiterPage() {
                   {STATUS_MAP[o.status]?.label ?? o.status}
                 </span>
               </div>
-              <div className={`flex items-center justify-between text-sm ${o.status === 'ready' && o.type === 'dine_in' ? 'mb-3' : ''}`}>
+              <div className={`flex items-center justify-between text-sm ${(o.status === 'ready' && o.type === 'dine_in') || o.table?.table_template_id ? 'mb-3' : ''}`}>
                 <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
                 <span className="font-medium text-gray-900 tabular-nums">{formatMoney(Number(o.total))}</span>
               </div>
@@ -618,9 +621,21 @@ export default function WaiterPage() {
                   <Check size={18} /> {serveMutation.isPending && serveMutation.variables === o.id ? 'Saqlanmoqda...' : 'Berildi'}
                 </button>
               )}
+              {o.table?.table_template_id && (
+                <button
+                  onClick={() => setTableSetOrder(o)}
+                  className="mt-2 w-full min-h-11 px-3 py-2 border border-gray-300 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-50 inline-flex items-center justify-center gap-1"
+                >
+                  <LayoutTemplate size={16} aria-hidden="true" /> Stoldagi narsalar
+                </button>
+              )}
             </div>
           ))}
         </div>
+      )}
+
+      {tableSetOrder && (
+        <TableSetModal orderId={tableSetOrder.id} tableLabel={tableLabel(tableSetOrder)} onClose={() => setTableSetOrder(null)} />
       )}
 
       {composerTable && branchId !== null && (
