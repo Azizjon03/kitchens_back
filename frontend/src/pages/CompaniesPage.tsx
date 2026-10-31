@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import type { Company } from '../types';
+import PageGuide from '../components/PageGuide';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { Building2, Plus, X, ExternalLink, Search, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -133,7 +136,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Manzil nomi (slug) <span className="text-red-600" aria-hidden="true">*</span></label>
+            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Manzil nomi (slug) <span className="text-red-600" aria-hidden="true">*</span> <HelpHint text={FIELD_HINTS.slug} label="Manzil nomi haqida" /></label>
             <input
               id="company-slug"
               aria-invalid={!!fieldErrors.slug}
@@ -339,6 +342,8 @@ export default function CompaniesPage() {
           Yangi kompaniya
         </button>
       </div>
+
+      <PageGuide id="companies" />
 
       {/* Search */}
       <div className="mb-4">

@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { CashShift, Branch } from '../types';
+import PageGuide from '../components/PageGuide';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
 import {
   Plus,
@@ -127,7 +130,7 @@ function OpenShiftModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Boshlang'ich summa
+              Boshlang'ich summa <HelpHint text={FIELD_HINTS.openingCash} label="Boshlang'ich summa haqida" />
             </label>
             <input
               type="number"
@@ -239,7 +242,7 @@ function CloseShiftModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Yopish summasi</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Yopish summasi <HelpHint text={FIELD_HINTS.closingCash} label="Yopish summasi haqida" /></label>
             <input
               type="number"
               required
@@ -559,6 +562,8 @@ export default function CashShiftsPage() {
         )}
       </div>
 
+      <PageGuide id="cashShifts" />
+
       {/* Current shift card */}
       {currentShift && (
         <div className="bg-white rounded-xl border-2 border-green-300 p-6 mb-6">
@@ -637,8 +642,17 @@ export default function CashShiftsPage() {
         </div>
       ) : shifts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <Banknote size={40} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Smenalar topilmadi</p>
+          <Banknote size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
+          <p className="text-gray-800 font-medium">Hali smena ochilmagan</p>
+          <p className="mt-1 text-sm text-gray-600">To'lov qabul qilish uchun ish boshida smena oching va kassadagi naqd pulni yozing.</p>
+          {!currentShift && (
+            <button
+              onClick={() => setShowOpenModal(true)}
+              className="mt-4 min-h-11 px-4 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
+            >
+              Smena ochish
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

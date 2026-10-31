@@ -148,7 +148,8 @@ test.describe('Company admin navigatsiyasi', () => {
   });
 
   test('company admin dashboard da kompaniya bloki ko\'rsatilishi kerak', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Kompaniya Dashboard' })).toBeVisible();
+    // #25: "Bugungi ish" bloki doim; "Birinchi qadamlar" — restoran to'liq sozlanmaguncha
+    await expect(page.getByRole('heading', { name: 'Bugungi ish' })).toBeVisible();
     await expect(page.getByText('Jami kompaniyalar')).toHaveCount(0);
   });
 

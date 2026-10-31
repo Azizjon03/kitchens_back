@@ -3,6 +3,8 @@ import { useAuth } from '../lib/auth';
 import api from '../lib/api';
 import type { DashboardStats } from '../types';
 import { Building2, Users, ClipboardList, DollarSign, TrendingUp } from 'lucide-react';
+import PageGuide from '../components/PageGuide';
+import FirstSteps from '../components/FirstSteps';
 import Layout from '../components/Layout';
 import { formatMoney } from '../lib/format';
 
@@ -99,13 +101,11 @@ function SuperAdminDashboard() {
 function CompanyDashboard() {
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-        <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Building2 size={32} className="text-amber-500" />
-        </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Kompaniya Dashboard</h2>
-        <p className="text-gray-500">
-          Bu yerda kompaniya statistikasi ko'rsatiladi.
+      <FirstSteps />
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="font-semibold text-gray-900 mb-1">Bugungi ish</h2>
+        <p className="text-sm text-gray-600">
+          Buyurtmalar — «Buyurtmalar» bo'limida, tushum va smena hisoboti — «Kassa» bo'limida.
         </p>
       </div>
     </div>
@@ -124,6 +124,8 @@ export default function DashboardPage() {
           Xush kelibsiz, {user?.name || user?.full_name}!
         </p>
       </div>
+
+      {user?.role !== 'super_admin' && <PageGuide id="dashboard" />}
 
       {isSuperAdmin ? <SuperAdminDashboard /> : <CompanyDashboard />}
     </Layout>
