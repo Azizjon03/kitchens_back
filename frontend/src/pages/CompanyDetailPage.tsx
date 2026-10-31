@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
 import {
   ArrowLeft,
@@ -160,7 +162,7 @@ function EditCompanyModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Manzil nomi (slug) <HelpHint text={FIELD_HINTS.slug} label="Manzil nomi haqida" /></label>
             <input
               type="text"
               required

@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import type { Branch, Table, Order, Category, MenuItem } from '../types';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import TableSetModal from '../components/TableSetModal';
 import { LoadingState, ErrorState } from '../components/QueryState';
@@ -510,6 +512,8 @@ export default function WaiterPage() {
           </select>
         )}
       </div>
+
+      <PageGuide id="waiter" />
       {actionError && (
         <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
           <span>{actionError}</span>
@@ -572,7 +576,14 @@ export default function WaiterPage() {
         {!tablesLoading && !tablesFailed && tables.length === 0 && (
           <div className="col-span-full bg-white rounded-xl border border-gray-200 p-6 text-center text-sm text-gray-500">
             <Grid3X3 size={32} className="text-gray-300 mx-auto mb-2" aria-hidden="true" />
-            Bu filialda hali stol yo'q
+            <p className="font-medium text-gray-800">Bu filialda hali stol yo'q</p>
+            {user?.role === 'waiter' ? (
+              <p className="mt-1">Admin yoki menejerga ayting — u «Stollar» bo'limida stol qo'shadi.</p>
+            ) : (
+              <Link to="/tables" className="mt-3 min-h-11 inline-flex items-center px-4 bg-amber-700 text-white rounded-lg font-medium hover:bg-amber-800">
+                Stol qo'shish
+              </Link>
+            )}
           </div>
         )}
       </div>
@@ -592,7 +603,8 @@ export default function WaiterPage() {
       ) : sortedOrders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-500">
           <ClipboardList size={36} className="text-gray-300 mx-auto mb-2" aria-hidden="true" />
-          Faol buyurtmalar yo'q
+          <p className="font-medium text-gray-800">Faol buyurtma yo'q</p>
+          <p className="mt-1">Yuqoridan bo'sh stolni bosing va buyurtma oling.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

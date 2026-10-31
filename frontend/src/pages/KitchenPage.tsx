@@ -5,6 +5,7 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
 import { Check, ChefHat, X } from 'lucide-react';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
@@ -343,6 +344,8 @@ export default function KitchenPage() {
           </select>
         )}
       </div>
+
+      <PageGuide id="kitchen" />
       {actionError && (
         <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
           <span>{actionError}</span>
@@ -360,7 +363,8 @@ export default function KitchenPage() {
       ) : sorted.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
           <ChefHat size={48} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
-          <p className="text-gray-500 text-lg">Hozircha faol buyurtmalar yo'q</p>
+          <p className="text-gray-800 text-lg font-medium">Hozircha buyurtma yo'q</p>
+          <p className="mt-1 text-gray-600">Ofitsiant yoki Telegram mijozi buyurtma berishi bilan shu yerda o'zi paydo bo'ladi — sahifani yangilash shart emas.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 2xl:gap-5">

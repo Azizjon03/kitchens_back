@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Modifier, Addon } from '../types';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
@@ -91,7 +92,7 @@ function ModifierModal({
       <div className="bg-white rounded-2xl w-full max-w-md">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">
-            {isEdit ? 'Modifikatorni tahrirlash' : 'Yangi modifikator'}
+            {isEdit ? 'Istakni tahrirlash' : 'Yangi istak'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={20} />
@@ -118,7 +119,7 @@ function ModifierModal({
               required
               value={form.name_uz}
               onChange={(e) => setForm((p) => ({ ...p, name_uz: e.target.value }))}
-              placeholder="Modifikator nomi (UZ)"
+              placeholder="Masalan: Piyozsiz"
               className={inputClass}
             />
           </div>
@@ -130,7 +131,7 @@ function ModifierModal({
               required
               value={form.name_ru}
               onChange={(e) => setForm((p) => ({ ...p, name_ru: e.target.value }))}
-              placeholder="Название модификатора (RU)"
+              placeholder="Например: Без лука"
               className={inputClass}
             />
           </div>
@@ -364,7 +365,7 @@ export default function ModifiersPage() {
   });
 
   const tabs = [
-    { key: 'modifiers' as const, label: 'Modifikatorlar' },
+    { key: 'modifiers' as const, label: 'Istaklar' },
     { key: 'addons' as const, label: "Qo'shimchalar" },
   ];
 
@@ -373,9 +374,11 @@ export default function ModifiersPage() {
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          Modifikatorlar va Qo'shimchalar
+          Qo'shimchalar va istaklar
         </h1>
       </div>
+
+      <PageGuide id="modifiers" />
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
@@ -408,7 +411,7 @@ export default function ModifiersPage() {
               className="inline-flex items-center gap-2 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
             >
               <Plus size={18} />
-              Yangi modifikator
+              Yangi istak
             </button>
           </div>
 
@@ -418,15 +421,16 @@ export default function ModifiersPage() {
             </div>
           ) : modifiers.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 text-sm">Modifikatorlar topilmadi</p>
+              <p className="text-gray-800 font-medium">Hali istak yo'q</p>
+              <p className="mt-1 text-sm text-gray-600">Masalan: «Piyozsiz», «Achchiq», «Kam tuzli» — ofitsiant buyurtmada belgilaydi, oshpaz ko'radi.</p>
               <button
                 onClick={() => {
                   setEditModifier(undefined);
                   setShowModifierModal(true);
                 }}
-                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
+                className="mt-4 min-h-11 px-4 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
               >
-                Yangi modifikator qo'shish
+                Birinchi istakni qo'shish
               </button>
             </div>
           ) : (
@@ -506,15 +510,16 @@ export default function ModifiersPage() {
             </div>
           ) : addons.length === 0 ? (
             <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-              <p className="text-gray-500 text-sm">Qo'shimchalar topilmadi</p>
+              <p className="text-gray-800 font-medium">Hali qo'shimcha yo'q</p>
+              <p className="mt-1 text-sm text-gray-600">Masalan: qazi, bedana tuxumi, limon — taomga qo'shib sotiladi va narxi hisobga qo'shiladi.</p>
               <button
                 onClick={() => {
                   setEditAddon(undefined);
                   setShowAddonModal(true);
                 }}
-                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
+                className="mt-4 min-h-11 px-4 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
               >
-                Yangi qo'shimcha qo'shish
+                Birinchi qo'shimchani qo'shish
               </button>
             </div>
           ) : (
@@ -587,8 +592,8 @@ export default function ModifiersPage() {
 
       {deleteModifier && (
         <DeleteConfirmModal
-          title="Modifikatorni o'chirish"
-          message={`"${deleteModifier.name_uz}" modifikatorini o'chirishni tasdiqlaysizmi?`}
+          title="Istakni o'chirish"
+          message={`"${deleteModifier.name_uz}" istagini o'chirishni tasdiqlaysizmi?`}
           onConfirm={() => deleteModifierMutation.mutate(deleteModifier.id)}
           onClose={() => setDeleteModifier(null)}
           isPending={deleteModifierMutation.isPending}

@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Category, MenuItem } from '../types';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
 import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
@@ -473,6 +475,7 @@ function MenuItemModal({
             <div>
               <label htmlFor="item-price" className="block text-sm font-medium text-gray-700 mb-1">
                 {form.sell_type === 'weight' ? "1 kg narxi (so'm)" : "Narxi (so'm)"} <span className="text-red-500">*</span>
+                {form.sell_type === 'weight' && <HelpHint text={FIELD_HINTS.weightPrice} label="1 kg narxi haqida" />}
               </label>
               <input
                 id="item-price"
@@ -597,14 +600,6 @@ function DeleteConfirmModal({
 }
 
 // ─── Main Menu Page ───────────────────────────────────────────────
-
-const GUIDE_STEPS = [
-  "«Kategoriya» tugmasini bosib asosiy kategoriya qo'shing — masalan, «Milliy taomlar» yoki «Suvlar».",
-  "Kategoriya yonidagi papka belgisini bosib, uning ichida sub-menyu qo'shing — masalan, «Palov» yoki «Gazli suv».",
-  "«Taom» tugmasini bosing va taomni kerakli sub-menyuga qo'shing.",
-  "Narxini yozing. Vazn bilan sotilsa (osh, kabob) — «Vazn bilan» ni tanlab, 1 kg narxini yozing.",
-  "Osh uchun qo'shimchalar (qazi, bedana tuxumi, limon) — chap menyudagi «Qo'shimchalar» bo'limida qo'shiladi va taomga biriktiriladi.",
-];
 
 type DeleteTarget = {
   type: 'category' | 'item';
@@ -847,12 +842,7 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <PageGuide
-        id="menu"
-        title="Menyu bo'limi nima uchun?"
-        intro="Bu yerda restoraningiz menyusini tuzasiz. Ofitsiant, kassa va Telegram mijozlari aynan shu menyuni ko'radi. Menyu ikki qavatli: kategoriya (masalan, «Suvlar») → uning ichida sub-menyu («Gazli suv») → taomlar."
-        steps={GUIDE_STEPS}
-      />
+      <PageGuide id="menu" />
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Categories tree */}

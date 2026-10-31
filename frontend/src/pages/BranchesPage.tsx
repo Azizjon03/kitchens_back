@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Branch } from '../types';
+import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import {
   Plus,
@@ -250,6 +251,8 @@ export default function BranchesPage() {
         </button>
       </div>
 
+      <PageGuide id="branches" />
+
       {/* Table */}
       {isLoading ? (
         <div className="p-8 text-center">
@@ -257,16 +260,17 @@ export default function BranchesPage() {
         </div>
       ) : branches.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-          <GitBranch size={40} className="text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Filiallar topilmadi</p>
+          <GitBranch size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
+          <p className="text-gray-800 font-medium">Hali filial yo'q</p>
+          <p className="mt-1 text-sm text-gray-600">Restoraningiz manzilini qo'shing — stollar va xodimlar filialga biriktiriladi.</p>
           <button
             onClick={() => {
               setEditBranch(undefined);
               setShowModal(true);
             }}
-            className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
+            className="mt-4 min-h-11 px-4 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800"
           >
-            Yangi filial qo'shish
+            Birinchi filialni qo'shish
           </button>
         </div>
       ) : (

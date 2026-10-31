@@ -57,7 +57,10 @@ talablar yozish. Kodni o'zingiz tuzatmaysiz.
    - forma bo'lsa: bo'sh yuborish → validatsiya xabarlari maydon yonida
      va **o'zbekcha**mi; server xatosi (masalan takroriy slug) xabari ko'rinadimi;
    - tablar/holat filtrlari: har birini oching;
-   - `browser_console_messages` — JS xatolari.
+   - `browser_console_messages` — JS xatolari;
+   - **yangi foydalanuvchi testi (#25):** localStorage'ni tozalab (`guide:*`) sahifani
+     birinchi marta ochgandek ko'ring — yo'riqnoma ochiqmi, faqat ekrandagi matnlarga
+     tayanib asosiy ishni (masalan taom qo'shish, smena ochish) bajara olasizmi.
 3. **Ma'lumotli holatni ko'ra olmasangiz** (bo'sh baza, 403) — bo'sh holat
    baholanadi, qolgani "tekshirilmadi" va 7.5 cheklovi.
 

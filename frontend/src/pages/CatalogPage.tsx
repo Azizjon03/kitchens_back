@@ -928,18 +928,7 @@ export default function CatalogPage() {
         </button>
       </div>
 
-      <PageGuide
-        id="catalog"
-        title="Standart menyu nima?"
-        intro="Bu — barcha yangi korxonalar uchun tayyor menyu. Yangi korxona ochganda restoran turini tanlaysiz (Oshxona, Fast food, Kafe yoki Hammasi) va shu turga mos taomlar unga avtomatik qo'shiladi. Korxona rahbari keyin o'z menyusini o'zi o'zgartiradi."
-        steps={[
-          "Kategoriyani bosing — ichidagi sub-menyular ochiladi (masalan: Suvlar → Gazli suv).",
-          "Sub-menyuni bosing — taomlar ro'yxati va narxlari ochiladi.",
-          "Taom qo'shish uchun sub-menyu ichidagi \"Taom qo'shish\" tugmasini bosing.",
-          "Rangli belgilar qaysi restoran turiga berilishini ko'rsatadi.",
-          "Bu yerdagi o'zgarish faqat bundan keyin ochiladigan yangi korxonalarga ta'sir qiladi.",
-        ]}
-      />
+      <PageGuide id="catalog" />
 
       <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         <Info size={18} className="mt-0.5 shrink-0" aria-hidden="true" />
