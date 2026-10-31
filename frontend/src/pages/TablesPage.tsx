@@ -55,7 +55,8 @@ function TableModal({
     mutationFn: async () => {
       const payload = {
         ...form,
-        number: parseInt(form.number),
+        // Backend stol raqamini matn sifatida qabul qiladi ("A1", "VIP-2"); son yuborilsa 422 edi
+        number: form.number.trim(),
         seats: parseInt(form.seats),
         zone: form.zone || null,
       };
@@ -101,30 +102,33 @@ function TableModal({
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-            <select
-              required
-              value={form.branch_id}
-              onChange={(e) => setForm((p) => ({ ...p, branch_id: parseInt(e.target.value) }))}
-              className={inputClass}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
+          {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+          {branches.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+              <select
+                required
+                value={form.branch_id}
+                onChange={(e) => setForm((p) => ({ ...p, branch_id: parseInt(e.target.value) }))}
+                className={inputClass}
+              >
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Stol raqami</label>
               <input
-                type="number"
+                type="text"
                 required
-                min="1"
+                maxLength={20}
                 value={form.number}
                 onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
-                placeholder="1"
+                placeholder="1, A1, VIP-2"
                 className={inputClass}
               />
             </div>
@@ -280,16 +284,18 @@ export default function TablesPage() {
 
       {/* Filters */}
       <div className="mb-4 flex items-center gap-4">
-        <select
-          value={filterBranch}
-          onChange={(e) => setFilterBranch(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-        >
-          <option value="">Barcha filiallar</option>
-          {branches.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
+        {branches.length > 1 && (
+          <select
+            value={filterBranch}
+            onChange={(e) => setFilterBranch(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+          >
+            <option value="">Barcha filiallar</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        )}
 
         {/* Status legend */}
         <div className="hidden sm:flex items-center gap-3 text-xs text-gray-500">
