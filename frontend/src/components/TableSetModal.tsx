@@ -4,6 +4,7 @@ import { Minus, Plus, X } from 'lucide-react';
 import api from '../lib/api';
 import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney } from '../lib/format';
+import { useEscape } from '../lib/useEscape';
 import { ErrorState, LoadingState } from './QueryState';
 
 /**
@@ -32,6 +33,7 @@ export default function TableSetModal({ orderId, tableLabel, onClose }: { orderI
   });
   const [used, setUsed] = useState<Record<number, number> | null>(null);
   const [saveError, setSaveError] = useState('');
+  useEscape(onClose);
   const counts = used ?? Object.fromEntries((data?.items ?? []).map((i) => [i.menu_item_id, i.used]));
   const extra = (data?.items ?? []).reduce((s, i) => s + Number(i.price) * (counts[i.menu_item_id] ?? 0), 0);
 
@@ -80,7 +82,7 @@ export default function TableSetModal({ orderId, tableLabel, onClose }: { orderI
                   <div key={i.menu_item_id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3">
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 truncate">{i.name_uz}</p>
-                      <p className="text-sm text-gray-600">Stolda {i.placed} ta · {formatMoney(i.price)}</p>
+                      <p className="text-sm text-gray-600">Stolda {i.placed} ta · donasi {formatMoney(i.price)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <button type="button" onClick={() => set(i.menu_item_id, n - 1, i.placed)} disabled={n === 0} aria-label={`${i.name_uz} — kamaytirish`} className="min-h-11 min-w-11 inline-flex items-center justify-center border border-gray-300 rounded-lg disabled:opacity-40">
@@ -100,11 +102,11 @@ export default function TableSetModal({ orderId, tableLabel, onClose }: { orderI
               </div>
             </>
           )}
-          {saveError && <p role="alert" className="text-sm text-red-600">{saveError}</p>}
+          {saveError && <div role="alert" className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-lg border border-red-100">{saveError}</div>}
         </div>
 
         <div className="flex gap-3 p-5 border-t border-gray-200">
-          <button onClick={onClose} className="flex-1 min-h-11 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Orqaga</button>
+          <button onClick={onClose} className="flex-1 min-h-11 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">Bekor qilish</button>
           <button
             onClick={() => { setSaveError(''); mutation.mutate(); }}
             disabled={!data?.template || mutation.isPending}

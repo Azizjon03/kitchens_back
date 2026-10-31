@@ -25,7 +25,7 @@ const MENU_TEMPLATES: { value: MenuTemplate; label: string; hint: string }[] = [
   { value: 'oshxona', label: 'Oshxona', hint: "Milliy taomlar: osh, sho'rva, kabob, somsa, salat, non, suv va ichimliklar" },
   { value: 'fast_food', label: 'Fast food', hint: "Lavash, burger, hot-dog, pitsa, kartoshka fri, souslar, suv va ichimliklar" },
   { value: 'kafe', label: 'Kafe', hint: "Qahva, desert, nonushta, limonad, shirinliklar, suv va ichimliklar" },
-  { value: 'hammasi', label: 'Hammasi', hint: "Yuqoridagi barcha taomlar birga — keyin keraksizini o'chirasiz" },
+  { value: 'hammasi', label: "To'liq menyu", hint: "Yuqoridagi barcha taomlar birga — keyin keraksizini o'chirasiz" },
   { value: 'bosh', label: "Bo'sh menyu", hint: "Hech narsa qo'shilmaydi — korxona menyuni o'zi to'ldiradi" },
 ];
 
@@ -133,7 +133,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Slug <span className="text-red-600" aria-hidden="true">*</span></label>
+            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Manzil nomi (slug) <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
               id="company-slug"
               aria-invalid={!!fieldErrors.slug}
@@ -145,6 +145,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="milliy-taomlar"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            <p className="mt-1 text-xs text-gray-500">Lotin harflarida, bo'shliqsiz — Telegram menyu havolasida ishlatiladi (masalan: oliyaviy-restoran). Nomdan o'zi to'ldiriladi.</p>
             {fieldErrors.slug && (
               <p id="company-slug-error" className="mt-1 text-sm text-red-600">{fieldErrors.slug}</p>
             )}
@@ -202,7 +203,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
           </fieldset>
 
           <hr className="border-gray-200" />
-          <p className="text-sm font-medium text-gray-700">Egasi (Owner)</p>
+          <p className="text-sm font-medium text-gray-700">Korxona rahbari (admin)</p>
 
           <div>
             <label htmlFor="company-owner_full_name" className="block text-sm font-medium text-gray-700 mb-1">To'liq ism <span className="text-red-600" aria-hidden="true">*</span></label>

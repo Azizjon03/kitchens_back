@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BookMarked,
@@ -17,6 +17,7 @@ import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 import { formatMoney, formatNumber } from '../lib/format';
+import { useEscape } from '../lib/useEscape';
 
 /**
  * Standart menyu katalogi (#23) — faqat super admin.
@@ -81,7 +82,7 @@ const TYPE_OPTIONS: { value: RestaurantType; label: string }[] = [
   { value: 'oshxona', label: 'Oshxona' },
   { value: 'fast_food', label: 'Fast food' },
   { value: 'kafe', label: 'Kafe' },
-  { value: 'hammasi', label: 'Hammasi' },
+  { value: 'hammasi', label: "To'liq menyu" },
 ];
 
 const TYPE_BADGE: Record<RestaurantType, string> = {
@@ -102,7 +103,7 @@ function TypeBadges({ types, inherited }: { types: RestaurantType[] | null; inhe
   if (types === null && inherited) {
     return (
       <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-        kategoriyadan
+        Kategoriya turlarida
       </span>
     );
   }
@@ -110,7 +111,7 @@ function TypeBadges({ types, inherited }: { types: RestaurantType[] | null; inhe
     // Asosiy kategoriyada tur bo'lmasa, har sub-menyu o'z turini belgilaydi
     return (
       <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-        {inherited ? 'hech qaysi turga' : "sub-menyuga qarab"}
+        {inherited ? 'Hech qaysi turga berilmaydi' : 'Turi har sub-menyuda'}
       </span>
     );
   }
@@ -152,11 +153,13 @@ function ModalShell({
   wide?: boolean;
   children: React.ReactNode;
 }) {
+  useEscape(onClose);
+  const titleId = useId();
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-white rounded-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`bg-white rounded-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-gray-900">{title}</h2>
           <button type="button" onClick={onClose} aria-label="Yopish" className={iconBtn}>
             <X size={20} />
           </button>
@@ -403,11 +406,13 @@ function ItemModal({
   categories,
   subId,
   edit,
+  onSaved,
   onClose,
 }: {
   categories: CatalogTop[];
   subId: number;
   edit?: CatalogItem;
+  onSaved?: (subId: number) => void;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -441,8 +446,11 @@ function ItemModal({
       if (edit) return (await api.put(`/super/catalog/items/${edit.id}`, payload)).data;
       return (await api.post('/super/catalog/items', payload)).data;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+      // Yangi/tahrirlangan taom ko'rinsin — uning sub-menyusi ochiladi (UI review)
+      const savedSubId = res?.data?.catalog_category_id;
+      if (savedSubId) onSaved?.(Number(savedSubId));
       onClose();
     },
     onError: (err) =>
@@ -797,6 +805,7 @@ interface DeleteTarget {
 function DeleteConfirmModal({ target, onClose }: { target: DeleteTarget; onClose: () => void }) {
   const queryClient = useQueryClient();
   const [error, setError] = useState('');
+  useEscape(onClose);
   const mutation = useMutation({
     mutationFn: async () => (await api.delete(target.url)).data,
     onSuccess: () => {
@@ -1296,7 +1305,16 @@ export default function CatalogPage() {
         <CategoryModal parent={modal.parent} edit={modal.edit} onClose={() => setModal(null)} />
       )}
       {modal?.kind === 'item' && (
-        <ItemModal categories={categories} subId={modal.subId} edit={modal.edit} onClose={() => setModal(null)} />
+        <ItemModal
+          categories={categories}
+          subId={modal.subId}
+          edit={modal.edit}
+          onClose={() => setModal(null)}
+          onSaved={(savedSubId) => {
+            const top = categories.find((t) => t.children.some((sc) => sc.id === savedSubId));
+            setOpen((prev) => new Set([...prev, `c-${top?.id}`, `s-${savedSubId}`]));
+          }}
+        />
       )}
       {modal?.kind === 'addon' && (
         <AddonModal categories={categories} edit={modal.edit} onClose={() => setModal(null)} />

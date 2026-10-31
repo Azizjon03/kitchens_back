@@ -16,7 +16,8 @@ import {
   MapPin,
   LayoutTemplate,
 } from 'lucide-react';
-import { apiErrorMessage } from '../lib/apiError';
+import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
+import { useEscape } from '../lib/useEscape';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   free: { label: 'Bo\'sh', bg: 'bg-green-100', text: 'text-green-700' },
@@ -56,6 +57,8 @@ function TableModal({
   });
   const { data: templates = [] } = useTableTemplates();
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  useEscape(onClose);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -78,7 +81,9 @@ function TableModal({
       onClose();
     },
     onError: (err: unknown) => {
-      setError(apiErrorMessage(err));
+      const byField = apiFieldErrors(err);
+      setFieldErrors(byField);
+      setError(Object.keys(byField).length ? '' : apiErrorMessage(err));
     },
   });
 
@@ -87,12 +92,12 @@ function TableModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md">
+      <div role="dialog" aria-modal="true" aria-labelledby="table-modal-title" className="bg-white rounded-2xl w-full max-w-md">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 id="table-modal-title" className="text-lg font-semibold text-gray-900">
             {isEdit ? 'Stolni tahrirlash' : 'Yangi stol'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} aria-label="Oynani yopish" className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">
             <X size={20} />
           </button>
         </div>
@@ -113,8 +118,10 @@ function TableModal({
           {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
           {branches.length > 1 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+              <label htmlFor="table-branch" className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
               <select
+              id="table-branch"
+              aria-invalid={!!fieldErrors.branch_id}
                 required
                 value={form.branch_id}
                 onChange={(e) => setForm((p) => ({ ...p, branch_id: parseInt(e.target.value) }))}
@@ -124,13 +131,16 @@ function TableModal({
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </select>
+              {fieldErrors.branch_id && <p className="mt-1 text-sm text-red-600">{fieldErrors.branch_id}</p>}
             </div>
           )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stol raqami</label>
+              <label htmlFor="table-number" className="block text-sm font-medium text-gray-700 mb-1">Stol raqami <span className="text-red-600" aria-hidden="true">*</span></label>
               <input
+              id="table-number"
+              aria-invalid={!!fieldErrors.number}
                 type="text"
                 required
                 maxLength={20}
@@ -139,10 +149,13 @@ function TableModal({
                 placeholder="1, A1, VIP-2"
                 className={inputClass}
               />
+              {fieldErrors.number && <p className="mt-1 text-sm text-red-600">{fieldErrors.number}</p>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">O'rindiqlar</label>
+              <label htmlFor="table-seats" className="block text-sm font-medium text-gray-700 mb-1">O'rindiqlar <span className="text-red-600" aria-hidden="true">*</span></label>
               <input
+              id="table-seats"
+              aria-invalid={!!fieldErrors.seats}
                 type="number"
                 required
                 min="1"
@@ -151,18 +164,22 @@ function TableModal({
                 placeholder="4"
                 className={inputClass}
               />
+              {fieldErrors.seats && <p className="mt-1 text-sm text-red-600">{fieldErrors.seats}</p>}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Zona (ixtiyoriy)</label>
+            <label htmlFor="table-zone" className="block text-sm font-medium text-gray-700 mb-1">Zona (ixtiyoriy)</label>
             <input
+              id="table-zone"
+              aria-invalid={!!fieldErrors.zone}
               type="text"
               value={form.zone}
               onChange={(e) => setForm((p) => ({ ...p, zone: e.target.value }))}
               placeholder="Veranda, Ichki zal..."
               className={inputClass}
             />
+              {fieldErrors.zone && <p className="mt-1 text-sm text-red-600">{fieldErrors.zone}</p>}
           </div>
 
           <div>
@@ -180,6 +197,7 @@ function TableModal({
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
+            {fieldErrors.table_template_id && <p className="mt-1 text-sm text-red-600">{fieldErrors.table_template_id}</p>}
             <p className="mt-1 text-xs text-gray-500">
               Shablonlar "Stol shablonlari" bo'limida tuziladi. Hisobga faqat ochilgani qo'shiladi.
             </p>
@@ -224,7 +242,7 @@ function DeleteConfirmModal({
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-sm p-6">
+      <div role="dialog" aria-modal="true" className="bg-white rounded-2xl w-full max-w-sm p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-sm text-gray-500 mb-6">{message}</p>
         <div className="flex gap-3">
@@ -299,16 +317,18 @@ export default function TablesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Stollar</h1>
           <p className="text-gray-500 text-sm mt-1">Filial stollari va ularni boshqarish</p>
         </div>
-        <button
-          onClick={() => {
-            setEditTable(undefined);
-            setShowModal(true);
-          }}
-          className="inline-flex items-center gap-2 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
-        >
-          <Plus size={18} />
-          Yangi stol
-        </button>
+        {tab === 'tables' && (
+          <button
+            onClick={() => {
+              setEditTable(undefined);
+              setShowModal(true);
+            }}
+            className="inline-flex items-center gap-2 min-h-11 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
+          >
+            <Plus size={18} />
+            Yangi stol
+          </button>
+        )}
       </div>
 
       <PageGuide
@@ -323,15 +343,15 @@ export default function TablesPage() {
         ]}
       />
 
-      <div role="tablist" className="mb-6 inline-flex rounded-xl border border-gray-200 bg-white p-1">
+      <div role="tablist" className="mb-6 flex gap-1 border-b border-gray-200">
         {([['tables', 'Stollar'], ['templates', 'Stol shablonlari']] as const).map(([key, label]) => (
           <button
             key={key}
             role="tab"
             aria-selected={tab === key}
             onClick={() => setTab(key)}
-            className={`min-h-11 px-4 rounded-lg text-sm font-medium transition-colors ${
-              tab === key ? 'bg-amber-700 text-white' : 'text-gray-700 hover:bg-gray-50'
+            className={`min-h-11 px-4 -mb-px border-b-2 text-sm font-medium transition-colors ${
+              tab === key ? 'border-amber-700 text-amber-800' : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             {label}
@@ -389,7 +409,7 @@ export default function TablesPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {tables.map((table) => {
             const st = STATUS_MAP[table.status] || STATUS_MAP.free;
             const borderClass = STATUS_BORDER[table.status] || 'border-gray-200';
@@ -427,16 +447,17 @@ export default function TablesPage() {
                 </div>
 
                 {/* Status buttons */}
-                <div className="flex flex-wrap gap-1 mb-3">
+                <div className="grid grid-cols-2 gap-1.5 mb-3" role="group" aria-label="Stol holati">
                   {['free', 'occupied', 'reserved', 'cleaning'].map((s) => (
                     <button
                       key={s}
                       onClick={() => statusMutation.mutate({ id: table.id, status: s })}
                       disabled={table.status === s}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      aria-pressed={table.status === s}
+                      className={`min-h-11 px-2 rounded-lg text-sm font-medium transition-colors ${
                         table.status === s
                           ? `${STATUS_MAP[s].bg} ${STATUS_MAP[s].text}`
-                          : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
                       }`}
                     >
                       {STATUS_MAP[s].label}
@@ -445,22 +466,22 @@ export default function TablesPage() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
                   <button
                     onClick={() => {
                       setEditTable(table);
                       setShowModal(true);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-gray-500 hover:text-amber-700 transition-colors"
+                    className="min-h-11 min-w-0 flex items-center justify-center gap-1 rounded-lg text-sm text-gray-700 hover:text-amber-800 hover:bg-amber-50 transition-colors"
                   >
-                    <Pencil size={12} />
+                    <Pencil size={16} aria-hidden="true" />
                     Tahrirlash
                   </button>
                   <button
                     onClick={() => setDeleteTarget({ id: table.id, number: table.number })}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-gray-500 hover:text-red-500 transition-colors"
+                    className="min-h-11 min-w-0 flex items-center justify-center gap-1 rounded-lg text-sm text-gray-700 hover:text-red-700 hover:bg-red-50 transition-colors"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={16} aria-hidden="true" />
                     O'chirish
                   </button>
                 </div>

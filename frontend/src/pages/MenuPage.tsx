@@ -1005,7 +1005,7 @@ export default function MenuPage() {
                     <tr className="border-b border-gray-200 bg-gray-50">
                       <th className="text-left px-6 py-3 font-medium text-gray-500">Taom</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-500">Kategoriya</th>
-                      <th className="text-left px-6 py-3 font-medium text-gray-500">Narxi</th>
+                      <th className="text-right px-6 py-3 font-medium text-gray-500">Narxi</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-500">Vaqt</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-500">Holati</th>
                       <th className="text-left px-6 py-3 font-medium text-gray-500">Amallar</th>
@@ -1030,7 +1030,7 @@ export default function MenuPage() {
                         <td className="px-6 py-4 text-gray-500">
                           {categoryLabel(item.category_id)}
                         </td>
-                        <td className="px-6 py-4 font-medium text-gray-900">
+                        <td className="px-6 py-4 font-medium text-gray-900 text-right tabular-nums whitespace-nowrap">
                           {formatMoney(item.price)}
                         </td>
                         <td className="px-6 py-4 text-gray-500">

@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LayoutTemplate, Pencil, Plus, Trash2, X } from 'lucide-react';
 import api from '../lib/api';
-import { apiErrorMessage } from '../lib/apiError';
+import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
+import { useEscape } from '../lib/useEscape';
 import { formatMoney } from '../lib/format';
 import { ErrorState, LoadingState } from './QueryState';
 import { useTableTemplates, type TableTemplate } from '../lib/tableTemplates';
@@ -14,6 +15,7 @@ import { useTableTemplates, type TableTemplate } from '../lib/tableTemplates';
 interface MenuOption {
   id: number;
   label: string;
+  group: string;
   price: number;
 }
 
@@ -36,7 +38,7 @@ function useMenuOptions() {
       return cats.flatMap((c) => {
         const parent = c.parent_id ? byId.get(c.parent_id) : undefined;
         const group = parent ? `${parent.name_uz} → ${c.name_uz}` : c.name_uz;
-        return (c.menu_items ?? []).map((m) => ({ id: m.id, label: `${m.name_uz} (${group})`, price: Number(m.price) }));
+        return (c.menu_items ?? []).map((m) => ({ id: m.id, label: m.name_uz, group, price: Number(m.price) }));
       });
     },
   });
@@ -50,6 +52,14 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
     template?.items.map((i) => ({ menu_item_id: i.menu_item_id, quantity: i.quantity })) ?? [{ menu_item_id: '', quantity: 1 }],
   );
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  useEscape(onClose);
+  // ~180 taomli to'liq menyuda tekis ro'yxat o'qilmaydi — kategoriya → sub-menyu bo'yicha guruhlar
+  const groups = useMemo(() => {
+    const m = new Map<string, MenuOption[]>();
+    options.forEach((o) => m.set(o.group, [...(m.get(o.group) ?? []), o]));
+    return [...m.entries()];
+  }, [options]);
   const priceOf = useMemo(() => new Map(options.map((o) => [o.id, o.price])), [options]);
   const total = rows.reduce((sum, r) => sum + (r.menu_item_id ? (priceOf.get(r.menu_item_id) ?? 0) * r.quantity : 0), 0);
 
@@ -64,7 +74,11 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
       queryClient.invalidateQueries({ queryKey: ['table-templates'] });
       onClose();
     },
-    onError: (err) => setError(apiErrorMessage(err)),
+    onError: (err) => {
+      const byField = apiFieldErrors(err);
+      setFieldErrors(byField);
+      setError(Object.keys(byField).length ? '' : apiErrorMessage(err));
+    },
   });
 
   const update = (i: number, patch: Partial<(typeof rows)[number]>) =>
@@ -72,9 +86,9 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-labelledby="tpl-title" className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between p-5 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{template ? 'Shablonni tahrirlash' : 'Yangi stol shabloni'}</h2>
+          <h2 id="tpl-title" className="text-lg font-semibold text-gray-900">{template ? 'Shablonni tahrirlash' : 'Yangi stol shabloni'}</h2>
           <button onClick={onClose} aria-label="Oynani yopish" className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100">
             <X size={20} />
           </button>
@@ -92,7 +106,8 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
             <label htmlFor="tpl-name" className="block text-sm font-medium text-gray-700 mb-1">
               Shablon nomi <span className="text-red-600" aria-hidden="true">*</span>
             </label>
-            <input id="tpl-name" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="Masalan: VIP stol, Oilaviy stol" className={inputClass} />
+            <input id="tpl-name" required maxLength={100} aria-invalid={!!fieldErrors.name} value={name} onChange={(e) => setName(e.target.value)} placeholder="Masalan: VIP stol, Oilaviy stol" className={inputClass} />
+            {fieldErrors.name && <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>}
           </div>
 
           <div>
@@ -103,7 +118,8 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
             ) : (
               <div className="space-y-2">
                 {rows.map((r, i) => (
-                  <div key={i} className="flex items-center gap-2">
+                  <div key={i}>
+                  <div className="flex items-center gap-2">
                     <select
                       aria-label={`${i + 1}-narsa`}
                       required
@@ -112,8 +128,12 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
                       className={`${inputClass} flex-1 min-h-11`}
                     >
                       <option value="">Menyudan tanlang...</option>
-                      {options.map((o) => (
-                        <option key={o.id} value={o.id}>{o.label}</option>
+                      {groups.map(([group, opts]) => (
+                        <optgroup key={group} label={group}>
+                          {opts.map((o) => (
+                            <option key={o.id} value={o.id}>{o.label}</option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                     <input
@@ -135,6 +155,10 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
                     >
                       <Trash2 size={18} />
                     </button>
+                  </div>
+                  {(fieldErrors[`items.${i}.menu_item_id`] || fieldErrors[`items.${i}.quantity`]) && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors[`items.${i}.menu_item_id`] ?? fieldErrors[`items.${i}.quantity`]}</p>
+                  )}
                   </div>
                 ))}
                 <button
@@ -176,6 +200,7 @@ export default function TableTemplatesPanel() {
   const [editing, setEditing] = useState<TableTemplate | 'new' | null>(null);
   const [deleting, setDeleting] = useState<TableTemplate | null>(null);
   const [deleteError, setDeleteError] = useState('');
+  useEscape(() => setDeleting(null), deleting !== null);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => (await api.delete(`/table-templates/${id}`)).data,
