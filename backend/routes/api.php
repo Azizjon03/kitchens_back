@@ -13,6 +13,9 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\SuperAdmin\AuditLogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CatalogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
+use App\Http\Controllers\Api\V1\SuperAdmin\TelegramBotController as SuperTelegramBotController;
+use App\Http\Controllers\Api\V1\TelegramBotController;
+use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
@@ -40,7 +43,12 @@ Route::prefix('v1')->group(function () {
         Route::get('menu', [TgMenuController::class, 'index']);
         Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1,tg-orders');
         Route::get('orders/{order}', [TgOrderController::class, 'show']);
+        Route::get('me', [TgOrderController::class, 'me']);
     });
+
+    // #26: Telegram webhook — sirli kalit bilan himoyalangan, Telegram IP'laridan keladi
+    Route::post('telegram/webhook/{bot}', TelegramWebhookController::class)
+        ->whereNumber('bot')->middleware('throttle:600,1,tg-webhook');
 
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -65,6 +73,12 @@ Route::prefix('v1')->group(function () {
 
             // Branches (write) & Staff (company_admin only)
             Route::middleware('role:company_admin')->group(function () {
+                // #26: restoranning Telegram boti
+                Route::get('telegram-bot', [TelegramBotController::class, 'show']);
+                Route::post('telegram-bot', [TelegramBotController::class, 'store'])->middleware('throttle:10,1,tg-connect');
+                Route::post('telegram-bot/reconnect', [TelegramBotController::class, 'reconnect'])->middleware('throttle:10,1,tg-connect');
+                Route::delete('telegram-bot', [TelegramBotController::class, 'destroy']);
+
                 Route::apiResource('branches', BranchController::class)->except(['index']);
                 Route::apiResource('users', UserController::class);
             });
@@ -139,6 +153,7 @@ Route::prefix('v1')->group(function () {
 
             // Standart menyu katalogi (#23) — global, faqat super admin
             Route::get('catalog', [CatalogController::class, 'index']);
+            Route::get('telegram-bots', [SuperTelegramBotController::class, 'index']); // #26
             Route::post('catalog/categories', [CatalogController::class, 'storeCategory']);
             Route::put('catalog/categories/{category}', [CatalogController::class, 'updateCategory']);
             Route::delete('catalog/categories/{category}', [CatalogController::class, 'destroyCategory']);

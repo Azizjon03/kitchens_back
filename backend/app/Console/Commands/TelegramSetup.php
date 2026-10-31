@@ -3,22 +3,23 @@
 namespace App\Console\Commands;
 
 use App\Models\Company;
-use App\Services\Telegram\TelegramClient;
+use App\Services\Telegram\TelegramBotService;
 use Illuminate\Console\Command;
 
+/**
+ * Botni server buyrug'i bilan qayta sozlash (webhook + menyu tugmasi + buyruqlar).
+ * Odatda kerak emas — korxona rahbari panel → "Telegram bot" orqali ulaydi (#26).
+ */
 class TelegramSetup extends Command
 {
     protected $signature = 'telegram:setup {company : Company id or slug}';
 
-    protected $description = 'Configure the Telegram bot menu button to open the Mini App for a company';
+    protected $description = 'Restoran botini qayta sozlash (webhook, Mini App menyu tugmasi)';
 
-    public function handle(TelegramClient $client): int
+    public function handle(TelegramBotService $service): int
     {
         $arg = $this->argument('company');
-
-        $company = is_numeric($arg)
-            ? Company::find($arg)
-            : Company::where('slug', $arg)->first();
+        $company = is_numeric($arg) ? Company::find($arg) : Company::where('slug', $arg)->first();
 
         if (! $company) {
             $this->error("Company '{$arg}' not found.");
@@ -26,36 +27,23 @@ class TelegramSetup extends Command
             return self::FAILURE;
         }
 
-        $token = $company->getSetting('telegram_bot_token');
+        $bot = $company->telegramBot;
+        if (! $bot) {
+            $token = $company->getSetting('telegram_bot_token');
+            if (! $token) {
+                $this->error("'{$company->name}' uchun bot ulanmagan. Panel → Telegram bot orqali ulang.");
 
-        if (! $token) {
-            $this->error("Company '{$company->name}' has no telegram_bot_token in settings_json.");
-
-            return self::FAILURE;
-        }
-
-        $frontend = rtrim((string) env('FRONTEND_URL', config('app.url')), '/');
-        $webAppUrl = "{$frontend}/tg?company={$company->slug}";
-
-        // Verify the token.
-        $me = $client->getMe($token);
-        if (! $me->ok() || ! ($me->json('ok') ?? false)) {
-            $this->error('Invalid bot token (getMe failed).');
+                return self::FAILURE;
+            }
+            $bot = $service->connect($company, $token);
+        } elseif (! $service->configure($bot->setRelation('company', $company))) {
+            $this->error('Sozlab bo\'lmadi: '.$bot->last_error);
 
             return self::FAILURE;
         }
-        $this->info('Bot: @'.($me->json('result.username') ?? 'unknown'));
 
-        $res = $client->setChatMenuButton($token, $webAppUrl);
+        $this->info("@{$bot->username} sozlandi. Webhook: {$bot->webhookUrl()}");
 
-        if ($res->ok() && ($res->json('ok') ?? false)) {
-            $this->info("Menu button set to: {$webAppUrl}");
-
-            return self::SUCCESS;
-        }
-
-        $this->error('Failed to set menu button: '.$res->body());
-
-        return self::FAILURE;
+        return self::SUCCESS;
     }
 }

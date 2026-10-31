@@ -6,6 +6,7 @@ import { useTgCart, cartTotal, cartCount, minWeightKg } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
 import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
+import TgOfflineBanner from './TgOfflineBanner';
 import { buildMenuTree } from '../../lib/menuTree';
 
 
@@ -80,6 +81,7 @@ export default function TgMenuPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
+      <TgOfflineBanner />
       {/* Header */}
       <div className="px-4 py-4 text-white" style={{ backgroundColor: primary }}>
         <h1 className="text-xl font-bold">{data.company.name}</h1>

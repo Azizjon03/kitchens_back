@@ -56,6 +56,10 @@ class OrderService
                 'type' => $data['type'],
                 'status' => 'preparing',
                 'note' => $data['note'] ?? null,
+                'delivery_address' => $data['delivery_address'] ?? null,
+                'delivery_lat' => $data['delivery_lat'] ?? null,
+                'delivery_lng' => $data['delivery_lng'] ?? null,
+                'client_key' => $data['client_key'] ?? null,
             ]);
 
             $subtotal = $this->syncItems($order, $data['items'], $company->id);

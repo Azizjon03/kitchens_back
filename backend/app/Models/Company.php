@@ -52,6 +52,17 @@ class Company extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function telegramBot(): HasOne
+    {
+        return $this->hasOne(TelegramBot::class);
+    }
+
+    /** #26: bot tokeni — panel orqali ulangan bot (eski settings_json zaxira) */
+    public function telegramToken(): ?string
+    {
+        return $this->telegramBot?->token ?: $this->getSetting('telegram_bot_token');
+    }
+
     public function getSetting(string $key, mixed $default = null): mixed
     {
         return data_get($this->settings_json, $key, $default);

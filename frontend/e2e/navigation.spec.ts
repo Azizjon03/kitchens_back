@@ -11,10 +11,10 @@ async function openSidebarIfCollapsed(page: Page) {
   }
 }
 
-const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Tarix'];
+const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Telegram botlar', 'Tarix'];
 const COMPANY_ADMIN_LINKS = [
   'Dashboard', 'Menyu', "Qo'shimchalar", 'Stollar', 'Ofitsiant',
-  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Filiallar',
+  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Filiallar', 'Telegram bot',
 ];
 
 // authenticatedPage — super admin

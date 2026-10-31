@@ -23,11 +23,11 @@ const log = (ok, m) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAI
 const PAGES = {
   '/dashboard': 'Dashboard', '/menu': 'Menyu', '/modifiers': "Qo'shimchalar", '/tables': 'Stollar',
   '/waiter': 'Ofitsiant', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/cash-shifts': 'Kassa',
-  '/staff': 'Xodimlar', '/branches': 'Filiallar',
+  '/staff': 'Xodimlar', '/branches': 'Filiallar', '/telegram-bot': 'Telegram bot',
 };
 // Layout.tsx allNav va App.tsx requiredRole dan
 const NAV = {
-  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/branches'],
+  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/branches', '/telegram-bot'],
   manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen'],
   waiter: ['/tables', '/waiter', '/orders'],
   chef: ['/kitchen'],
