@@ -72,7 +72,7 @@ function SuperAdminDashboard() {
         <StatCard
           title="Jami buyurtmalar"
           value={stats?.total_orders ?? 0}
-          icon={<ClipboardList size={24} className="text-amber-600" />}
+          icon={<ClipboardList size={24} className="text-amber-700" />}
           color="bg-amber-50"
         />
         <StatCard

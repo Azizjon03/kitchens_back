@@ -316,7 +316,7 @@ export default function TablesPage() {
               setEditTable(undefined);
               setShowModal(true);
             }}
-            className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+            className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
           >
             Yangi stol qo'shish
           </button>
@@ -378,7 +378,7 @@ export default function TablesPage() {
                       setEditTable(table);
                       setShowModal(true);
                     }}
-                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-gray-500 hover:text-amber-600 transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 text-xs text-gray-500 hover:text-amber-700 transition-colors"
                   >
                     <Pencil size={12} />
                     Tahrirlash

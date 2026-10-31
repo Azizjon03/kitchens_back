@@ -171,6 +171,8 @@ Har `useQuery` bloki to'rt holatni ko'rsatadi:
 > 5.26, `red-600` 4.76, `purple-600` 5.53. `*-500` + `text-white` — **taqiq**
 > (amber-500 2.15, green-500 2.22). KDS "Tayyor" — `green-700` (istisno emas,
 > shu qoida). Hover — bir pog'ona to'qroq.
+> Matnli havola/yorliq oq yoki `*-50` fonda — `text-amber-700`+ (5.05:1); `text-amber-600`
+> (3.19:1) va `-400` taqiq (#17, ui-lint K8). `text-amber-500` faqat ikonka/spinner uchun.
 > **Hozirgi holat:** Ikonka-tugmalarda faqat `title`
 > (aria-label faqat Tg'da), tugmalarda focus halqasi yo'q, modallarda
 > `Escape` yo'q, Tg "+" tugmasi 36px. Yangi kodda — standart.

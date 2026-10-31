@@ -363,7 +363,7 @@ export default function StaffPage() {
                           setEditStaff(u);
                           setShowModal(true);
                         }}
-                        className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                        className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                       >
                         <Pencil size={16} />
                       </button>

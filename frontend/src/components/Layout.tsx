@@ -259,7 +259,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
-                <span className={isActive(item.path) ? 'text-amber-600' : 'text-gray-400'}>
+                <span className={isActive(item.path) ? 'text-amber-700' : 'text-gray-400'}>
                   {item.icon}
                 </span>
                 {item.label}
@@ -282,7 +282,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <button
                 onClick={() => setShowPasswordModal(true)}
                 aria-label="Parolni o'zgartirish"
-                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
                 title="Parolni o'zgartirish"
               >
                 <KeyRound size={18} />

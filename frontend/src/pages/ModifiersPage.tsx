@@ -386,7 +386,7 @@ export default function ModifiersPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`pb-3 text-sm font-medium transition-colors ${
                 activeTab === tab.key
-                  ? 'border-b-2 border-amber-500 text-amber-600'
+                  ? 'border-b-2 border-amber-500 text-amber-700'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -424,7 +424,7 @@ export default function ModifiersPage() {
                   setEditModifier(undefined);
                   setShowModifierModal(true);
                 }}
-                className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
               >
                 Yangi modifikator qo'shish
               </button>
@@ -463,7 +463,7 @@ export default function ModifiersPage() {
                               setEditModifier(mod);
                               setShowModifierModal(true);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                           >
                             <Pencil size={16} />
                           </button>
@@ -512,7 +512,7 @@ export default function ModifiersPage() {
                   setEditAddon(undefined);
                   setShowAddonModal(true);
                 }}
-                className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
               >
                 Yangi qo'shimcha qo'shish
               </button>
@@ -553,7 +553,7 @@ export default function ModifiersPage() {
                               setEditAddon(addon);
                               setShowAddonModal(true);
                             }}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                            className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                           >
                             <Pencil size={16} />
                           </button>

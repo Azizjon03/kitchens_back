@@ -388,7 +388,7 @@ export default function CompaniesPage() {
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <Link
                         to={`/companies/${company.id}`}
-                        className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-medium text-sm"
+                        className="inline-flex items-center gap-1 text-amber-700 hover:text-amber-800 font-medium text-sm"
                       >
                         <ExternalLink size={14} />
                         Batafsil

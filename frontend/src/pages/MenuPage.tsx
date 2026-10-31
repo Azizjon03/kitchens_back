@@ -473,7 +473,7 @@ export default function MenuPage() {
               setEditCategory(undefined);
               setShowCategoryModal(true);
             }}
-            className="inline-flex items-center gap-2 border border-amber-500 text-amber-600 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors"
+            className="inline-flex items-center gap-2 border border-amber-500 text-amber-700 px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors"
           >
             <Plus size={18} />
             Kategoriya
@@ -531,7 +531,7 @@ export default function MenuPage() {
                         setEditCategory(cat);
                         setShowCategoryModal(true);
                       }}
-                      className="p-1 text-gray-400 hover:text-amber-600"
+                      className="p-1 text-gray-400 hover:text-amber-700"
                       title="Tahrirlash"
                     >
                       <Pencil size={14} />
@@ -589,7 +589,7 @@ export default function MenuPage() {
                     setEditItem(undefined);
                     setShowItemModal(true);
                   }}
-                  className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                  className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
                 >
                   Yangi taom qo'shish
                 </button>
@@ -617,7 +617,7 @@ export default function MenuPage() {
                               <p className="text-xs text-gray-400">{item.name_ru}</p>
                             )}
                             {item.is_popular && (
-                              <span className="inline-block mt-1 text-xs bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded font-medium">
+                              <span className="inline-block mt-1 text-xs bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-medium">
                                 Mashhur
                               </span>
                             )}
@@ -660,7 +660,7 @@ export default function MenuPage() {
                                 setEditItem(item);
                                 setShowItemModal(true);
                               }}
-                              className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                              className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                               title="Tahrirlash"
                             >
                               <Pencil size={16} />

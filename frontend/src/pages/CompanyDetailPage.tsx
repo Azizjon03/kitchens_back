@@ -348,7 +348,7 @@ function ChangePlanModal({
                 </p>
               </div>
               {currentPlanId === plan.id && (
-                <span className="inline-block mt-1 text-xs text-amber-600 font-medium">
+                <span className="inline-block mt-1 text-xs text-amber-700 font-medium">
                   Hozirgi tarif
                 </span>
               )}
@@ -424,7 +424,7 @@ export default function CompanyDetailPage() {
                 <div className="ml-auto flex items-center gap-2">
                   <button
                     onClick={() => setShowEditModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-600 hover:text-amber-700 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-amber-700 hover:text-amber-800 border border-amber-200 hover:border-amber-300 rounded-lg transition-colors"
                   >
                     <Pencil size={14} />
                     Tahrirlash
@@ -500,7 +500,7 @@ export default function CompanyDetailPage() {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
                   <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-                    <ClipboardList size={20} className="text-amber-600" />
+                    <ClipboardList size={20} className="text-amber-700" />
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Buyurtmalar</p>
@@ -519,7 +519,7 @@ export default function CompanyDetailPage() {
                 </div>
                 <button
                   onClick={() => setShowPlanModal(true)}
-                  className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                  className="text-sm text-amber-700 hover:text-amber-800 font-medium"
                 >
                   O'zgartirish
                 </button>
@@ -562,7 +562,7 @@ export default function CompanyDetailPage() {
                   <p className="text-gray-500 text-sm">Tarif biriktirilmagan</p>
                   <button
                     onClick={() => setShowPlanModal(true)}
-                    className="mt-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                    className="mt-2 text-sm text-amber-700 hover:text-amber-800 font-medium"
                   >
                     Tarif biriktirish
                   </button>

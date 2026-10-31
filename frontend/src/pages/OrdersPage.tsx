@@ -437,7 +437,7 @@ function PaymentModal({
 
           <div className="bg-amber-50 rounded-lg p-4 text-center">
             <p className="text-sm text-gray-600">Buyurtma summasi</p>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{formatMoney(order.total)}</p>
+            <p className="text-2xl font-bold text-amber-700 mt-1">{formatMoney(order.total)}</p>
           </div>
 
           <div>
@@ -1115,7 +1115,7 @@ export default function OrdersPage() {
                               e.stopPropagation();
                               setSelectedOrder(order);
                             }}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-amber-600 hover:bg-amber-50 rounded-lg text-xs font-medium transition-colors"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 text-amber-700 hover:bg-amber-50 rounded-lg text-xs font-medium transition-colors"
                           >
                             <Eye size={14} />
                             Ko'rish

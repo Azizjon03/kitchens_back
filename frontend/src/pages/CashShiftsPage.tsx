@@ -713,7 +713,7 @@ export default function CashShiftsPage() {
                     <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => setReportShiftId(shift.id)}
-                        className="inline-flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        className="inline-flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 font-medium"
                       >
                         <FileText size={14} />
                         Hisobot

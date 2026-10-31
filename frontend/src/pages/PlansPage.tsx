@@ -344,7 +344,7 @@ export default function PlansPage() {
                     <td className="px-6 py-4">
                       <button
                         onClick={() => openEdit(plan)}
-                        className="text-amber-600 hover:text-amber-700 font-medium text-sm"
+                        className="text-amber-700 hover:text-amber-800 font-medium text-sm"
                       >
                         Tahrirlash
                       </button>

@@ -1,5 +1,6 @@
 export function Good() {
   const onErr = (e: any) => setError(e.response?.data?.error?.message || 'Xatolik yuz berdi');
   api.get('/menu');
+  const link = <a className="text-amber-700 hover:text-amber-800">Ko'rish</a>;
   return <div className="bg-amber-700 text-white">Osh</div>;
 }

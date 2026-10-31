@@ -264,7 +264,7 @@ export default function BranchesPage() {
               setEditBranch(undefined);
               setShowModal(true);
             }}
-            className="mt-3 text-sm text-amber-600 hover:text-amber-700 font-medium"
+            className="mt-3 text-sm text-amber-700 hover:text-amber-800 font-medium"
           >
             Yangi filial qo'shish
           </button>
@@ -322,7 +322,7 @@ export default function BranchesPage() {
                             setEditBranch(branch);
                             setShowModal(true);
                           }}
-                          className="p-1.5 text-gray-400 hover:text-amber-600 transition-colors"
+                          className="p-1.5 text-gray-400 hover:text-amber-700 transition-colors"
                           title="Tahrirlash"
                         >
                           <Pencil size={16} />
