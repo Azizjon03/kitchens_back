@@ -1,29 +1,33 @@
-import TelegramBotPage from './pages/TelegramBotPage';
-import SuperTelegramBotsPage from './pages/SuperTelegramBotsPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './lib/auth';
 import ProtectedRoute, { RoleHome } from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import CompaniesPage from './pages/CompaniesPage';
-import CompanyDetailPage from './pages/CompanyDetailPage';
-import HistoryPage from './pages/HistoryPage';
-import PlansPage from './pages/PlansPage';
-import CatalogPage from './pages/CatalogPage';
-import MenuPage from './pages/MenuPage';
-import ModifiersPage from './pages/ModifiersPage';
-import TablesPage from './pages/TablesPage';
-import OrdersPage from './pages/OrdersPage';
-import CashShiftsPage from './pages/CashShiftsPage';
-import BranchesPage from './pages/BranchesPage';
-import StaffPage from './pages/StaffPage';
-import KitchenPage from './pages/KitchenPage';
-import WaiterPage from './pages/WaiterPage';
-import TgMenuPage from './pages/tg/TgMenuPage';
-import TgCartPage from './pages/tg/TgCartPage';
-import TgOrderStatusPage from './pages/tg/TgOrderStatusPage';
-import NotFoundPage from './pages/NotFoundPage';
+import { LoadingState } from './components/QueryState';
+// #27: har sahifa alohida yuklanadi (code-splitting) — birinchi ochilish tezroq
+import { lazy, Suspense } from 'react';
+const PublicPageSettingsPage = lazy(() => import('./pages/PublicPageSettingsPage'));
+const TelegramBotPage = lazy(() => import('./pages/TelegramBotPage'));
+const SuperTelegramBotsPage = lazy(() => import('./pages/SuperTelegramBotsPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
+const CompanyDetailPage = lazy(() => import('./pages/CompanyDetailPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const PlansPage = lazy(() => import('./pages/PlansPage'));
+const CatalogPage = lazy(() => import('./pages/CatalogPage'));
+const MenuPage = lazy(() => import('./pages/MenuPage'));
+const ModifiersPage = lazy(() => import('./pages/ModifiersPage'));
+const TablesPage = lazy(() => import('./pages/TablesPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const CashShiftsPage = lazy(() => import('./pages/CashShiftsPage'));
+const BranchesPage = lazy(() => import('./pages/BranchesPage'));
+const StaffPage = lazy(() => import('./pages/StaffPage'));
+const KitchenPage = lazy(() => import('./pages/KitchenPage'));
+const WaiterPage = lazy(() => import('./pages/WaiterPage'));
+const TgMenuPage = lazy(() => import('./pages/tg/TgMenuPage'));
+const TgCartPage = lazy(() => import('./pages/tg/TgCartPage'));
+const TgOrderStatusPage = lazy(() => import('./pages/tg/TgOrderStatusPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,8 +41,10 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      {/* #27: lazy sahifa yuklanguncha eski sahifa ko'rinib turadi (butun ekran spinnerga almashmaydi) */}
+      <BrowserRouter future={{ v7_startTransition: true }}>
         <AuthProvider>
+          <Suspense fallback={<LoadingState large />}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
 
@@ -88,6 +94,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="super_admin">
                   <CatalogPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/public-page"
+              element={
+                <ProtectedRoute requiredRole="company_admin">
+                  <PublicPageSettingsPage />
                 </ProtectedRoute>
               }
             />
@@ -199,8 +213,11 @@ function App() {
               }
             />
             <Route path="/" element={<ProtectedRoute><RoleHome /></ProtectedRoute>} />
+            {/* #27: production'da "/" — serverdagi landing; kirgan foydalanuvchi /home ga yo'naltiriladi */}
+            <Route path="/home" element={<ProtectedRoute><RoleHome /></ProtectedRoute>} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
+          </Suspense>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

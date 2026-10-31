@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\SuperAdmin\AuditLogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CatalogController;
+use App\Http\Controllers\Api\V1\PublicPageController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
 use App\Http\Controllers\Api\V1\SuperAdmin\TelegramBotController as SuperTelegramBotController;
 use App\Http\Controllers\Api\V1\TelegramBotController;
@@ -78,6 +79,9 @@ Route::prefix('v1')->group(function () {
                 Route::post('telegram-bot', [TelegramBotController::class, 'store'])->middleware('throttle:10,1,tg-connect');
                 Route::post('telegram-bot/reconnect', [TelegramBotController::class, 'reconnect'])->middleware('throttle:10,1,tg-connect');
                 Route::delete('telegram-bot', [TelegramBotController::class, 'destroy']);
+                // #27: restoranning ochiq menyu sahifasi (SEO)
+                Route::get('public-page', [PublicPageController::class, 'show']);
+                Route::put('public-page', [PublicPageController::class, 'update']);
 
                 Route::apiResource('branches', BranchController::class)->except(['index']);
                 Route::apiResource('users', UserController::class);

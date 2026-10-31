@@ -6,6 +6,7 @@ import api from '../lib/api';
 import {
   LayoutDashboard,
   Building2,
+  Globe,
   Send,
   CreditCard,
   History,
@@ -206,6 +207,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: 'Oshxona', path: '/kitchen', icon: <Soup size={20} />, roles: ['company_admin', 'manager', 'chef'] },
     { label: 'Kassa', path: '/cash-shifts', icon: <Wallet size={20} />, roles: ['company_admin', 'cashier'] },
     { label: 'Xodimlar', path: '/staff', icon: <Users size={20} />, roles: ['company_admin'] },
+    { label: 'Restoran sahifasi', path: '/public-page', icon: <Globe size={20} />, roles: ['company_admin'] },
     { label: 'Filiallar', path: '/branches', icon: <Building2 size={20} />, roles: ['company_admin'] },
     { label: 'Telegram bot', path: '/telegram-bot', icon: <Send size={20} />, roles: ['company_admin'] },
   ];

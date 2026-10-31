@@ -1,0 +1,28 @@
+# #27: ochiq sahifalar — bosh sahifa, /ru va restoran menyulari (/r/...). Panel va API yopiq.
+User-agent: *
+Allow: /$
+Allow: /ru
+Allow: /r/
+Disallow: /api/
+Disallow: /login
+Disallow: /dashboard
+Disallow: /home
+Disallow: /menu
+Disallow: /modifiers
+Disallow: /tables
+Disallow: /waiter
+Disallow: /orders
+Disallow: /kitchen
+Disallow: /cash-shifts
+Disallow: /staff
+Disallow: /branches
+Disallow: /companies
+Disallow: /plans
+Disallow: /catalog
+Disallow: /history
+Disallow: /public-page
+Disallow: /telegram-bot
+Disallow: /telegram-bots
+Disallow: /tg
+
+Sitemap: https://kitchens.uz/sitemap.xml
