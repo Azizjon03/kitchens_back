@@ -4,6 +4,8 @@ import type { Page } from '@playwright/test';
 
 /** Mobil/planshet (< lg) da sidebar yashirin — linkni bosishdan oldin hamburger orqali ochamiz. */
 async function openSidebarIfCollapsed(page: Page) {
+  // #27: sahifalar lazy yuklanadi — Layout chizilguncha kutamiz
+  await page.locator('aside').waitFor({ state: 'attached' });
   const hamburger = page.locator('header button').filter({ has: page.locator('svg.lucide-menu') });
   if (await hamburger.isVisible()) {
     await hamburger.click();
@@ -14,7 +16,7 @@ async function openSidebarIfCollapsed(page: Page) {
 const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Tarix'];
 const COMPANY_ADMIN_LINKS = [
   'Dashboard', 'Menyu', "Qo'shimchalar", 'Stollar', 'Ofitsiant',
-  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Filiallar',
+  'Buyurtmalar', 'Oshxona', 'Kassa', 'Xodimlar', 'Restoran sahifasi', 'Filiallar',
 ];
 
 // authenticatedPage — super admin

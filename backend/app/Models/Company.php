@@ -52,6 +52,28 @@ class Company extends Model
         return $this->hasMany(Order::class);
     }
 
+    /**
+     * #27: restoranning ochiq (Google'da ko'rinadigan) sahifasi sozlamalari —
+     * kitchens.uz/r/{slug}. Rahbar yoqmaguncha sahifa yopiq.
+     *
+     * @return array{enabled: bool, description: ?string, city: ?string, opens: ?string, closes: ?string, cuisine: ?string, latitude: ?float, longitude: ?float}
+     */
+    public function publicPage(): array
+    {
+        $p = (array) $this->getSetting('public_page', []);
+
+        return [
+            'enabled' => (bool) ($p['enabled'] ?? false),
+            'description' => $p['description'] ?? null,
+            'city' => $p['city'] ?? null,
+            'opens' => $p['opens'] ?? null,
+            'closes' => $p['closes'] ?? null,
+            'cuisine' => $p['cuisine'] ?? null,
+            'latitude' => isset($p['latitude']) ? (float) $p['latitude'] : null,
+            'longitude' => isset($p['longitude']) ? (float) $p['longitude'] : null,
+        ];
+    }
+
     public function getSetting(string $key, mixed $default = null): mixed
     {
         return data_get($this->settings_json, $key, $default);

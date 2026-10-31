@@ -23,11 +23,11 @@ const log = (ok, m) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAI
 const PAGES = {
   '/dashboard': 'Dashboard', '/menu': 'Menyu', '/modifiers': "Qo'shimchalar", '/tables': 'Stollar',
   '/waiter': 'Ofitsiant', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/cash-shifts': 'Kassa',
-  '/staff': 'Xodimlar', '/branches': 'Filiallar',
+  '/staff': 'Xodimlar', '/branches': 'Filiallar', '/public-page': 'Restoran sahifasi',
 };
 // Layout.tsx allNav va App.tsx requiredRole dan
 const NAV = {
-  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/branches'],
+  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/public-page', '/branches'],
   manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen'],
   waiter: ['/tables', '/waiter', '/orders'],
   chef: ['/kitchen'],
@@ -61,6 +61,8 @@ async function session(role, viewport = { width: 1440, height: 900 }) {
 for (const role of Object.keys(NAV)) {
   const { page, problems } = await session(role);
   const R = ROLE_UZ[role];
+  // #27: sahifalar lazy yuklanadi — sidebar chizilishini kutamiz
+  await page.locator('aside nav a, nav a').first().waitFor({ state: 'attached', timeout: 10000 }).catch(() => {});
   const navLabels = (await page.locator('aside nav a, nav a').allInnerTexts()).map((t) => t.trim()).filter(Boolean);
   const expected = NAV[role].map((p) => PAGES[p]);
   const extra = navLabels.filter((l) => !expected.includes(l));
