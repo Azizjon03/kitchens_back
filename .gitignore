@@ -5,7 +5,9 @@
 !.env.example
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/agents/
+!.claude/skills/
 
 # Specify
 .specify/
