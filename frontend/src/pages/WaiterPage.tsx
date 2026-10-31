@@ -41,7 +41,13 @@ function OrderComposer({
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [error, setError] = useState('');
 
-  const { data: categories = [] } = useQuery<Category[]>({
+  const {
+    data: categories = [],
+    isLoading: menuLoading,
+    isError: menuFailed,
+    error: menuError,
+    refetch: refetchMenu,
+  } = useQuery<Category[]>({
     queryKey: ['pos-menu'],
     queryFn: async () => {
       const res = await api.get('/pos/menu');
@@ -153,6 +159,10 @@ function OrderComposer({
               ))}
             </div>
             <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {menuLoading && <LoadingState label="Menyu yuklanmoqda..." />}
+              {menuFailed && (
+                <ErrorState error={menuError} onRetry={() => refetchMenu()} title="Menyuni yuklab bo'lmadi" />
+              )}
               {activeItems.map((item) => (
                 <button
                   key={item.id}
@@ -166,8 +176,8 @@ function OrderComposer({
                   </span>
                 </button>
               ))}
-              {activeItems.length === 0 && (
-                <p className="text-sm text-gray-400 p-4 text-center">Taom yo'q</p>
+              {!menuLoading && !menuFailed && activeItems.length === 0 && (
+                <p className="text-sm text-gray-500 p-4 text-center">Bu kategoriyada taom yo'q</p>
               )}
             </div>
           </div>
@@ -244,7 +254,7 @@ function OrderComposer({
                         <button
                           key={m.id}
                           onClick={() => toggleId(l, 'modifier_ids', m.id)}
-                          className={`min-h-10 px-3 py-1.5 rounded-lg text-sm border ${
+                          className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
                             l.modifier_ids.includes(m.id)
                               ? 'bg-amber-500 text-white border-amber-500'
                               : 'bg-white text-gray-600 border-gray-200'
@@ -262,7 +272,7 @@ function OrderComposer({
                         <button
                           key={a.id}
                           onClick={() => toggleId(l, 'addon_ids', a.id)}
-                          className={`min-h-10 px-3 py-1.5 rounded-lg text-sm border ${
+                          className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
                             l.addon_ids.includes(a.id)
                               ? 'bg-green-700 text-white border-green-700'
                               : 'bg-white text-gray-600 border-gray-200'
@@ -310,6 +320,10 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ready: { label: 'Tayyor', className: 'bg-blue-100 text-blue-700' },
   served: { label: 'Berildi', className: 'bg-purple-100 text-purple-700' },
 };
+
+// Ofitsiantning birinchi ishi — tayyor taomni olib borish: avval "Tayyor" (eng uzoq
+// kutayotgani tepada), keyin tayyorlanayotganlar, oxirida berilganlar
+const STATUS_ORDER: Record<string, number> = { ready: 0, preparing: 1, served: 2 };
 
 const TABLE_STATUS_LABELS: Record<string, string> = {
   free: "Bo'sh",
@@ -438,7 +452,12 @@ export default function WaiterPage() {
     o.table ? `Stol #${o.table.number}` : `${TYPE_LABELS[o.type] ?? o.type} #${o.id}`;
 
   const sortedOrders = useMemo(
-    () => [...orders].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
+    () =>
+      [...orders].sort(
+        (a, b) =>
+          (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) ||
+          (a.created_at ?? '').localeCompare(b.created_at ?? ''),
+      ),
     [orders],
   );
 
@@ -461,7 +480,9 @@ export default function WaiterPage() {
       {actionError && (
         <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
           <span>{actionError}</span>
-          <button type="button" onClick={() => setActionError('')} className="shrink-0 rounded-lg px-2 text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">✕</button>
+          <button type="button" onClick={() => setActionError('')} className="shrink-0 -my-2 -mr-2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
       )}
 
@@ -510,8 +531,16 @@ export default function WaiterPage() {
             </button>
           );
         })}
-        {tablesLoading && <LoadingState label="Stollar yuklanmoqda..." />}
-        {!tablesLoading && !tablesFailed && tables.length === 0 && <p className="text-sm text-gray-400">Stollar yo'q</p>}
+        {tablesLoading && (
+          <div className="col-span-full">
+            <LoadingState label="Stollar yuklanmoqda..." />
+          </div>
+        )}
+        {!tablesLoading && !tablesFailed && tables.length === 0 && (
+          <div className="col-span-full bg-white rounded-xl border border-gray-200 p-6 text-center text-sm text-gray-500">
+            Bu filialda hali stol yo'q
+          </div>
+        )}
       </div>
 
       {tablesFailed && (

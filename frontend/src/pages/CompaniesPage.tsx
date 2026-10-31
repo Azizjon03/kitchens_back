@@ -6,7 +6,7 @@ import type { Company } from '../types';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { Building2, Plus, X, ExternalLink, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { apiErrorMessage } from '../lib/apiError';
+import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 
 interface CreateCompanyForm {
   name: string;
@@ -44,6 +44,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
     owner_full_name: '',
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CreateCompanyForm, string>>>({});
 
   const mutation = useMutation({
     mutationFn: async (data: CreateCompanyForm) => {
@@ -60,12 +61,17 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (err: unknown) => {
-      setError(apiErrorMessage(err));
+      const byField = apiFieldErrors(err) as Partial<Record<keyof CreateCompanyForm, string>>;
+      setFieldErrors(byField);
+      // Maydonga bog'langan xato maydon ostida; umumiy blok faqat bog'lanmagan xato uchun
+      setError(Object.keys(byField).length ? '' : apiErrorMessage(err));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setFieldErrors({});
     mutation.mutate(form);
   };
 
@@ -98,8 +104,11 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Kompaniya nomi</label>
+            <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">Kompaniya nomi <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-name"
+              aria-invalid={!!fieldErrors.name}
+              aria-describedby={fieldErrors.name ? 'company-name-error' : undefined}
               type="text"
               required
               value={form.name}
@@ -107,11 +116,17 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="Milliy taomlar"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.name && (
+              <p id="company-name-error" className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+            <label htmlFor="company-slug" className="block text-sm font-medium text-gray-700 mb-1">Slug <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-slug"
+              aria-invalid={!!fieldErrors.slug}
+              aria-describedby={fieldErrors.slug ? 'company-slug-error' : undefined}
               type="text"
               required
               value={form.slug}
@@ -119,11 +134,17 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="milliy-taomlar"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.slug && (
+              <p id="company-slug-error" className="mt-1 text-sm text-red-600">{fieldErrors.slug}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <label htmlFor="company-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-phone"
+              aria-invalid={!!fieldErrors.phone}
+              aria-describedby={fieldErrors.phone ? 'company-phone-error' : undefined}
               type="tel"
               required
               value={form.phone}
@@ -131,14 +152,20 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="+998 (90) 123-45-67"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.phone && (
+              <p id="company-phone-error" className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>
+            )}
           </div>
 
           <hr className="border-gray-200" />
           <p className="text-sm font-medium text-gray-700">Egasi (Owner)</p>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">To'liq ism</label>
+            <label htmlFor="company-owner_full_name" className="block text-sm font-medium text-gray-700 mb-1">To'liq ism <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-owner_full_name"
+              aria-invalid={!!fieldErrors.owner_full_name}
+              aria-describedby={fieldErrors.owner_full_name ? 'company-owner_full_name-error' : undefined}
               type="text"
               required
               value={form.owner_full_name}
@@ -146,11 +173,17 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="Ism Familiya"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.owner_full_name && (
+              <p id="company-owner_full_name-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_full_name}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam</label>
+            <label htmlFor="company-owner_phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-owner_phone"
+              aria-invalid={!!fieldErrors.owner_phone}
+              aria-describedby={fieldErrors.owner_phone ? 'company-owner_phone-error' : undefined}
               type="tel"
               required
               value={form.owner_phone}
@@ -158,22 +191,34 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="+998 (90) 123-45-67"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.owner_phone && (
+              <p id="company-owner_phone-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_phone}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email (ixtiyoriy)</label>
+            <label htmlFor="company-owner_email" className="block text-sm font-medium text-gray-700 mb-1">Email (ixtiyoriy)</label>
             <input
+              id="company-owner_email"
+              aria-invalid={!!fieldErrors.owner_email}
+              aria-describedby={fieldErrors.owner_email ? 'company-owner_email-error' : undefined}
               type="email"
               value={form.owner_email}
               onChange={(e) => setForm((prev) => ({ ...prev, owner_email: e.target.value }))}
               placeholder="owner@example.com"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.owner_email && (
+              <p id="company-owner_email-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_email}</p>
+            )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parol</label>
+            <label htmlFor="company-owner_password" className="block text-sm font-medium text-gray-700 mb-1">Parol <span className="text-red-600" aria-hidden="true">*</span></label>
             <input
+              id="company-owner_password"
+              aria-invalid={!!fieldErrors.owner_password}
+              aria-describedby={fieldErrors.owner_password ? 'company-owner_password-error' : undefined}
               type="password"
               required
               minLength={8}
@@ -182,6 +227,9 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
               placeholder="Kamida 8 ta belgi"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
             />
+            {fieldErrors.owner_password && (
+              <p id="company-owner_password-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_password}</p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-2">

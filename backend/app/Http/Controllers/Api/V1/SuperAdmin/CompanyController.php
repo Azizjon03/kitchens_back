@@ -34,7 +34,8 @@ class CompanyController extends Controller
             $query->where('is_active', filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        $companies = $query->orderByDesc('created_at')
+        // id — barqaror tartib: bir soniyada yaratilganlar sahifalar orasida takrorlanmaydi
+        $companies = $query->orderByDesc('created_at')->orderByDesc('id')
             ->paginate(min(max($request->integer('per_page', 15), 1), 100));
 
         return $this->success($companies);

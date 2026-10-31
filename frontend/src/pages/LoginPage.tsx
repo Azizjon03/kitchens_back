@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, type LoginAccount } from '../lib/auth';
+import { useAuth, homePathFor, type LoginAccount } from '../lib/auth';
 import { Building2, ChefHat, Eye, EyeOff } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 
@@ -43,8 +43,8 @@ export default function LoginPage() {
     setError('');
     setSelectingId(userId);
     try {
-      await selectCompany(selection.token, userId);
-      navigate('/dashboard', { replace: true });
+      const user = await selectCompany(selection.token, userId);
+      navigate(homePathFor(user.role), { replace: true });
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
       // Token muddati o'tgan bo'lsa — qaytadan parol bilan kirish kerak
@@ -69,7 +69,7 @@ export default function LoginPage() {
         setSelection({ accounts: result.accounts, token: result.selectionToken });
         return;
       }
-      navigate('/dashboard', { replace: true });
+      navigate(homePathFor(result.user.role), { replace: true });
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
     } finally {

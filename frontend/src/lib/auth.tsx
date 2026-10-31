@@ -11,7 +11,7 @@ export interface LoginAccount {
 }
 
 export type LoginResult =
-  | { status: 'ok' }
+  | { status: 'ok'; user: User }
   | { status: 'select'; accounts: LoginAccount[]; selectionToken: string };
 
 interface AuthContextType {
@@ -19,8 +19,18 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (phone: string, password: string) => Promise<LoginResult>;
-  selectCompany: (selectionToken: string, userId: number) => Promise<void>;
+  selectCompany: (selectionToken: string, userId: number) => Promise<User>;
   logout: () => void;
+}
+
+/** Login'dan keyin rolning ish ekrani: oshpaz KDS'ga, ofitsiant zalga, kassir kassaga */
+export function homePathFor(role?: string): string {
+  switch (role) {
+    case 'chef': return '/kitchen';
+    case 'waiter': return '/waiter';
+    case 'cashier': return '/cash-shifts';
+    default: return '/dashboard';
+  }
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -71,12 +81,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     storeSession(data.data.token, data.data.user);
-    return { status: 'ok' };
+    return { status: 'ok', user: data.data.user };
   }, [storeSession]);
 
   const selectCompany = useCallback(async (selectionToken: string, userId: number) => {
     const { data } = await api.post('/auth/login/select', { selection_token: selectionToken, user_id: userId });
     storeSession(data.data.token, data.data.user);
+    return data.data.user as User;
   }, [storeSession]);
 
   const logout = useCallback(() => {

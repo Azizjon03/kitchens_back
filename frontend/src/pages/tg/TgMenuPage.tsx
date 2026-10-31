@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
-import { useTgCart, cartTotal, cartCount } from '../../lib/tgCart';
+import { useTgCart, cartTotal, cartCount, minWeightKg } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
 import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 
@@ -121,7 +121,7 @@ export default function TgMenuPage() {
               </p>
               {item.sell_type === 'weight' && (
                 <p className="text-xs text-gray-500">
-                  kamida {Number(item.min_weight) || 0.1} kg
+                  kamida {minWeightKg(item)} kg
                 </p>
               )}
             </div>

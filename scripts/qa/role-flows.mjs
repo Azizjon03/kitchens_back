@@ -33,6 +33,7 @@ const NAV = {
   chef: ['/kitchen'],
   cashier: ['/orders', '/cash-shifts'],
 };
+const HOME = { company_admin: '/dashboard', manager: '/dashboard', waiter: '/waiter', chef: '/kitchen', cashier: '/cash-shifts' };
 const ROLE_UZ = { company_admin: 'Admin', manager: 'Menejer', waiter: 'Ofitsiant', chef: 'Oshpaz', cashier: 'Kassir' };
 
 const browser = await chromium.launch();
@@ -51,7 +52,8 @@ async function session(role, viewport = { width: 1440, height: 900 }) {
   await page.fill('#phone', USERS[role]);
   await page.fill('#password', role === 'company_admin' ? 'Admin12345' : 'Staff12345');
   await page.click('button[type=submit]');
-  await page.waitForURL('**/dashboard', { timeout: 10000 });
+  // Login rolning ish ekraniga olib boradi (homePathFor): oshpaz → /kitchen, ofitsiant → /waiter, kassir → /cash-shifts
+  await page.waitForURL((u) => u.pathname === HOME[role], { timeout: 10000 });
   return { page, problems };
 }
 
@@ -68,7 +70,7 @@ for (const role of Object.keys(NAV)) {
   // /dashboard rol uchun xatosiz ochiladimi (login har rolni shu yerga olib keladi)
   await page.waitForTimeout(1200);
   const dashProblems = problems.splice(0);
-  log(dashProblems.length === 0, `${R}: login → /dashboard xatosiz${dashProblems.length ? ' — ' + dashProblems.join(' | ') : ''}`);
+  log(dashProblems.length === 0, `${R}: login → ${HOME[role]} xatosiz${dashProblems.length ? ' — ' + dashProblems.join(' | ') : ''}`);
 
   for (const path of NAV[role]) {
     if (path === '/dashboard') continue;
@@ -89,7 +91,7 @@ for (const role of Object.keys(NAV)) {
     if (new URL(page.url()).pathname === path) leaked.push(path);
   }
   problems.splice(0);
-  log(leaked.length === 0, `${R}: taqiqlangan ${forbidden.length} sahifa /dashboard ga qaytaradi${leaked.length ? ' — OCHILDI: ' + leaked.join(', ') : ''}`);
+  log(leaked.length === 0, `${R}: taqiqlangan ${forbidden.length} sahifa ${HOME[role]} ga qaytaradi${leaked.length ? ' — OCHILDI: ' + leaked.join(', ') : ''}`);
   await page.close();
 }
 

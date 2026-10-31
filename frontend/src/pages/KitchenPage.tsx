@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
-import { Check, ChefHat } from 'lucide-react';
+import { Check, ChefHat, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
@@ -171,7 +171,7 @@ function OrderCard({
       {order.status === 'ready' && (
         <div className="m-3 mt-0 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
           <Check size={18} aria-hidden="true" />
-          Tayyor — berishni kutmoqda
+          Berishni kutmoqda
         </div>
       )}
     </div>
@@ -345,7 +345,9 @@ export default function KitchenPage() {
       {actionError && (
         <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
           <span>{actionError}</span>
-          <button type="button" onClick={() => setActionError('')} className="shrink-0 rounded-lg px-2 text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">✕</button>
+          <button type="button" onClick={() => setActionError('')} className="shrink-0 -my-2 -mr-2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
       )}
 
