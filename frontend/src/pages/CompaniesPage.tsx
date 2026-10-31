@@ -1,11 +1,11 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../lib/api';
 import type { Company } from '../types';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
-import { Building2, Plus, X, ExternalLink, Search } from 'lucide-react';
+import { Building2, Plus, X, ExternalLink, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 
 interface CreateCompanyForm {
@@ -209,20 +209,38 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
 export default function CompaniesPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const navigate = useNavigate();
 
-  const { data: companies = [], isLoading, isError, error, refetch } = useQuery<Company[]>({
-    queryKey: ['companies'],
+  // Qidiruv serverda (#8): avval faqat 1-sahifa (15 ta) olinib, brauzerda filtrlanardi
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading, isError, error, refetch } = useQuery<{
+    data: Company[];
+    current_page: number;
+    last_page: number;
+    total: number;
+  }>({
+    queryKey: ['companies', page, debouncedSearch],
     queryFn: async () => {
-      const res = await api.get('/super/companies');
-      return res.data.data?.data ?? res.data.data ?? [];
+      const res = await api.get('/super/companies', {
+        params: { page, search: debouncedSearch || undefined },
+      });
+      return res.data.data;
     },
+    placeholderData: keepPreviousData,
   });
 
-  const filtered = companies.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.slug.toLowerCase().includes(search.toLowerCase())
-  );
+  const companies = data?.data ?? [];
+  const lastPage = data?.last_page ?? 1;
+  const currentPage = data?.current_page ?? page;
 
   return (
     <Layout>
@@ -264,10 +282,23 @@ export default function CompaniesPage() {
           <div className="p-4">
             <ErrorState error={error} onRetry={() => refetch()} title="Kompaniyalarni yuklab bo'lmadi" />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : companies.length === 0 && debouncedSearch ? (
+          <div className="p-8 text-center">
+            <Search size={40} className="text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-700 text-sm font-medium">"{debouncedSearch}" bo'yicha kompaniya topilmadi</p>
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              className="mt-3 text-sm font-medium text-amber-700 hover:text-amber-800 underline"
+            >
+              Qidiruvni tozalash
+            </button>
+          </div>
+        ) : companies.length === 0 ? (
           <div className="p-8 text-center">
             <Building2 size={40} className="text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-sm">Kompaniyalar topilmadi</p>
+            <p className="text-gray-700 text-sm font-medium">Hali kompaniya qo'shilmagan</p>
+            <p className="text-gray-500 text-sm mt-1">"Yangi kompaniya" tugmasi orqali birinchi restoranni qo'shing</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -282,8 +313,12 @@ export default function CompaniesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((company) => (
-                  <tr key={company.id} className="hover:bg-gray-50 transition-colors">
+                {companies.map((company) => (
+                  <tr
+                    key={company.id}
+                    onClick={() => navigate(`/companies/${company.id}`)}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                  >
                     <td className="px-6 py-4 font-medium text-gray-900">{company.name}</td>
                     <td className="px-6 py-4 text-gray-500">{company.slug}</td>
                     <td className="px-6 py-4 text-gray-500">{company.phone}</td>
@@ -298,7 +333,7 @@ export default function CompaniesPage() {
                         {company.is_active ? 'Faol' : 'Nofaol'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                       <Link
                         to={`/companies/${company.id}`}
                         className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-700 font-medium text-sm"
@@ -314,6 +349,32 @@ export default function CompaniesPage() {
           </div>
         )}
       </div>
+
+      {lastPage > 1 && (
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-sm text-gray-500">
+            Sahifa {currentPage} / {lastPage} (jami {data?.total ?? 0} ta)
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage <= 1}
+              className="inline-flex items-center gap-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={16} />
+              Oldingi
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+              disabled={currentPage >= lastPage}
+              className="inline-flex items-center gap-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Keyingi
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showModal && <CreateCompanyModal onClose={() => setShowModal(false)} />}
     </Layout>

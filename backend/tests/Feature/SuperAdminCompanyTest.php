@@ -98,6 +98,30 @@ class SuperAdminCompanyTest extends TestCase
         $this->assertSame('+998902783610', $company->fresh()->phone);
     }
 
+    public function test_company_search_is_case_insensitive_and_paginated(): void
+    {
+        Sanctum::actingAs($this->superAdmin());
+        for ($i = 1; $i <= 18; $i++) {
+            Company::create(['name' => "Restoran {$i}", 'slug' => "restoran-{$i}", 'phone' => '+998700000000']);
+        }
+        Company::create(['name' => 'Oliyaviy Restoran', 'slug' => 'oliyaviy', 'phone' => '+998700000001']);
+
+        $this->getJson('/api/v1/super/companies?search=OLIY')
+            ->assertOk()
+            ->assertJsonPath('data.total', 1)
+            ->assertJsonPath('data.data.0.slug', 'oliyaviy');
+
+        $this->getJson('/api/v1/super/companies?page=2')
+            ->assertOk()
+            ->assertJsonPath('data.current_page', 2)
+            ->assertJsonPath('data.last_page', 2)
+            ->assertJsonPath('data.total', 19);
+
+        $this->getJson('/api/v1/super/companies?per_page=100000')
+            ->assertOk()
+            ->assertJsonPath('data.per_page', 100);
+    }
+
     public function test_short_owner_password_is_rejected_and_nothing_is_created(): void
     {
         Sanctum::actingAs($this->superAdmin());

@@ -21,10 +21,12 @@ class CompanyController extends Controller
     {
         $query = Company::with('subscription.plan');
 
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('slug', 'like', "%{$search}%");
+        if ($search = trim((string) $request->query('search'))) {
+            // LOWER(): PostgreSQL'da LIKE katta-kichik harfga sezgir ("oliy" "Oliyaviy"ni topmasdi)
+            $needle = '%'.addcslashes(mb_strtolower($search), '%_\\').'%';
+            $query->where(function ($q) use ($needle) {
+                $q->whereRaw('LOWER(name) LIKE ?', [$needle])
+                    ->orWhereRaw('LOWER(slug) LIKE ?', [$needle]);
             });
         }
 
@@ -33,7 +35,7 @@ class CompanyController extends Controller
         }
 
         $companies = $query->orderByDesc('created_at')
-            ->paginate($request->integer('per_page', 15));
+            ->paginate(min(max($request->integer('per_page', 15), 1), 100));
 
         return $this->success($companies);
     }
