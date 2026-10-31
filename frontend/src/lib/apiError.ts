@@ -15,7 +15,7 @@ type ApiErrorBody = {
 };
 
 export function apiErrorMessage(err: unknown, fallback = 'Xatolik yuz berdi'): string {
-  const response = (err as { response?: { data?: ApiErrorBody } } | null)?.response;
+  const response = (err as { response?: { status?: number; data?: ApiErrorBody } } | null)?.response;
   const data = response?.data;
 
   if (!response) {
@@ -23,6 +23,11 @@ export function apiErrorMessage(err: unknown, fallback = 'Xatolik yuz berdi'): s
     return (err as { message?: string } | null)?.message === 'Network Error'
       ? "Server bilan aloqa yo'q. Internetni tekshirib, qayta urinib ko'ring."
       : fallback;
+  }
+
+  // 5xx: backend matni ("Server Error") foydalanuvchi uchun emas
+  if ((response.status ?? 0) >= 500) {
+    return "Serverda xatolik yuz berdi. Birozdan keyin qayta urinib ko'ring.";
   }
 
   if (data?.error?.message) return data.error.message;

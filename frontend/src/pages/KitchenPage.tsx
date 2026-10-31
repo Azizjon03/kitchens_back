@@ -5,6 +5,7 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
 import Layout from '../components/Layout';
+import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Types matching Order::toBroadcastArray() ────────────────────
@@ -202,7 +203,13 @@ export default function KitchenPage() {
   }, [branches, branchId]);
 
   // Initial load of active (preparing + ready) orders for the branch.
-  const { data: initialOrders } = useQuery<KdsOrder[]>({
+  const {
+    data: initialOrders,
+    isLoading: ordersLoading,
+    isError: ordersFailed,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useQuery<KdsOrder[]>({
     queryKey: ['kds-orders', branchId],
     enabled: branchId !== null,
     queryFn: async () => {
@@ -335,9 +342,14 @@ export default function KitchenPage() {
         </div>
       )}
 
-      {sorted.length === 0 ? (
+      {ordersLoading ? (
+        <LoadingState label="Buyurtmalar yuklanmoqda..." large />
+      ) : ordersFailed ? (
+        // KDS uzoqdan ko'riladi: xato katta va qizil, bo'sh holat bilan adashtirilmaydi
+        <ErrorState error={ordersError} onRetry={() => refetchOrders()} title="Buyurtmalarni yuklab bo'lmadi" large />
+      ) : sorted.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-          <p className="text-gray-500">Hozircha faol buyurtmalar yo'q</p>
+          <p className="text-gray-500 text-lg">Hozircha faol buyurtmalar yo'q</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

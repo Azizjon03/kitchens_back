@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import type { Company } from '../types';
 import Layout from '../components/Layout';
+import { LoadingState, ErrorState } from '../components/QueryState';
 import { Building2, Plus, X, ExternalLink, Search } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 
@@ -209,7 +210,7 @@ export default function CompaniesPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
 
-  const { data: companies = [], isLoading } = useQuery<Company[]>({
+  const { data: companies = [], isLoading, isError, error, refetch } = useQuery<Company[]>({
     queryKey: ['companies'],
     queryFn: async () => {
       const res = await api.get('/super/companies');
@@ -258,8 +259,10 @@ export default function CompaniesPage() {
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         {isLoading ? (
-          <div className="p-8 text-center">
-            <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <LoadingState label="Kompaniyalar yuklanmoqda..." />
+        ) : isError ? (
+          <div className="p-4">
+            <ErrorState error={error} onRetry={() => refetch()} title="Kompaniyalarni yuklab bo'lmadi" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-8 text-center">

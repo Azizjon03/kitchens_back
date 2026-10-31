@@ -5,6 +5,7 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch, Table, Order, Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
+import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
 import { Plus, Minus, X, Bell, Check } from 'lucide-react';
 
@@ -319,7 +320,13 @@ export default function WaiterPage() {
     if (branchId === null && branches.length > 0) setBranchId(branches[0].id);
   }, [branches, branchId]);
 
-  const { data: tables = [] } = useQuery<Table[]>({
+  const {
+    data: tables = [],
+    isLoading: tablesLoading,
+    isError: tablesFailed,
+    error: tablesError,
+    refetch: refetchTables,
+  } = useQuery<Table[]>({
     queryKey: ['waiter-tables', branchId],
     enabled: branchId !== null,
     queryFn: async () => {
@@ -329,7 +336,13 @@ export default function WaiterPage() {
     },
   });
 
-  const { data: orders = [] } = useQuery<Order[]>({
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    isError: ordersFailed,
+    error: ordersError,
+    refetch: refetchOrders,
+  } = useQuery<Order[]>({
     queryKey: ['waiter-orders', branchId],
     enabled: branchId !== null,
     queryFn: async () => {
@@ -464,12 +477,23 @@ export default function WaiterPage() {
             </button>
           );
         })}
-        {tables.length === 0 && <p className="text-sm text-gray-400">Stollar yo'q</p>}
+        {tablesLoading && <LoadingState label="Stollar yuklanmoqda..." />}
+        {!tablesLoading && !tablesFailed && tables.length === 0 && <p className="text-sm text-gray-400">Stollar yo'q</p>}
       </div>
+
+      {tablesFailed && (
+        <div className="mb-6">
+          <ErrorState error={tablesError} onRetry={() => refetchTables()} title="Stollarni yuklab bo'lmadi" />
+        </div>
+      )}
 
       {/* Active orders */}
       <h2 className="text-sm font-semibold text-gray-500 mb-2">Faol buyurtmalar</h2>
-      {sortedOrders.length === 0 ? (
+      {ordersLoading ? (
+        <LoadingState label="Buyurtmalar yuklanmoqda..." />
+      ) : ordersFailed ? (
+        <ErrorState error={ordersError} onRetry={() => refetchOrders()} title="Buyurtmalarni yuklab bo'lmadi" />
+      ) : sortedOrders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-500">
           Faol buyurtmalar yo'q
         </div>
