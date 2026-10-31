@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\SuperAdmin;
 
 use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\Company;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -81,6 +82,15 @@ class CompanyController extends Controller
                     'current_period_end' => now()->addYear(),
                 ]);
             }
+
+            // Stol, buyurtma, kassa filialsiz ishlamaydi — bitta joyli restoran uchun
+            // filial avtomatik; UI bitta filialda filial maydonini ko'rsatmaydi (#21)
+            Branch::create([
+                'company_id' => $company->id,
+                'name' => 'Asosiy filial',
+                'phone' => $company->phone,
+                'is_active' => true,
+            ]);
 
             User::create($owner + [
                 'company_id' => $company->id,

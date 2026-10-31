@@ -198,21 +198,24 @@ function StaffModal({
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-              <select
-                value={form.branch_id}
-                onChange={(e) => setForm((p) => ({ ...p, branch_id: e.target.value }))}
-                className={inputClass}
-              >
-                <option value="">— Tanlanmagan —</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+            {branches.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+                <select
+                  value={form.branch_id}
+                  onChange={(e) => setForm((p) => ({ ...p, branch_id: e.target.value }))}
+                  className={inputClass}
+                >
+                  <option value="">— Tanlanmagan —</option>
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div>
@@ -331,7 +334,7 @@ export default function StaffPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">F.I.O.</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Telefon</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Rol</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Filial</th>
+                {branches.length > 1 && <th className="text-left px-4 py-3 font-medium text-gray-600">Filial</th>}
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Holat</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Amallar</th>
               </tr>
@@ -346,7 +349,7 @@ export default function StaffPage() {
                       {roleLabel(u.role)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{u.branch?.name || '—'}</td>
+                  {branches.length > 1 && <td className="px-4 py-3 text-gray-500">{u.branch?.name || '—'}</td>}
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

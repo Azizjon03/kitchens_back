@@ -212,18 +212,21 @@ function CreateOrderModal({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-              <select
-                value={form.branch_id}
-                onChange={(e) => setForm((p) => ({ ...p, branch_id: Number(e.target.value), table_id: '' }))}
-                className={inputClass}
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
+            {/* Bitta filial bo'lsa filial tanlovi ko'rsatilmaydi — backend o'zi qo'yadi (#21) */}
+            {branches.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
+                <select
+                  value={form.branch_id}
+                  onChange={(e) => setForm((p) => ({ ...p, branch_id: Number(e.target.value), table_id: '' }))}
+                  className={inputClass}
+                >
+                  {branches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Turi</label>
               <select
@@ -1019,16 +1022,18 @@ export default function OrdersPage() {
             <option value="delivery">Yetkazib berish</option>
           </select>
 
-          <select
-            value={branchFilter}
-            onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
-            className={inputClass}
-          >
-            <option value="">Barcha filiallar</option>
-            {branches.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
+          {branches.length > 1 && (
+            <select
+              value={branchFilter}
+              onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
+              className={inputClass}
+            >
+              <option value="">Barcha filiallar</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
 
           <input
             type="date"

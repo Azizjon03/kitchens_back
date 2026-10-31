@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\ApiResponse;
+use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,7 @@ use Illuminate\Validation\Rules\Exists;
 
 class UserController extends Controller
 {
+    use DefaultsToSingleBranch;
     use ApiResponse;
 
     /**
@@ -54,6 +56,10 @@ class UserController extends Controller
         $companyId = $authUser->company_id;
 
         $this->normalizePhoneInput($request);
+        // Filialga bog'langan rollar (KDS kanali branch bo'yicha) — bitta filial bo'lsa o'zi biriktiriladi
+        if (in_array($request->input('role'), ['waiter', 'chef', 'cashier'], true)) {
+            $this->defaultToSingleBranch($request, $companyId);
+        }
 
         $data = $request->validate([
             'name' => 'required|string|max:255',
