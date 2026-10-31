@@ -19,6 +19,7 @@ import {
   Filter,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { useAuth } from '../lib/auth';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -26,6 +27,8 @@ const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = 
   preparing: { label: 'Tayyorlanmoqda', bg: 'bg-amber-100', text: 'text-amber-700' },
   ready: { label: 'Tayyor', bg: 'bg-blue-100', text: 'text-blue-700' },
   served: { label: 'Berildi', bg: 'bg-purple-100', text: 'text-purple-700' },
+  delivering: { label: 'Yetkazilmoqda', bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  delivered: { label: 'Yetkazildi', bg: 'bg-teal-100', text: 'text-teal-700' },
   paid: { label: "To'langan", bg: 'bg-green-100', text: 'text-green-700' },
   closed: { label: 'Yopilgan', bg: 'bg-gray-100', text: 'text-gray-600' },
   cancelled: { label: 'Bekor qilingan', bg: 'bg-red-100', text: 'text-red-700' },
@@ -40,8 +43,15 @@ const TYPE_LABELS: Record<string, string> = {
 const NEXT_STATUS: Record<string, Record<string, string>> = {
   dine_in: { preparing: 'ready', ready: 'served', served: 'paid', paid: 'closed' },
   takeaway: { preparing: 'ready', ready: 'paid', paid: 'closed' },
-  delivery: { preparing: 'ready', ready: 'paid', paid: 'closed' },
+  // Backend OrderController::updateStatus bilan bir xil (yetkazish: ready → delivering → delivered)
+  delivery: { preparing: 'ready', ready: 'delivering', delivering: 'delivered', delivered: 'paid', paid: 'closed' },
 };
+
+// To'lov, chegirma, bekor qilish endi mumkin bo'lmagan holatlar (backend TERMINAL_STATUSES)
+const TERMINAL_STATUSES = ['paid', 'closed', 'cancelled'];
+// routes/api.php: payments — company_admin, manager, cashier; discount/cancel — + waiter
+const CAN_PAY = ['company_admin', 'manager', 'cashier'];
+const CAN_EDIT = ['company_admin', 'manager', 'waiter', 'cashier'];
 
 // Phase 1: cash + card only (online methods come later).
 const PAYMENT_METHODS: { value: Payment['method']; label: string }[] = [
@@ -678,9 +688,16 @@ function OrderDetailModal({
   const [showCancel, setShowCancel] = useState(false);
   const [error, setError] = useState('');
 
+  const { user } = useAuth();
+  const role = user?.role ?? '';
   const statusInfo = STATUS_MAP[order.status] ?? STATUS_MAP.preparing;
   const nextStatus = NEXT_STATUS[order.type]?.[order.status];
   const nextStatusLabel = nextStatus ? STATUS_MAP[nextStatus]?.label : null;
+  const isTerminal = TERMINAL_STATUSES.includes(order.status);
+  // "To'langan" holati faqat to'lov orqali o'rnatiladi — qo'lda o'tkazish tugmasi ko'rsatilmaydi
+  const showNext = !!nextStatus && !!nextStatusLabel && nextStatus !== 'paid';
+  const showPay = !isTerminal && CAN_PAY.includes(role);
+  const showEdit = !isTerminal && CAN_EDIT.includes(role);
 
   const statusMutation = useMutation({
     mutationFn: async () => {
@@ -862,40 +879,50 @@ function OrderDetailModal({
           )}
         </div>
 
-        {/* Action buttons */}
-        {order.status !== 'closed' && order.status !== 'cancelled' && (
+        {/* Amallar: holat va rolga qarab (#15). Bitta asosiy tugma — to'lov bo'lsa u, aks holda keyingi holat */}
+        {(showNext || showPay || showEdit) && (
           <div className="p-6 border-t border-gray-200 flex flex-wrap gap-2">
-            {nextStatus && nextStatusLabel && (
+            {showPay && (
+              <button
+                onClick={() => setShowPayment(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
+              >
+                <CreditCard size={16} />
+                To'lov
+              </button>
+            )}
+            {showNext && (
               <button
                 onClick={() => statusMutation.mutate()}
                 disabled={statusMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
+                className={`inline-flex items-center gap-1.5 min-h-11 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                  showPay
+                    ? 'border border-amber-700 text-amber-800 hover:bg-amber-50'
+                    : 'bg-amber-700 text-white hover:bg-amber-800'
+                }`}
               >
                 <ArrowRight size={16} />
                 {statusMutation.isPending ? 'Saqlanmoqda...' : nextStatusLabel}
               </button>
             )}
-            <button
-              onClick={() => setShowPayment(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
-            >
-              <CreditCard size={16} />
-              To'lov
-            </button>
-            <button
-              onClick={() => setShowDiscount(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Percent size={16} />
-              Chegirma
-            </button>
-            <button
-              onClick={() => setShowCancel(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-            >
-              <Ban size={16} />
-              Bekor qilish
-            </button>
+            {showEdit && (
+              <button
+                onClick={() => setShowDiscount(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                <Percent size={16} />
+                Chegirma
+              </button>
+            )}
+            {showEdit && (
+              <button
+                onClick={() => setShowCancel(true)}
+                className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 border border-red-300 text-red-700 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors sm:ml-auto"
+              >
+                <Ban size={16} />
+                Bekor qilish
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -976,6 +1003,8 @@ export default function OrdersPage() {
             <option value="preparing">Tayyorlanmoqda</option>
             <option value="ready">Tayyor</option>
             <option value="served">Berildi</option>
+            <option value="delivering">Yetkazilmoqda</option>
+            <option value="delivered">Yetkazildi</option>
             <option value="paid">To'langan</option>
             <option value="closed">Yopilgan</option>
             <option value="cancelled">Bekor qilingan</option>
