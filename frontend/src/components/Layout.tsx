@@ -23,6 +23,7 @@ import {
   SlidersHorizontal,
   Bell,
   Soup,
+  BookMarked,
 } from 'lucide-react';
 import type { Role } from '../types';
 import { apiErrorMessage } from '../lib/apiError';
@@ -192,6 +193,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // Super admin
     { label: 'Kompaniyalar', path: '/companies', icon: <Building2 size={20} />, roles: ['super_admin'] },
     { label: 'Tariflar', path: '/plans', icon: <CreditCard size={20} />, roles: ['super_admin'] },
+    { label: 'Standart menyu', path: '/catalog', icon: <BookMarked size={20} />, roles: ['super_admin'] },
     { label: 'Tarix', path: '/history', icon: <History size={20} />, roles: ['super_admin'] },
     // Company
     { label: 'Menyu', path: '/menu', icon: <UtensilsCrossed size={20} />, roles: ['company_admin', 'manager'] },
