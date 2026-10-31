@@ -8,7 +8,7 @@ export default function NotFoundPage() {
         <p className="text-lg text-gray-600 mb-6">Sahifa topilmadi</p>
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 bg-amber-500 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+          className="inline-flex items-center gap-2 bg-amber-700 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
         >
           Bosh sahifaga qaytish
         </Link>

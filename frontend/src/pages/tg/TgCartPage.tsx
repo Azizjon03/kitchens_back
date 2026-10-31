@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import tgApi, { tgInit, tgTableId } from '../../lib/tgApi';
-import { useTgCart, cartTotal, lineTotal, type TgCartLine } from '../../lib/tgCart';
+import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
+import { useTgCart, cartTotal, lineTotal, minWeightKg, type TgCartLine } from '../../lib/tgCart';
 import type { Category } from '../../types';
 import { ArrowLeft, Minus, Plus, X } from 'lucide-react';
 
@@ -69,8 +69,7 @@ export default function TgCartPage() {
       navigate(`/tg/order/${order.id}${window.location.search}`);
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string }; message?: string } } };
-      setError(axiosErr.response?.data?.error?.message || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(tgErrorMessage(err, { fallback: "Buyurtmani yuborib bo'lmadi." }));
     },
   });
 
@@ -121,7 +120,7 @@ export default function TgCartPage() {
                 <input
                   type="number"
                   step={Number(l.item.weight_step) || 0.1}
-                  min={Number(l.item.min_weight) || 0.1}
+                  min={minWeightKg(l.item)}
                   value={l.weight_kg ?? ''}
                   onChange={(e) => update(l.key, { weight_kg: Number(e.target.value) })}
                   className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
@@ -180,7 +179,7 @@ export default function TgCartPage() {
                     onClick={() => toggleId(l, 'addon_ids', a.id)}
                     className={`px-2 py-0.5 rounded text-[11px] border ${
                       l.addon_ids.includes(a.id)
-                        ? 'bg-green-500 text-white border-green-500'
+                        ? 'bg-green-700 text-white border-green-700'
                         : 'bg-white text-gray-600 border-gray-200'
                     }`}
                   >

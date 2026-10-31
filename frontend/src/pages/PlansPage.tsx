@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import Layout from '../components/Layout';
 import { CreditCard, Plus, X, Check, Minus } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface Plan {
   id: number;
@@ -90,8 +91,7 @@ function PlanModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
-      setError(axiosErr.response?.data?.error?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -219,7 +219,7 @@ function PlanModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : editPlan ? 'Saqlash' : 'Yaratish'}
             </button>
@@ -269,7 +269,7 @@ export default function PlansPage() {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+          className="inline-flex items-center gap-2 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
         >
           <Plus size={18} />
           Yangi tarif

@@ -82,6 +82,11 @@ export function cartCount(cart: TgCartLine[]): number {
 }
 
 /** Reactive cart state backed by localStorage and synced across components. */
+/** Vaznli taomning minimal (va savatga qo'shilgandagi boshlang'ich) vazni — yagona manba. */
+export function minWeightKg(item: Pick<MenuItem, 'min_weight'>): number {
+  return Number(item.min_weight) || 0.1;
+}
+
 export function useTgCart() {
   const [cart, setCart] = useState<TgCartLine[]>(() => loadCart());
 
@@ -101,7 +106,7 @@ export function useTgCart() {
       key: `${item.id}-${Date.now()}-${next.length}`,
       item,
       quantity: 1,
-      weight_kg: item.sell_type === 'weight' ? Number(item.min_weight) || 0.3 : undefined,
+      weight_kg: item.sell_type === 'weight' ? minWeightKg(item) : undefined,
       modifier_ids: [],
       addon_ids: [],
     });

@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Filter,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -125,8 +126,7 @@ function CreateOrderModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -285,7 +285,7 @@ function CreateOrderModal({
                   type="button"
                   onClick={addToCart}
                   disabled={!selectedMenuItemId}
-                  className="w-full px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+                  className="w-full px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
                 >
                   Qo'shish
                 </button>
@@ -363,7 +363,7 @@ function CreateOrderModal({
             <button
               type="submit"
               disabled={mutation.isPending || cart.length === 0}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Yaratilmoqda...' : 'Buyurtma yaratish'}
             </button>
@@ -401,8 +401,7 @@ function PaymentModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -465,7 +464,7 @@ function PaymentModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : "To'lash"}
             </button>
@@ -502,8 +501,7 @@ function DiscountModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -568,7 +566,7 @@ function DiscountModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
@@ -601,8 +599,7 @@ function CancelModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -655,7 +652,7 @@ function CancelModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Bekor qilinmoqda...' : 'Bekor qilish'}
             </button>
@@ -694,8 +691,7 @@ function OrderDetailModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -873,7 +869,7 @@ function OrderDetailModal({
               <button
                 onClick={() => statusMutation.mutate()}
                 disabled={statusMutation.isPending}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
               >
                 <ArrowRight size={16} />
                 {statusMutation.isPending ? 'Saqlanmoqda...' : nextStatusLabel}
@@ -881,21 +877,21 @@ function OrderDetailModal({
             )}
             <button
               onClick={() => setShowPayment(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium hover:bg-green-800 transition-colors"
             >
               <CreditCard size={16} />
               To'lov
             </button>
             <button
               onClick={() => setShowDiscount(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               <Percent size={16} />
               Chegirma
             </button>
             <button
               onClick={() => setShowCancel(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
             >
               <Ban size={16} />
               Bekor qilish
@@ -957,7 +953,7 @@ export default function OrdersPage() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
         >
           <Plus size={18} />
           Yangi buyurtma

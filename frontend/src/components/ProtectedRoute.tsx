@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
+import { useAuth, homePathFor } from '../lib/auth';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -24,9 +24,15 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
   if (requiredRole) {
     const allowed = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
     if (!user || !allowed.includes(user.role)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={homePathFor(user?.role)} replace />;
     }
   }
 
   return <>{children}</>;
+}
+
+/** "/" — rolning ish ekraniga (oshpaz → KDS, ofitsiant → zal, kassir → kassa) */
+export function RoleHome() {
+  const { user } = useAuth();
+  return <Navigate to={homePathFor(user?.role)} replace />;
 }

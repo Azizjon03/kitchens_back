@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AxiosError } from 'axios';
-import { useAuth } from '../lib/auth';
-import { ChefHat, Eye, EyeOff } from 'lucide-react';
+import { useAuth, homePathFor, type LoginAccount } from '../lib/auth';
+import { Building2, ChefHat, Eye, EyeOff } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -18,14 +18,41 @@ function unformatPhone(value: string): string {
   return '+' + value.replace(/\D/g, '');
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Tizim administratori',
+  company_admin: 'Administrator',
+  manager: 'Menejer',
+  waiter: 'Ofitsiant',
+  chef: 'Oshpaz',
+  cashier: 'Kassir',
+};
+
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, selectCompany } = useAuth();
   const navigate = useNavigate();
+  const [selection, setSelection] = useState<{ accounts: LoginAccount[]; token: string } | null>(null);
+  const [selectingId, setSelectingId] = useState<number | null>(null);
+
+  const handleSelect = async (userId: number) => {
+    if (!selection) return;
+    setError('');
+    setSelectingId(userId);
+    try {
+      const user = await selectCompany(selection.token, userId);
+      navigate(homePathFor(user.role), { replace: true });
+    } catch (err: unknown) {
+      setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
+      // Token muddati o'tgan bo'lsa — qaytadan parol bilan kirish kerak
+      setSelection(null);
+    } finally {
+      setSelectingId(null);
+    }
+  };
 
   const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {
     setPhone(formatPhone(e.target.value));
@@ -37,15 +64,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await login(unformatPhone(phone), password);
-      navigate('/dashboard', { replace: true });
+      const result = await login(unformatPhone(phone), password);
+      if (result.status === 'select') {
+        setSelection({ accounts: result.accounts, token: result.selectionToken });
+        return;
+      }
+      navigate(homePathFor(result.user.role), { replace: true });
     } catch (err: unknown) {
-      const axiosError = err as AxiosError<{ detail?: string; error?: { message?: string } }>;
-      const message =
-        axiosError.response?.data?.detail ||
-        axiosError.response?.data?.error?.message ||
-        'Login xatolik yuz berdi';
-      setError(message);
+      setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +89,50 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-1">Admin paneliga kirish</p>
         </div>
 
-        {/* Form */}
+        {/* Restoran tanlash (#10) */}
+        {selection ? (
+          <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-8">
+            <h2 className="text-lg font-semibold text-gray-900">Qaysi restoranga kirasiz?</h2>
+            <p className="text-sm text-gray-500 mt-1 mb-5">
+              Bu telefon raqam bir nechta restoranda ro'yxatdan o'tgan.
+            </p>
+            {error && (
+              <div role="alert" className="mb-4 bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-100">
+                {error}
+              </div>
+            )}
+            <ul className="space-y-2">
+              {selection.accounts.map((a) => (
+                <li key={a.user_id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(a.user_id)}
+                    disabled={selectingId !== null}
+                    className="w-full min-h-14 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border border-gray-200 hover:border-amber-400 hover:bg-amber-50 text-left transition-colors disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <span className="flex items-center gap-3 min-w-0">
+                      <Building2 size={20} className="text-gray-400 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0">
+                        <span className="block font-medium text-gray-900 truncate">{a.company?.name ?? 'Tizim'}</span>
+                        <span className="block text-sm text-gray-500">{ROLE_LABELS[a.role] ?? a.role}</span>
+                      </span>
+                    </span>
+                    <span className="text-sm text-amber-700 font-medium shrink-0">
+                      {selectingId === a.user_id ? 'Kirilmoqda...' : 'Kirish'}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => { setSelection(null); setError(''); }}
+              className="mt-5 w-full min-h-11 text-sm text-gray-600 hover:text-gray-900"
+            >
+              Orqaga
+            </button>
+          </div>
+        ) : (
         <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
@@ -114,7 +183,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full bg-amber-700 hover:bg-amber-800 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -127,6 +196,7 @@ export default function LoginPage() {
             </button>
           </form>
         </div>
+        )}
 
         <p className="text-center text-xs text-gray-400 mt-6">
           Kitchens.uz - Oshxona boshqaruv tizimi

@@ -1,123 +1,121 @@
 import { test, expect } from './fixtures/auth';
+import { devices, type Page } from '@playwright/test';
+
+// Mobil sarlavhadagi (lg:hidden) hamburger tugmasi
+const hamburger = (page: Page) => page.locator('header button').filter({ has: page.locator('svg.lucide-menu') });
+// Sidebar ochiq bo'lganda chiqadigan qora overlay
+const overlay = (page: Page) => page.locator('div.fixed.inset-0.bg-black\\/50');
 
 test.describe('Responsive dizayn — Mobile', () => {
   test.use({ viewport: { width: 375, height: 812 } }); // iPhone X
 
-  test('mobile da hamburger menyu ko\'rsatilishi kerak', async ({
+  test('mobile da hamburger menyu ko\'rsatilishi va sidebar yashirin bo\'lishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    // Desktop sidebar ko'rinmasligi kerak
-    const sidebar = page.locator('aside, nav').filter({ hasText: 'Kitchens.uz' });
-
-    // Hamburger tugmasi ko'rinishi kerak
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    if ((await hamburger.count()) > 0) {
-      await expect(hamburger.first()).toBeVisible();
-    }
+    await expect(hamburger(page)).toBeVisible();
+    await expect(page.locator('header').getByText('Kitchens.uz')).toBeVisible();
+    // Sidebar ekrandan tashqarida (-translate-x-full)
+    await expect(page.locator('aside')).not.toBeInViewport();
   });
 
   test('hamburger tugmasini bosganda sidebar ochilishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    if ((await hamburger.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await hamburger(page).click();
 
-    await hamburger.first().click();
-
-    // Sidebar ko'rinishi kerak
-    await expect(page.locator('text=Kitchens.uz').first()).toBeVisible({ timeout: 5000 });
-
-    // Overlay ko'rinishi kerak
-    const overlay = page.locator('.bg-black\\/50, [class*="bg-black"]');
-    if ((await overlay.count()) > 0) {
-      await expect(overlay.first()).toBeVisible();
-    }
+    await expect(page.locator('aside')).toBeInViewport();
+    await expect(page.locator('aside').getByRole('link', { name: 'Dashboard' })).toBeVisible();
+    await expect(overlay(page)).toBeVisible();
   });
 
   test('mobile sidebar yopilishi kerak (X tugmasi)', async ({
     authenticatedPage: page,
   }) => {
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    if ((await hamburger.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await hamburger(page).click();
+    await expect(page.locator('aside')).toBeInViewport();
 
-    await hamburger.first().click();
-    await page.waitForTimeout(500);
-
-    // X tugmasi bilan yopish
-    const closeBtn = page.locator('button').filter({ has: page.locator('svg.lucide-x') });
-    if ((await closeBtn.count()) > 0) {
-      await closeBtn.first().click();
-      await page.waitForTimeout(500);
-    }
+    await page.locator('aside button').filter({ has: page.locator('svg.lucide-x') }).click();
+    await expect(overlay(page)).toBeHidden();
+    await expect(page.locator('aside')).not.toBeInViewport();
   });
 
   test('mobile sidebar yopilishi kerak (overlay bosish)', async ({
     authenticatedPage: page,
   }) => {
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    if ((await hamburger.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await hamburger(page).click();
+    await expect(overlay(page)).toBeVisible();
 
-    await hamburger.first().click();
-    await page.waitForTimeout(500);
+    // Sidebar (w-64 = 256px) overlay ustida — undan o'ngdagi bo'sh joyni bosamiz
+    await overlay(page).click({ position: { x: 340, y: 400 } });
+    await expect(overlay(page)).toBeHidden();
+    await expect(page.locator('aside')).not.toBeInViewport();
+  });
 
-    // Overlay bosish orqali yopish
-    const overlay = page.locator('.bg-black\\/50, [class*="bg-black"][class*="fixed"]');
-    if ((await overlay.count()) > 0) {
-      await overlay.first().click({ force: true });
-      await page.waitForTimeout(500);
-    }
+  test('mobile da sidebar linkini bosganda sidebar yopilishi va sahifa ochilishi kerak', async ({
+    authenticatedPage: page,
+  }) => {
+    await hamburger(page).click();
+    await page.locator('aside nav').getByRole('link', { name: 'Kompaniyalar' }).click();
+    await expect(page).toHaveURL(/\/companies$/);
+    await expect(overlay(page)).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Kompaniyalar', level: 1 })).toBeVisible();
   });
 
   test('mobile da login sahifasi to\'g\'ri ko\'rsatilishi kerak', async ({ page }) => {
     await page.goto('/login');
 
-    // Form ko'rinishi kerak
-    await expect(page.locator('input#email')).toBeVisible();
+    await expect(page.locator('input#phone')).toBeVisible();
     await expect(page.locator('input#password')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+    const submitBtn = page.locator('button[type="submit"]');
+    await expect(submitBtn).toBeVisible();
 
     // Viewport ichida joylashganligini tekshirish
-    const submitBtn = page.locator('button[type="submit"]');
     const box = await submitBtn.boundingBox();
-    if (box) {
-      expect(box.x + box.width).toBeLessThanOrEqual(375);
-    }
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
   });
 
   test('mobile da modal to\'g\'ri ko\'rsatilishi kerak', async ({
     authenticatedPage: page,
   }) => {
     await page.goto('/companies');
-    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Yangi kompaniya' }).click();
 
-    // Hamburger orqali navigatsiya
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    if ((await hamburger.count()) > 0) {
-      await hamburger.first().click();
-      await page.waitForTimeout(500);
-    }
+    const heading = page.getByRole('heading', { name: 'Yangi kompaniya' });
+    await expect(heading).toBeVisible();
 
-    const addBtn = page.locator('button, a').filter({ hasText: 'Yangi kompaniya' });
-    if ((await addBtn.count()) > 0) {
-      await addBtn.first().click();
-      await page.waitForTimeout(500);
+    // Modal oynasi (sarlavhaning oq konteyneri) gorizontal viewport ichida
+    const dialogBox = page.locator('div.bg-white.rounded-2xl').filter({ has: heading });
+    const box = await dialogBox.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(375);
 
-      // Modal viewport ichida bo'lishi kerak
-      const modal = page.locator('[class*="fixed"][class*="inset-0"], [role="dialog"]');
-      if ((await modal.count()) > 0) {
-        await expect(modal.first()).toBeVisible();
-      }
-    }
+    // Uzun forma modal ichida scroll bo'ladi — "Yaratish" tugmasigacha yetib boriladi
+    const submit = dialogBox.getByRole('button', { name: 'Yaratish' });
+    await submit.scrollIntoViewIfNeeded();
+    await expect(submit).toBeInViewport();
   });
+});
+
+test.describe('Responsive dizayn — gorizontal overflow (haqiqiy mobil qurilma)', () => {
+  // defaultBrowserType ni describe ichida berib bo'lmaydi
+  const { defaultBrowserType: _ignored, ...pixel5 } = devices['Pixel 5'];
+  test.use(pixel5);
+
+  for (const path of ['/dashboard', '/companies', '/plans', '/history']) {
+    test(`${path} sahifasi mobil ekranda gorizontal kengaymasligi kerak`, async ({ authenticatedPage: page }) => {
+      await page.goto(path);
+      await expect(page.locator('main h1')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('status')).toHaveCount(0, { timeout: 10000 });
+      const { scroll, client } = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      }));
+      expect(scroll).toBeLessThanOrEqual(client);
+    });
+  }
 });
 
 test.describe('Responsive dizayn — Tablet', () => {
@@ -126,7 +124,10 @@ test.describe('Responsive dizayn — Tablet', () => {
   test('tablet da sahifa to\'g\'ri ko\'rsatilishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible({ timeout: 10000 });
+    // 768px < lg (1024px) — hali mobil sarlavha va hamburger
+    await expect(hamburger(page)).toBeVisible();
+    await expect(page.locator('aside')).not.toBeInViewport();
   });
 });
 
@@ -136,11 +137,9 @@ test.describe('Responsive dizayn — Desktop', () => {
   test('desktop da sidebar doim ko\'rsatilishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    // Sidebar ko'rinishi kerak
-    await expect(page.locator('text=Kitchens.uz').first()).toBeVisible();
-
-    // Hamburger ko'rinmasligi kerak
-    const hamburger = page.locator('button').filter({ has: page.locator('svg.lucide-menu') });
-    // Desktop da hamburger hidden bo'lishi kerak (lg:hidden class)
+    await expect(page.locator('aside')).toBeInViewport();
+    await expect(page.locator('aside').getByRole('heading', { name: 'Kitchens.uz' })).toBeVisible();
+    // Hamburger (lg:hidden) desktopda ko'rinmaydi
+    await expect(hamburger(page)).toBeHidden();
   });
 });

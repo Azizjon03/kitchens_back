@@ -89,7 +89,7 @@ export default function TgOrderStatusPage() {
         <button
           onClick={() => refetch()}
           disabled={isRefetching}
-          className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50"
+          className="px-4 py-2 rounded-lg bg-amber-700 text-white text-sm font-medium disabled:opacity-50"
         >
           {isRefetching ? 'Qayta yuklanmoqda...' : 'Qayta urinish'}
         </button>
@@ -140,7 +140,7 @@ export default function TgOrderStatusPage() {
                 <div key={s} className="flex items-center gap-3">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-white ${
-                      done ? 'bg-green-500' : active ? 'bg-amber-500' : 'bg-gray-300'
+                      done ? 'bg-green-700' : active ? 'bg-amber-700' : 'bg-gray-300'
                     }`}
                   >
                     {done ? <Check size={16} /> : <Clock size={16} />}

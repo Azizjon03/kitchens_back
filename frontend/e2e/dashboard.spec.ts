@@ -1,74 +1,45 @@
-import { test, expect } from './fixtures/auth';
+import { test, expect, loginViaUI } from './fixtures/auth';
 
+// Fixture super admin (998906921469) bilan kiradi — super admin dashboardi tekshiriladi.
 test.describe('Dashboard sahifasi', () => {
-  test('dashboard sahifasi yuklangandan keyin statistikalar ko\'rsatilishi kerak', async ({
+  test('dashboard sahifasi sarlavha va xush kelibsiz matnini ko\'rsatishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    // Sahifa yuklandi
-    await expect(page.locator('text=Dashboard')).toBeVisible({ timeout: 10000 });
-
-    // Stat kartalar yoki placeholder ko'rinishi kerak
-    const statCards = page.locator('.bg-white, .bg-gray-50').filter({ hasText: /Jami|kompaniya|statistika/i });
-    const hasStats = (await statCards.count()) > 0;
-
-    // Agar super_admin bo'lsa — stat kartalar
-    const superAdminCards = page.locator('text=Jami kompaniyalar');
-    const companyPlaceholder = page.locator('text=kompaniya statistikasi');
-
-    const isSuperAdmin = (await superAdminCards.count()) > 0;
-    const isCompanyAdmin = (await companyPlaceholder.count()) > 0;
-
-    // Ikkalasidan biri ko'rinishi kerak
-    expect(isSuperAdmin || isCompanyAdmin).toBeTruthy();
+    await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/^Xush kelibsiz, .+!$/)).toBeVisible();
   });
 
   test('super admin uchun 4 ta stat karta ko\'rsatilishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    const superAdminCards = page.locator('text=Jami kompaniyalar');
-    if ((await superAdminCards.count()) === 0) {
-      test.skip();
-      return;
+    const main = page.getByRole('main');
+    for (const title of ['Jami kompaniyalar', 'Jami foydalanuvchilar', 'Jami buyurtmalar', 'Jami daromad']) {
+      await expect(main.getByText(title, { exact: true })).toBeVisible({ timeout: 10000 });
     }
-
-    await expect(page.locator('text=Jami kompaniyalar')).toBeVisible();
-    await expect(page.locator('text=Jami foydalanuvchilar')).toBeVisible();
-    await expect(page.locator('text=Jami buyurtmalar')).toBeVisible();
-    await expect(page.locator('text=Jami daromad')).toBeVisible();
+    // Daromad so'mda formatlanadi
+    await expect(main.getByText(/so'm$/)).toBeVisible();
   });
 
   test('tizim holati kartasi ko\'rsatilishi kerak', async ({
     authenticatedPage: page,
   }) => {
-    const systemStatus = page.locator('text=Tizim holati');
-    if ((await systemStatus.count()) > 0) {
-      await expect(systemStatus).toBeVisible();
-      await expect(page.locator('text=Tizim barqaror ishlayapti')).toBeVisible();
-    }
+    await expect(page.getByRole('heading', { name: 'Tizim holati' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Tizim barqaror ishlayapti', { exact: false })).toBeVisible();
   });
 
   test('loading skeleton ko\'rsatilishi kerak', async ({ page }) => {
-    // API ni sekinlashtirish
+    // Stat API ni sekinlashtirish
     await page.route('**/api/v1/super/dashboard', async (route) => {
       await new Promise((r) => setTimeout(r, 2000));
       await route.continue();
     });
 
-    // Login qilish
-    const email = process.env.TEST_EMAIL || 'admin@kitchens.uz';
-    const password = process.env.TEST_PASSWORD || 'password';
+    await loginViaUI(page);
 
-    await page.goto('/login');
-    await page.fill('input#email', email);
-    await page.fill('input#password', password);
-    await page.click('button[type="submit"]');
-    await page.waitForURL('**/dashboard', { timeout: 15000 });
-
-    // Skeleton/loading elementlari
-    const loadingElements = page.locator('.animate-pulse, .animate-spin');
-    // Agar API sekin bo'lsa skeleton ko'rinadi
-    if ((await loadingElements.count()) > 0) {
-      await expect(loadingElements.first()).toBeVisible();
-    }
+    // API javobi kelguncha skeleton kartalar, keyin haqiqiy kartalar
+    const skeletons = page.getByRole('main').locator('.animate-pulse');
+    await expect(skeletons).toHaveCount(4);
+    await expect(page.getByText('Jami kompaniyalar', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(skeletons).toHaveCount(0);
   });
 });

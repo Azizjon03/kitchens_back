@@ -69,7 +69,9 @@ const [form, setForm] = useState({ name: branch?.name || '', phone: '+998 ' });
   - `ApiResponse`: `{ success: false, error: { code, message } }`
   - Laravel 422: `{ message, errors: { field: ['...'] } }`
 - O'qish tartibi: `errors[field][0]` → maydon ostida; `error.message` →
-  `message` → `'Xatolik yuz berdi'` → forma tepasidagi umumiy blok:
+  `message` → `'Xatolik yuz berdi'` → forma tepasidagi umumiy blok.
+  **MAJBURIY:** `apiErrorMessage(err)` va maydonlar uchun `apiFieldErrors(err)`
+  (`lib/apiError.ts`) — qo'lda `response.data...` zanjiri yozilmaydi:
 
 ```tsx
 {error && (
@@ -83,10 +85,10 @@ const [form, setForm] = useState({ name: branch?.name || '', phone: '+998 ' });
 - Telegram Mini App'da — `tgErrorMessage(err, { fallback })` (`lib/tgApi.ts`),
   u xato kodlarini o'zbekcha matnga aylantiradi.
 
-> **Hozirgi holat:** ko'p sahifa `response.data.detail || message` o'qiydi —
-> `detail` backendda yo'q, `error.message` esa o'qilmaydi, natijada
-> foydalanuvchi faqat "Xatolik yuz berdi" ko'radi. `errors` (422) hech
-> qayerda maydonga bog'lanmagan. Yangi kodda — yuqoridagi tartib.
+> **Hozirgi holat (2026-10-31, #6 dan keyin):** barcha sahifalar umumiy xabarni
+> `apiErrorMessage` orqali o'qiydi (`detail` olib tashlandi, ui-lint K2 = 0).
+> `errors` (422) hali hech qayerda **maydon ostiga** bog'lanmagan — `apiFieldErrors`
+> tayyor, yangi/tahrirlanayotgan formada ishlatilsin.
 
 ## §4 Yuborish
 

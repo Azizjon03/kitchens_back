@@ -1,5 +1,5 @@
 export function Good() {
   const onErr = (e: any) => setError(e.response?.data?.error?.message || 'Xatolik yuz berdi');
   api.get('/menu');
-  return <div className="bg-amber-500 text-white">Osh</div>;
+  return <div className="bg-amber-700 text-white">Osh</div>;
 }
