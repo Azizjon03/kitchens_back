@@ -10,6 +10,7 @@ import {
   X,
   GitBranch,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Phone Mask ──────────────────────────────────────────────────
 
@@ -61,8 +62,7 @@ function BranchModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 

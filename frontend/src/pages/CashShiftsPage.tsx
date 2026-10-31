@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -83,8 +84,7 @@ function OpenShiftModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -202,8 +202,7 @@ function CloseShiftModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 

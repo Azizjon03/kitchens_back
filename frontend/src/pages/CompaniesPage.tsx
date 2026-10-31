@@ -5,6 +5,7 @@ import api from '../lib/api';
 import type { Company } from '../types';
 import Layout from '../components/Layout';
 import { Building2, Plus, X, ExternalLink, Search } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface CreateCompanyForm {
   name: string;
@@ -58,9 +59,7 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
       onClose();
     },
     onError: (err: unknown) => {
-      const data = (err as { response?: { data?: { error?: { message?: string }; message?: string } } })
-        .response?.data;
-      setError(data?.error?.message || data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 

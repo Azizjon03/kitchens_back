@@ -12,6 +12,7 @@ import {
   Users,
   MapPin,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   free: { label: 'Bo\'sh', bg: 'bg-green-100', text: 'text-green-700' },
@@ -68,8 +69,7 @@ function TableModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 

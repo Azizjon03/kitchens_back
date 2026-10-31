@@ -5,6 +5,7 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
 import Layout from '../components/Layout';
+import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Types matching Order::toBroadcastArray() ────────────────────
 
@@ -176,6 +177,7 @@ export default function KitchenPage() {
   const [branchId, setBranchId] = useState<number | null>(user?.branch_id ?? null);
   const [orders, setOrders] = useState<KdsOrder[]>([]);
   const [now, setNow] = useState(Date.now());
+  const [actionError, setActionError] = useState('');
 
   // Tick every 30s so elapsed-time colours update.
   useEffect(() => {
@@ -292,7 +294,10 @@ export default function KitchenPage() {
           prev.map((o) => (o.id === updated.id ? { ...o, status: 'ready' } : o)),
         );
       }
+      setActionError('');
     },
+    // Xato jim yutilmaydi: oshpaz "Tayyor" o'tmaganini ko'rishi shart (#6)
+    onError: (err) => setActionError(apiErrorMessage(err, "Buyurtmani 'Tayyor' qilib bo'lmadi")),
   });
 
   const sorted = useMemo(
@@ -323,6 +328,12 @@ export default function KitchenPage() {
           </select>
         )}
       </div>
+      {actionError && (
+        <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError('')} className="shrink-0 rounded-lg px-2 text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">✕</button>
+        </div>
+      )}
 
       {sorted.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">

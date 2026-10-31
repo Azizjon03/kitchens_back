@@ -25,6 +25,7 @@ import {
   Soup,
 } from 'lucide-react';
 import type { Role } from '../types';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface NavItem {
   label: string;
@@ -56,12 +57,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setTimeout(onClose, 1500);
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string }; detail?: string } } };
-      setError(
-        axiosErr.response?.data?.error?.message ||
-        axiosErr.response?.data?.detail ||
-        'Xatolik yuz berdi'
-      );
+      setError(apiErrorMessage(err));
     },
   });
 

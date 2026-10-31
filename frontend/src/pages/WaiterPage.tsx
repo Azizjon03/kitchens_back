@@ -5,6 +5,7 @@ import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch, Table, Order, Category, MenuItem } from '../types';
 import Layout from '../components/Layout';
+import { apiErrorMessage } from '../lib/apiError';
 import { Plus, Minus, X, Bell, Check } from 'lucide-react';
 
 function formatPrice(price: number) {
@@ -303,6 +304,7 @@ export default function WaiterPage() {
   const [branchId, setBranchId] = useState<number | null>(user?.branch_id ?? null);
   const [composerTable, setComposerTable] = useState<Table | null>(null);
   const [alerts, setAlerts] = useState<{ id: number; label: string }[]>([]);
+  const [actionError, setActionError] = useState('');
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -379,7 +381,12 @@ export default function WaiterPage() {
 
   const serveMutation = useMutation({
     mutationFn: async (id: number) => (await api.patch(`/orders/${id}/status`, { status: 'served' })).data,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['waiter-orders', branchId] }),
+    onSuccess: () => {
+      setActionError('');
+      queryClient.invalidateQueries({ queryKey: ['waiter-orders', branchId] });
+    },
+    // Xato jim yutilmaydi: ofitsiant "Berildi" o'tmaganini ko'rishi shart (#6)
+    onError: (err) => setActionError(apiErrorMessage(err, "Buyurtmani 'Berildi' qilib bo'lmadi")),
   });
 
   const tableLabel = (o: Order) => (o.table ? `Stol #${o.table.number}` : `#${o.id}`);
@@ -405,6 +412,12 @@ export default function WaiterPage() {
           </select>
         )}
       </div>
+      {actionError && (
+        <div role="alert" className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-base font-medium text-red-800">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError('')} className="shrink-0 rounded-lg px-2 text-red-700 hover:bg-red-100" aria-label="Xabarni yopish">✕</button>
+        </div>
+      )}
 
       {/* Ready alerts */}
       {alerts.length > 0 && (

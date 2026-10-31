@@ -1,8 +1,8 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AxiosError } from 'axios';
 import { useAuth } from '../lib/auth';
 import { ChefHat, Eye, EyeOff } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 function formatPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 12);
@@ -40,12 +40,7 @@ export default function LoginPage() {
       await login(unformatPhone(phone), password);
       navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
-      const axiosError = err as AxiosError<{ detail?: string; error?: { message?: string } }>;
-      const message =
-        axiosError.response?.data?.detail ||
-        axiosError.response?.data?.error?.message ||
-        'Login xatolik yuz berdi';
-      setError(message);
+      setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
     } finally {
       setLoading(false);
     }

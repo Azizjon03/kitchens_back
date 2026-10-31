@@ -16,6 +16,7 @@ import {
   EyeOff,
   X,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface Plan {
   id: number;
@@ -121,8 +122,7 @@ function EditCompanyModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 

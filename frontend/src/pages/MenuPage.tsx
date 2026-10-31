@@ -15,6 +15,7 @@ import {
   UtensilsCrossed,
   FolderOpen,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 // ─── Category Modal ───────────────────────────────────────────────
 
@@ -47,8 +48,7 @@ function CategoryModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -182,8 +182,7 @@ function MenuItemModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
