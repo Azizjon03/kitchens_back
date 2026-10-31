@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney, formatDate } from '../lib/format';
 
 interface Plan {
   id: number;
@@ -343,7 +344,7 @@ function ChangePlanModal({
                 <p className="text-sm font-semibold text-gray-700">
                   {Number(plan.price_monthly) === 0
                     ? 'Bepul'
-                    : `${Number(plan.price_monthly).toLocaleString()} so'm/oy`}
+                    : `${formatMoney(plan.price_monthly)}/oy`}
                 </p>
               </div>
               {currentPlanId === plan.id && (
@@ -470,7 +471,7 @@ export default function CompanyDetailPage() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Yaratilgan sana</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {new Date(company.created_at).toLocaleDateString('uz-UZ')}
+                    {formatDate(company.created_at)}
                   </p>
                 </div>
               </div>
@@ -538,7 +539,7 @@ export default function CompanyDetailPage() {
                     <p className="text-sm font-medium text-gray-900">
                       {Number(company.subscription.plan.price_monthly) === 0
                         ? 'Bepul'
-                        : `${Number(company.subscription.plan.price_monthly).toLocaleString()} so'm/oy`}
+                        : `${formatMoney(company.subscription.plan.price_monthly)}/oy`}
                     </p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -546,7 +547,7 @@ export default function CompanyDetailPage() {
                     <div className="flex items-center gap-1">
                       <Calendar size={14} className="text-gray-400" />
                       <p className="text-sm font-medium text-gray-900">
-                        {new Date(company.subscription.current_period_end).toLocaleDateString('uz-UZ')}
+                        {formatDate(company.subscription.current_period_end)}
                       </p>
                     </div>
                     <p className={`text-xs mt-0.5 ${

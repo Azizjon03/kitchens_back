@@ -111,11 +111,10 @@ Faol/nofaol (kompaniya, filial, xodim): `bg-green-50 text-green-700` "Faol" /
 - Summa ustuni/katagi: `text-right` (+ `tabular-nums`).
 - Bo'sh qiymat: `—`. `0` — bo'sh emas: `formatPrice(0)`; tarif narxi 0 → "Bepul".
 
-> **Hozirgi holat:** markaziy `lib/format.ts` yo'q — `formatPrice` 7 faylda
-> takrorlanadi; `DashboardPage`, `PlansPage`, `CompanyDetailPage` locale'siz
-> `toLocaleString()` ishlatadi (buzilish). `lib/format.ts` paydo bo'lganda —
-> faqat undan. ui-lint K5 (ogohlantirish) `uz-UZ` shaklini ham belgilaydi —
-> reviewer uni locale'li bo'lsa ayirmaydi.
+> **Holat (2026-10-31, #16):** `frontend/src/lib/format.ts` — `formatMoney`
+> (`45 000 so'm`, bo'linmas probel), `formatNumber`, `formatDate` (`DD.MM.YYYY`),
+> `formatTime` (`HH:mm`), `formatDateTime`. **MAJBURIY** — sahifada `toLocaleString`,
+> `Intl.*` yoki lokal `formatPrice` taqiq (ui-lint K5 endi xato).
 
 ## §5 Holatlar
 

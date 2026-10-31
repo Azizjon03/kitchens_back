@@ -4,6 +4,7 @@ import api from '../lib/api';
 import Layout from '../components/Layout';
 import { CreditCard, Plus, X, Check, Minus } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney } from '../lib/format';
 
 interface Plan {
   id: number;
@@ -311,7 +312,7 @@ export default function PlansPage() {
                     <td className="px-6 py-4 text-gray-700 font-medium">
                       {Number(plan.price_monthly) === 0
                         ? 'Bepul'
-                        : `${Number(plan.price_monthly).toLocaleString()} so'm`}
+                        : formatMoney(plan.price_monthly)}
                     </td>
                     <td className="px-6 py-4 text-center text-gray-600">
                       {plan.max_branches === -1 ? 'Cheksiz' : plan.max_branches}

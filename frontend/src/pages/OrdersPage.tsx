@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { useAuth } from '../lib/auth';
+import { formatMoney, formatDateTime } from '../lib/format';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -62,9 +63,6 @@ const PAYMENT_METHODS: { value: Payment['method']; label: string }[] = [
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 // ─── Create Order Modal ──────────────────────────────────────────
 
@@ -271,7 +269,7 @@ function CreateOrderModal({
                   <option value="">Taom tanlang...</option>
                   {availableItems.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name_uz} — {formatPrice(m.price)}{m.sell_type === 'weight' ? '/kg' : ''}
+                      {m.name_uz} — {formatMoney(m.price)}{m.sell_type === 'weight' ? '/kg' : ''}
                     </option>
                   ))}
                 </select>
@@ -334,7 +332,7 @@ function CreateOrderModal({
                         <td className="px-4 py-2 text-center text-gray-700">
                           {mi?.sell_type === 'weight' ? `${c.weight_kg ?? 0} kg` : c.quantity}
                         </td>
-                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice(lineTotal(c))}</td>
+                        <td className="px-4 py-2 text-right text-gray-900">{formatMoney(lineTotal(c))}</td>
                         <td className="px-4 py-2">
                           <button type="button" onClick={() => removeFromCart(idx)} className="text-red-400 hover:text-red-600">
                             <Trash2 size={16} />
@@ -346,7 +344,7 @@ function CreateOrderModal({
                 </tbody>
               </table>
               <div className="px-4 py-2 bg-gray-50 text-right font-semibold text-gray-900">
-                Jami: {formatPrice(cartTotal)}
+                Jami: {formatMoney(cartTotal)}
               </div>
             </div>
           )}
@@ -439,7 +437,7 @@ function PaymentModal({
 
           <div className="bg-amber-50 rounded-lg p-4 text-center">
             <p className="text-sm text-gray-600">Buyurtma summasi</p>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{formatPrice(order.total)}</p>
+            <p className="text-2xl font-bold text-amber-600 mt-1">{formatMoney(order.total)}</p>
           </div>
 
           <div>
@@ -729,7 +727,7 @@ function OrderDetailModal({
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Buyurtma #{order.id}</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              {new Date(order.created_at).toLocaleString('uz-UZ')}
+              {formatDateTime(order.created_at)}
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -799,9 +797,9 @@ function OrderDetailModal({
                         {item.weight_kg ? `${Number(item.weight_kg)} kg` : Number(item.quantity)}
                       </td>
                       <td className="px-4 py-2 text-right text-gray-700">
-                        {formatPrice(item.unit_price)}{item.weight_kg ? '/kg' : ''}
+                        {formatMoney(item.unit_price)}{item.weight_kg ? '/kg' : ''}
                       </td>
-                      <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatPrice(item.total_price)}</td>
+                      <td className="px-4 py-2 text-right text-gray-900 font-medium">{formatMoney(item.total_price)}</td>
                     </tr>
                   ))}
                   {(!order.order_items || order.order_items.length === 0) && (
@@ -820,12 +818,12 @@ function OrderDetailModal({
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between text-gray-600">
               <span>Oraliq summa</span>
-              <span>{formatPrice(order.subtotal)}</span>
+              <span>{formatMoney(order.subtotal)}</span>
             </div>
             {order.service_charge_pct > 0 && (
               <div className="flex justify-between text-gray-600">
                 <span>Xizmat haqi ({order.service_charge_pct}%)</span>
-                <span>{formatPrice(order.service_charge_amount)}</span>
+                <span>{formatMoney(order.service_charge_amount)}</span>
               </div>
             )}
             {order.discount_amount && order.discount_amount > 0 && (
@@ -836,12 +834,12 @@ function OrderDetailModal({
                     ? ` (${order.discount_value}%)`
                     : ''}
                 </span>
-                <span>-{formatPrice(order.discount_amount)}</span>
+                <span>-{formatMoney(order.discount_amount)}</span>
               </div>
             )}
             <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-2">
               <span>Jami</span>
-              <span>{formatPrice(order.total)}</span>
+              <span>{formatMoney(order.total)}</span>
             </div>
           </div>
 
@@ -865,10 +863,10 @@ function OrderDetailModal({
                         <td className="px-4 py-2 text-gray-900">
                           {PAYMENT_METHODS.find((pm) => pm.value === p.method)?.label ?? p.method}
                         </td>
-                        <td className="px-4 py-2 text-right text-gray-900">{formatPrice(p.amount)}</td>
-                        <td className="px-4 py-2 text-right text-gray-500">{formatPrice(p.change_amount)}</td>
+                        <td className="px-4 py-2 text-right text-gray-900">{formatMoney(p.amount)}</td>
+                        <td className="px-4 py-2 text-right text-gray-500">{formatMoney(p.change_amount)}</td>
                         <td className="px-4 py-2 text-gray-500 text-xs">
-                          {new Date(p.paid_at).toLocaleString('uz-UZ')}
+                          {formatDateTime(p.paid_at)}
                         </td>
                       </tr>
                     ))}
@@ -1106,10 +1104,10 @@ export default function OrdersPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right font-medium text-gray-900">
-                          {formatPrice(order.total)}
+                          {formatMoney(order.total)}
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
-                          {new Date(order.created_at).toLocaleString('uz-UZ')}
+                          {formatDateTime(order.created_at)}
                         </td>
                         <td className="px-4 py-3 text-center">
                           <button

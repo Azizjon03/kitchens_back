@@ -16,6 +16,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney } from '../lib/format';
 
 // ─── Category Modal ───────────────────────────────────────────────
 
@@ -458,8 +459,6 @@ export default function MenuPage() {
     },
   });
 
-  const formatPrice = (price: number) =>
-    new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
 
   return (
     <Layout>
@@ -629,7 +628,7 @@ export default function MenuPage() {
                           {item.category?.name_uz || '—'}
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-900">
-                          {formatPrice(item.price)}
+                          {formatMoney(item.price)}
                         </td>
                         <td className="px-6 py-4 text-gray-500">
                           {item.cooking_time ? `${item.cooking_time} min` : '—'}

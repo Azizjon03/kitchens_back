@@ -5,13 +5,11 @@ import type { Modifier, Addon } from '../types';
 import Layout from '../components/Layout';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney } from '../lib/format';
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
-}
 
 // ─── Delete Confirm Modal ────────────────────────────────────────
 
@@ -536,7 +534,7 @@ export default function ModifiersPage() {
                     <tr key={addon.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                       <td className="px-4 py-3 text-gray-900">{addon.name_uz}</td>
                       <td className="px-4 py-3 text-gray-500">{addon.name_ru || '—'}</td>
-                      <td className="px-4 py-3 text-gray-900 font-medium">{formatPrice(addon.price)}</td>
+                      <td className="px-4 py-3 text-gray-900 font-medium">{formatMoney(addon.price)}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

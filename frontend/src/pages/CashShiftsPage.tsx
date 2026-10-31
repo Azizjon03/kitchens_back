@@ -14,16 +14,11 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatMoney, formatDateTime } from '../lib/format';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat('uz-UZ').format(amount) + " so'm";
-}
 
-function formatDate(date: string) {
-  return new Date(date).toLocaleString('uz-UZ');
-}
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
@@ -236,7 +231,7 @@ function CloseShiftModal({
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Kutilgan summa:</span>
-              <span className="font-medium text-gray-900">{formatAmount(expectedAmount)}</span>
+              <span className="font-medium text-gray-900">{formatMoney(expectedAmount)}</span>
             </div>
           </div>
 
@@ -265,7 +260,7 @@ function CloseShiftModal({
               }`}
             >
               Farq: {difference >= 0 ? '+' : ''}
-              {formatAmount(difference)}
+              {formatMoney(difference)}
             </div>
           )}
 
@@ -356,12 +351,12 @@ function ReportModal({
               </div>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="text-xs text-gray-500 mb-1">Ochilgan vaqt</div>
-                <div className="text-sm font-medium text-gray-900">{formatDate(report.opened_at)}</div>
+                <div className="text-sm font-medium text-gray-900">{formatDateTime(report.opened_at)}</div>
               </div>
               {report.closed_at && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="text-xs text-gray-500 mb-1">Yopilgan vaqt</div>
-                  <div className="text-sm font-medium text-gray-900">{formatDate(report.closed_at)}</div>
+                  <div className="text-sm font-medium text-gray-900">{formatDateTime(report.closed_at)}</div>
                 </div>
               )}
               <div className="bg-gray-50 rounded-lg p-4">
@@ -374,18 +369,18 @@ function ReportModal({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-amber-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Boshlang'ich</div>
-                <div className="text-sm font-bold text-gray-900">{formatAmount(report.opening_amount)}</div>
+                <div className="text-sm font-bold text-gray-900">{formatMoney(report.opening_amount)}</div>
               </div>
               {report.closing_amount != null && (
                 <div className="bg-amber-50 rounded-lg p-4 text-center">
                   <div className="text-xs text-gray-500 mb-1">Yopish summasi</div>
-                  <div className="text-sm font-bold text-gray-900">{formatAmount(report.closing_amount)}</div>
+                  <div className="text-sm font-bold text-gray-900">{formatMoney(report.closing_amount)}</div>
                 </div>
               )}
               {report.expected_amount != null && (
                 <div className="bg-blue-50 rounded-lg p-4 text-center">
                   <div className="text-xs text-gray-500 mb-1">Kutilgan</div>
-                  <div className="text-sm font-bold text-gray-900">{formatAmount(report.expected_amount)}</div>
+                  <div className="text-sm font-bold text-gray-900">{formatMoney(report.expected_amount)}</div>
                 </div>
               )}
               {report.difference != null && (
@@ -409,7 +404,7 @@ function ReportModal({
                     }`}
                   >
                     {report.difference >= 0 ? '+' : ''}
-                    {formatAmount(report.difference)}
+                    {formatMoney(report.difference)}
                   </div>
                 </div>
               )}
@@ -419,11 +414,11 @@ function ReportModal({
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-green-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Jami tushum</div>
-                <div className="text-sm font-bold text-green-700">{formatAmount(report.total_revenue)}</div>
+                <div className="text-sm font-bold text-green-700">{formatMoney(report.total_revenue)}</div>
               </div>
               <div className="bg-red-50 rounded-lg p-4 text-center">
                 <div className="text-xs text-gray-500 mb-1">Qaytarilgan</div>
-                <div className="text-sm font-bold text-red-700">{formatAmount(report.refunds_total)}</div>
+                <div className="text-sm font-bold text-red-700">{formatMoney(report.refunds_total)}</div>
               </div>
             </div>
 
@@ -459,10 +454,10 @@ function ReportModal({
                         <tr key={rm.method} className="border-b border-gray-100">
                           <td className="py-2 px-3 font-medium text-gray-900">{rm.method}</td>
                           <td className="py-2 px-3 text-right text-gray-600">{rm.count}</td>
-                          <td className="py-2 px-3 text-right text-gray-900">{formatAmount(rm.total)}</td>
-                          <td className="py-2 px-3 text-right text-gray-500">{formatAmount(rm.change)}</td>
+                          <td className="py-2 px-3 text-right text-gray-900">{formatMoney(rm.total)}</td>
+                          <td className="py-2 px-3 text-right text-gray-500">{formatMoney(rm.change)}</td>
                           <td className="py-2 px-3 text-right font-medium text-gray-900">
-                            {formatAmount(rm.net)}
+                            {formatMoney(rm.net)}
                           </td>
                         </tr>
                       ))}
@@ -578,11 +573,11 @@ export default function CashShiftsPage() {
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Clock size={14} className="text-gray-400" />
-                  {formatDate(currentShift.opened_at)}
+                  {formatDateTime(currentShift.opened_at)}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Banknote size={14} className="text-gray-400" />
-                  {formatAmount(currentShift.opening_amount)}
+                  {formatMoney(currentShift.opening_amount)}
                 </span>
               </div>
             </div>
@@ -673,7 +668,7 @@ export default function CashShiftsPage() {
               <tbody>
                 {shifts.map((shift) => (
                   <tr key={shift.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 text-gray-900">{formatDate(shift.opened_at)}</td>
+                    <td className="py-3 px-4 text-gray-900">{formatDateTime(shift.opened_at)}</td>
                     <td className="py-3 px-4 text-gray-600">
                       {shift.user?.name ?? `#${shift.user_id}`}
                     </td>
@@ -692,10 +687,10 @@ export default function CashShiftsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right text-gray-900">
-                      {formatAmount(shift.opening_amount)}
+                      {formatMoney(shift.opening_amount)}
                     </td>
                     <td className="py-3 px-4 text-right text-gray-900">
-                      {shift.closing_amount != null ? formatAmount(shift.closing_amount) : '—'}
+                      {shift.closing_amount != null ? formatMoney(shift.closing_amount) : '—'}
                     </td>
                     <td className="py-3 px-4 text-right">
                       {shift.difference != null ? (
@@ -709,7 +704,7 @@ export default function CashShiftsPage() {
                           }
                         >
                           {shift.difference >= 0 ? '+' : ''}
-                          {formatAmount(shift.difference)}
+                          {formatMoney(shift.difference)}
                         </span>
                       ) : (
                         '—'
