@@ -114,6 +114,10 @@ export interface Addon {
   name_ru?: string;
   price: number;
   is_active: boolean;
+  /** #35: bitta taomga eng ko'p son (masalan go'sht ×3) */
+  max_quantity?: number;
+  /** Buyurtma qatorida: narx va son (order_item_addons) */
+  pivot?: { price?: number | string; quantity?: number };
 }
 
 export interface Table {

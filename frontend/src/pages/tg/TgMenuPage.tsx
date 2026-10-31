@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
-import { useTgCart, cartTotal, cartCount, minWeightKg } from '../../lib/tgCart';
+import { useTgCart, cartTotal, cartCount, itemCount } from '../../lib/tgCart';
+import { haptic, tgThemeStyle } from '../../lib/tgTheme';
+import DishImage from './DishImage';
+import TgItemSheet from './TgItemSheet';
 import type { Category, MenuItem } from '../../types';
-import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import { AlertTriangle, Plus, Search, ShoppingBag, UtensilsCrossed, X } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
 import TgOfflineBanner from './TgOfflineBanner';
 import { buildMenuTree } from '../../lib/menuTree';
@@ -18,10 +21,12 @@ interface TgMenuResponse {
 
 export default function TgMenuPage() {
   const navigate = useNavigate();
-  const { cart, add } = useTgCart();
-  // Ikki darajali menyu (#23): kategoriya → sub-menyu → taomlar
+  const { cart, add, addLine } = useTgCart();
+  // Ikki darajali menyu (#23): kategoriya → sub-menyu → taomlar; #35 — yetkazib berish ilovasi ko'rinishi
   const [activeTop, setActiveTop] = useState<number | null>(null);
-  const [activeSub, setActiveSub] = useState<number | null>(null);
+  const [q, setQ] = useState('');
+  const [sheet, setSheet] = useState<MenuItem | null>(null);
+  const closeSheet = useCallback(() => setSheet(null), []);
 
   useEffect(() => {
     tgInit();
@@ -36,21 +41,41 @@ export default function TgMenuPage() {
   });
 
   const tree = useMemo(() => buildMenuTree<MenuItem>(data?.menu ?? []), [data]);
-  const primary = data?.company.primary_color || '#F59E0B';
-
-  // Tanlov yo'q yoki eskirgan bo'lsa — birinchi kategoriya / birinchi sub-menyu
+  const theme = tgThemeStyle(data?.company?.primary_color);
   const topNode = tree.find((n) => n.category.id === activeTop) ?? tree[0];
-  const subCat = topNode?.children.find((c) => c.id === activeSub) ?? topNode?.children[0];
-  const items: MenuItem[] = subCat?.menu_items ?? [];
+  const needle = q.trim().toLowerCase();
+  const found = useMemo(
+    () => (needle ? tree.flatMap((n) => n.children.flatMap((c) => c.menu_items ?? [])).filter((i) => i.name_uz.toLowerCase().includes(needle)) : []),
+    [tree, needle],
+  );
   const count = cartCount(cart);
-  const total = cartTotal(cart);
+  const total = Math.round(cartTotal(cart));
+
+  /** "+" — qo'shimchasi/istagi bo'lmagan porsiyali taom darhol savatga, aks holda oyna ochiladi */
+  const quickAdd = (item: MenuItem) => {
+    const needsChoice = item.sell_type === 'weight' || (item.addons?.length ?? 0) > 0 || (item.modifiers?.length ?? 0) > 0;
+    if (needsChoice) {
+      setSheet(item);
+    } else {
+      haptic();
+      add(item);
+    }
+  };
 
   if (isLoading) {
     return (
-      // Brend rangi hali noma'lum — neytral spinner (boshqa kompaniyada rang "sakramaydi")
-      <div role="status" className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin" />
-        <span className="sr-only">Yuklanmoqda...</span>
+      <div role="status" className="min-h-screen p-4" style={{ ...tgThemeStyle(null), background: 'var(--tg-bg)' }}>
+        <div className="h-7 w-48 rounded-lg mb-5 animate-pulse" style={{ background: 'color-mix(in srgb, var(--tg-hint) 22%, transparent)' }} />
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl p-2" style={{ background: 'var(--tg-card)' }}>
+              <div className="aspect-square rounded-xl animate-pulse" style={{ background: 'color-mix(in srgb, var(--tg-hint) 18%, transparent)' }} />
+              <div className="h-4 w-20 mt-3 rounded animate-pulse" style={{ background: 'color-mix(in srgb, var(--tg-hint) 18%, transparent)' }} />
+              <div className="h-4 w-28 mt-2 mb-1 rounded animate-pulse" style={{ background: 'color-mix(in srgb, var(--tg-hint) 18%, transparent)' }} />
+            </div>
+          ))}
+        </div>
+        <span className="sr-only">Menyu yuklanmoqda...</span>
       </div>
     );
   }
@@ -61,7 +86,7 @@ export default function TgMenuPage() {
     // Restoran yo'q/nofaol — qayta urinish foyda bermaydi
     const retryable = code !== 'COMPANY_NOT_FOUND' && code !== 'COMPANY_REQUIRED';
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6">
+      <div className="flex items-center justify-center min-h-screen  p-6">
         <div role="alert" className="w-full max-w-sm flex flex-col items-center text-center gap-3 rounded-xl border border-red-200 bg-red-50 p-6">
           <AlertTriangle size={36} className="text-red-500" aria-hidden="true" />
           <p className="text-red-700">{message}</p>
@@ -79,119 +104,136 @@ export default function TgMenuPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      <TgOfflineBanner />
-      {/* Header */}
-      <div className="px-4 py-4 text-white" style={{ backgroundColor: primary }}>
-        <h1 className="text-xl font-bold">{data.company.name}</h1>
-        <p className="text-sm opacity-90">Menyu</p>
-      </div>
+  const card = (item: MenuItem) => (
+    <DishCard key={item.id} item={item} inCart={itemCount(cart, item.id)} onOpen={() => setSheet(item)} onAdd={() => quickAdd(item)} />
+  );
 
-      {/* Kategoriya va sub-menyu tablari */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
-        <div className="flex gap-1 px-3 py-2 overflow-x-auto" role="tablist" aria-label="Kategoriyalar">
-          {tree.map(({ category: c }) => {
-            const active = topNode?.category.id === c.id;
-            return (
-              <button
-                key={c.id}
-                role="tab"
-                aria-selected={active}
-                onClick={() => {
-                  setActiveTop(c.id);
-                  setActiveSub(null);
-                }}
-                className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                  active ? 'text-white' : 'bg-gray-100 text-gray-700'
-                }`}
-                // style faqat faol (brend rangi) holatda — nofaol holat Tailwind palitrasidan
-                style={active ? { backgroundColor: primary } : undefined}
-              >
-                {c.name_uz}
-              </button>
-            );
-          })}
+  return (
+    <div className="min-h-screen pb-28" style={{ ...theme, background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
+      <TgOfflineBanner />
+      <header className="px-4 pt-4 pb-3" style={{ background: 'var(--tg-card)' }}>
+        <div className="flex items-center gap-3">
+          {data.company.logo && <img src={data.company.logo} alt="" className="h-11 w-11 rounded-xl object-cover" />}
+          <h1 className="text-[22px] font-extrabold leading-tight tracking-tight">{data.company.name}</h1>
         </div>
-        {/* Sub-menyular: kategoriyada bittadan ko'p bo'lsa ko'rsatiladi */}
-        {topNode && topNode.children.length > 1 && (
-          <div className="flex gap-1 px-3 pb-2 overflow-x-auto" role="tablist" aria-label="Sub-menyular">
-            {topNode.children.map((c) => {
-              const active = subCat?.id === c.id;
+        <div className="relative mt-3">
+          <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--tg-hint)' }} aria-hidden="true" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Taom qidirish"
+            aria-label="Taom qidirish"
+            className="w-full h-11 rounded-xl pl-10 pr-10 text-[15px] outline-none focus:ring-2"
+            style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)', ['--tw-ring-color' as string]: 'var(--tg-accent)' }}
+          />
+          {q && (
+            <button type="button" onClick={() => setQ('')} aria-label="Qidiruvni tozalash" className="absolute right-0 top-0 h-11 w-11 flex items-center justify-center" style={{ color: 'var(--tg-hint)' }}>
+              <X size={18} />
+            </button>
+          )}
+        </div>
+      </header>
+
+      {!needle && tree.length > 1 && (
+        <nav className="sticky top-0 z-20 border-b" style={{ background: 'var(--tg-card)', borderColor: 'color-mix(in srgb, var(--tg-hint) 15%, transparent)' }}>
+          <div className="flex gap-2 px-4 py-2 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Kategoriyalar">
+            {tree.map(({ category: c }) => {
+              const active = topNode?.category.id === c.id;
               return (
                 <button
                   key={c.id}
                   role="tab"
                   aria-selected={active}
-                  onClick={() => setActiveSub(c.id)}
-                  className={`min-h-11 px-3 py-2 rounded-full text-sm whitespace-nowrap border ${
-                    active ? 'text-white border-transparent font-medium' : 'bg-white border-gray-300 text-gray-700'
-                  }`}
-                  style={active ? { backgroundColor: primary } : undefined}
+                  onClick={() => { setActiveTop(c.id); window.scrollTo({ top: 0 }); }}
+                  className="min-h-11 px-4 rounded-full text-[15px] font-semibold whitespace-nowrap"
+                  style={active ? { background: 'var(--tg-accent)', color: 'var(--tg-on-accent)' } : { background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
                 >
                   {c.name_uz}
                 </button>
               );
             })}
           </div>
-        )}
-      </div>
+        </nav>
+      )}
 
-      {/* Items */}
-      <div className="p-3 space-y-2">
-        {items.map((item) => (
-          <div key={item.id} className="bg-white rounded-xl border border-gray-200 p-3 flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="font-medium text-gray-900 truncate">{item.name_uz}</p>
-              {item.description_uz && (
-                <p className="text-xs text-gray-500 truncate">{item.description_uz}</p>
-              )}
-              {/* Narx — o'qilishi uchun to'q matn; brend rangi tugmada (amber matn oq fonda ~2:1) */}
-              <p className="text-base font-semibold mt-1 text-gray-900 tabular-nums">
-                {formatMoney(Number(item.price))}
-                {item.sell_type === 'weight' ? '/kg' : ''}
-              </p>
-              {item.sell_type === 'weight' && (
-                <p className="text-xs text-gray-500">
-                  kamida {minWeightKg(item)} kg
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => add(item)}
-              className="ml-3 shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white"
-              style={{ backgroundColor: primary }}
-              aria-label={`${item.name_uz} — savatga qo'shish`}
-            >
-              <Plus size={18} />
-            </button>
-          </div>
-        ))}
-        {tree.length === 0 ? (
-          <div className="text-center py-12">
-            <UtensilsCrossed size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
-            <p className="text-gray-600">Menyu hozircha bo'sh</p>
+      <main className="px-4">
+        {needle ? (
+          found.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 pt-4">{found.map(card)}</div>
+          ) : (
+            <p className="py-12 text-center text-[15px]" style={{ color: 'var(--tg-hint)' }}>«{q}» topilmadi. Boshqacha yozib ko'ring.</p>
+          )
+        ) : tree.length === 0 ? (
+          <div className="py-16 text-center">
+            <UtensilsCrossed size={40} className="mx-auto mb-3" style={{ color: 'var(--tg-hint)' }} aria-hidden="true" />
+            <p className="text-[15px]" style={{ color: 'var(--tg-hint)' }}>Menyu hozircha bo'sh</p>
           </div>
         ) : (
-          items.length === 0 && (
-            <p className="text-center text-sm text-gray-500 py-8">Bu bo'limda taom yo'q</p>
-          )
+          topNode?.children.map((sub) => (
+            <section key={sub.id} aria-labelledby={`sub-${sub.id}`} className="pt-5">
+              <h2 id={`sub-${sub.id}`} className="text-lg font-bold mb-3">{sub.name_uz}</h2>
+              <div className="grid grid-cols-2 gap-3">{(sub.menu_items ?? []).map(card)}</div>
+            </section>
+          ))
         )}
-      </div>
+      </main>
 
-      {/* Cart bar */}
       {count > 0 && (
-        <button
-          onClick={() => navigate(`/tg/cart${window.location.search}`)}
-          className="fixed bottom-4 left-4 right-4 rounded-xl text-white px-4 py-3 flex items-center justify-between shadow-lg"
-          style={{ backgroundColor: primary }}
-        >
-          <span className="flex items-center gap-2 font-medium">
-            <ShoppingCart size={18} /> Savat ({count})
-          </span>
-          <span className="font-semibold">{formatMoney(total)}</span>
-        </button>
+        <div className="fixed inset-x-0 bottom-0 z-30 px-4 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]" style={{ background: 'linear-gradient(to top, var(--tg-bg) 70%, transparent)' }}>
+          <button
+            onClick={() => navigate(`/tg/cart${window.location.search}`)}
+            className="w-full min-h-14 rounded-2xl px-5 flex items-center justify-between shadow-lg"
+            style={{ background: 'var(--tg-accent)', color: 'var(--tg-on-accent)' }}
+          >
+            <span className="flex items-center gap-2.5 text-base font-semibold">
+              <ShoppingBag size={20} aria-hidden="true" />
+              Savat
+              <span className="min-w-7 h-7 px-2 rounded-full text-sm font-bold inline-flex items-center justify-center" style={{ background: 'color-mix(in srgb, var(--tg-on-accent) 20%, transparent)' }}>{count}</span>
+            </span>
+            <span className="text-base font-bold tabular-nums">{formatMoney(total)}</span>
+          </button>
+        </div>
+      )}
+
+      {sheet && (
+        <TgItemSheet
+          item={sheet}
+          onClose={closeSheet}
+          onSubmit={(line) => { addLine(line); setSheet(null); }}
+        />
       )}
     </div>
+  );
+}
+
+function DishCard({ item, inCart, onOpen, onAdd }: { item: MenuItem; inCart: number; onOpen: () => void; onAdd: () => void }) {
+  return (
+    <article className="relative rounded-2xl p-2 flex flex-col" style={{ background: 'var(--tg-card)' }}>
+      <button type="button" onClick={onOpen} className="text-left flex-1 flex flex-col" aria-label={`${item.name_uz}, ${formatMoney(Number(item.price))}${item.sell_type === 'weight' ? ' 1 kg' : ''}`}>
+        <div className="aspect-square rounded-xl overflow-hidden">
+          <DishImage src={item.image} name={item.name_uz} seed={item.id} />
+        </div>
+        <div className="px-1 pt-2">
+          <div className="text-base font-bold tabular-nums">
+            {formatMoney(Number(item.price))}
+            {item.sell_type === 'weight' && <span className="text-sm font-medium" style={{ color: 'var(--tg-hint)' }}> / kg</span>}
+          </div>
+          <div className="text-[14px] leading-snug mt-0.5 line-clamp-2">{item.name_uz}</div>
+        </div>
+      </button>
+      <button
+        type="button"
+        onClick={onAdd}
+        aria-label={`${item.name_uz} — savatga qo'shish`}
+        className="mt-2 h-11 rounded-xl flex items-center justify-center gap-1.5 text-[15px] font-semibold"
+        style={inCart > 0
+          ? { background: 'var(--tg-accent)', color: 'var(--tg-on-accent)' }
+          : { background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+      >
+        <Plus size={18} aria-hidden="true" />
+        {inCart > 0 ? `${inCart} ta` : "Qo'shish"}
+      </button>
+    </article>
   );
 }

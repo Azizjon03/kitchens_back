@@ -809,6 +809,11 @@ function OrderDetailModal({
                       <td className="px-4 py-2 text-gray-900">
                         {item.menu_item?.name_uz ?? `#${item.menu_item_id}`}
                         {item.note && <span className="text-gray-400 text-xs ml-1">({item.note})</span>}
+                        {(item.addons ?? []).length > 0 && (
+                          <div className="text-xs text-gray-600">
+                            + {(item.addons ?? []).map((a) => `${a.name_uz}${(a.pivot?.quantity ?? 1) > 1 ? ` ×${a.pivot?.quantity}` : ''}`).join(', ')}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-2 text-center text-gray-700">
                         {item.weight_kg ? `${Number(item.weight_kg)} kg` : Number(item.quantity)}

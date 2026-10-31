@@ -136,6 +136,7 @@ class Order extends Model
                     'id' => $a->id,
                     'name_uz' => $a->name_uz,
                     'name_ru' => $a->name_ru,
+                    'quantity' => (int) ($a->pivot->quantity ?? 1), // #35
                 ])->values(),
             ])->values(),
         ];

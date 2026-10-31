@@ -26,6 +26,7 @@ class AddonController extends Controller
             'name_ru' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'is_active' => 'sometimes|boolean',
+            'max_quantity' => 'sometimes|integer|min:1|max:20', // #35: masalan go'sht ×3
         ]);
 
         $addon = Addon::create($data);
@@ -45,6 +46,7 @@ class AddonController extends Controller
             'name_ru' => 'sometimes|string|max:255',
             'price' => 'sometimes|numeric|min:0',
             'is_active' => 'sometimes|boolean',
+            'max_quantity' => 'sometimes|integer|min:1|max:20',
         ]);
 
         $addon->update($data);

@@ -16,6 +16,8 @@ interface KdsModifier {
   id: number;
   name_uz?: string;
   name_ru?: string;
+  /** #35: qo'shimcha soni (oshga 2× go'sht) */
+  quantity?: number;
 }
 
 interface KdsItem {
@@ -146,7 +148,12 @@ function OrderCard({
             )}
             {item.addons.length > 0 && (
               <div className="mt-0.5 text-sm text-gray-700">
-                {item.addons.map((a) => `+ ${a.name_uz || a.name_ru}`).join(', ')}
+                {item.addons.map((a, i) => (
+                  <span key={a.id}>
+                    {i > 0 && ', '}+ {a.name_uz || a.name_ru}
+                    {(a.quantity ?? 1) > 1 && <b className="text-red-700"> ×{a.quantity}</b>}
+                  </span>
+                ))}
               </div>
             )}
             {item.note && <div className="mt-0.5 text-sm italic text-gray-700">“{item.note}”</div>}
@@ -233,7 +240,7 @@ export default function KitchenPage() {
           order_items?: Array<{
             id: number; quantity: number; weight_kg?: number; note?: string; is_table_set?: boolean;
             menu_item?: { name_uz?: string; name_ru?: string };
-            modifiers?: KdsModifier[]; addons?: KdsModifier[];
+            modifiers?: KdsModifier[]; addons?: (KdsModifier & { pivot?: { quantity?: number } })[];
           }>;
         }>;
       };
@@ -257,7 +264,8 @@ export default function KitchenPage() {
           weight_kg: it.weight_kg,
           note: it.note,
           modifiers: it.modifiers ?? [],
-          addons: it.addons ?? [],
+          // #35: API'da son pivot ichida keladi
+          addons: (it.addons ?? []).map((a) => ({ ...a, quantity: a.quantity ?? a.pivot?.quantity ?? 1 })),
         })),
       }));
     },

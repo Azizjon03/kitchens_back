@@ -5,6 +5,7 @@ import type { Category, MenuItem } from '../types';
 import HelpHint from '../components/HelpHint';
 import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
+import ImagePicker from '../components/ImagePicker';
 import CatalogPickerModal from '../components/CatalogPickerModal';
 import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
@@ -312,6 +313,9 @@ function MenuItemModal({
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const noCategories = selectable.length === 0;
+  // #35: rasm — saqlashda yuklanadi yoki o'chiriladi
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -320,10 +324,18 @@ function MenuItemModal({
         price: parseFloat(form.price) || 0,
         cooking_time: form.cooking_time ? parseInt(form.cooking_time) : null,
       };
-      if (isEdit) {
-        return (await api.put(`/menu-items/${item.id}`, payload)).data;
+      const saved = isEdit
+        ? (await api.put(`/menu-items/${item.id}`, payload)).data
+        : (await api.post('/menu-items', payload)).data;
+      const id = saved.data.id as number;
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append('image', imageFile);
+        await api.post(`/menu-items/${id}/image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else if (imageRemoved && item?.image) {
+        await api.delete(`/menu-items/${id}/image`);
       }
-      return (await api.post('/menu-items', payload)).data;
+      return saved;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['menu-items'] });
@@ -362,6 +374,15 @@ function MenuItemModal({
               {error}
             </div>
           )}
+
+          <ImagePicker
+            current={item?.image}
+            file={imageFile}
+            removed={imageRemoved}
+            onFile={(f) => { setImageFile(f); if (f) setImageRemoved(false); }}
+            onRemove={() => setImageRemoved(true)}
+          />
+          {fieldError('image')}
 
           {noCategories && (
             <div className="bg-amber-50 text-amber-800 text-sm px-4 py-3 rounded-lg border border-amber-200">

@@ -41,6 +41,6 @@ class OrderItem extends Model
 
     public function addons(): BelongsToMany
     {
-        return $this->belongsToMany(Addon::class, 'order_item_addons')->withPivot('price');
+        return $this->belongsToMany(Addon::class, 'order_item_addons')->withPivot('price', 'quantity');
     }
 }

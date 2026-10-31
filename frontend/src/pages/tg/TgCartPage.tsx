@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
-import { useTgCart, cartTotal, lineTotal, minWeightKg, type TgCartLine } from '../../lib/tgCart';
+import { useTgCart, cartTotal, lineTotal, addonSummary, type TgCartLine } from '../../lib/tgCart';
+import { tgThemeStyle, useTgBackButton } from '../../lib/tgTheme';
+import DishImage from './DishImage';
+import TgItemSheet, { Stepper } from './TgItemSheet';
 import type { Category } from '../../types';
-import { ArrowLeft, Minus, Plus, X } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, Trash2 } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
 import { useOnline } from '../../lib/useOnline';
 import TgOfflineBanner from './TgOfflineBanner';
@@ -50,19 +53,18 @@ export default function TgCartPage() {
   const addressValue = address ?? me?.address ?? '';
   const hasLocation = me?.latitude != null;
 
-  const primary = data?.company.primary_color || '#F59E0B';
+  const theme = tgThemeStyle(data?.company?.primary_color);
   const branches = data?.branches ?? [];
 
   useEffect(() => {
     if (!tableId && branchId === null && branches.length > 0) setBranchId(branches[0].id);
   }, [branches, branchId, tableId]);
 
-  const toggleId = (line: TgCartLine, field: 'modifier_ids' | 'addon_ids', id: number) => {
-    const set = new Set(line[field]);
-    if (set.has(id)) set.delete(id);
-    else set.add(id);
-    update(line.key, { [field]: Array.from(set) } as Partial<TgCartLine>);
-  };
+  // #35: qatorni taom oynasi orqali tahrirlash
+  const [editing, setEditing] = useState<TgCartLine | null>(null);
+  const closeEdit = useCallback(() => setEditing(null), []);
+  const goMenu = useCallback(() => navigate(`/tg${window.location.search}`), [navigate]);
+  useTgBackButton(!editing, goMenu);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -72,7 +74,8 @@ export default function TgCartPage() {
           quantity: l.quantity,
           weight_kg: l.item.sell_type === 'weight' ? l.weight_kg : null,
           modifier_ids: l.modifier_ids,
-          addon_ids: l.addon_ids,
+          // #35: qo'shimcha soni
+          addons: Object.entries(l.addons).filter(([, n]) => n > 0).map(([id, n]) => ({ id: Number(id), quantity: n })),
         })),
       };
       if (tableId) payload.table_id = tableId;
@@ -106,202 +109,153 @@ export default function TgCartPage() {
     serviceChargePct > 0 ? Math.round((subtotal * serviceChargePct) / 100) : 0;
   const total = subtotal + serviceChargeAmount;
 
+  const divider = { borderColor: 'color-mix(in srgb, var(--tg-hint) 18%, transparent)' };
+  const blocked = mutation.isPending || !online || (orderType === 'delivery' && !tableId && !hasLocation && !addressValue.trim());
+
   return (
-    <div className="min-h-screen bg-gray-50 pb-28">
+    <div className="min-h-screen pb-40" style={{ ...theme, background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
       <TgOfflineBanner />
-      <div className="px-4 py-4 text-white flex items-center gap-3" style={{ backgroundColor: primary }}>
-        <button onClick={() => navigate(`/tg${window.location.search}`)} aria-label="Orqaga">
+      <header className="sticky top-0 z-20 flex items-center gap-2 px-2 h-14" style={{ background: 'var(--tg-card)' }}>
+        <button onClick={goMenu} aria-label="Menyuga qaytish" className="h-11 w-11 flex items-center justify-center rounded-full">
           <ArrowLeft size={22} />
         </button>
         <h1 className="text-lg font-bold">Savat</h1>
-      </div>
-
-      <div className="p-3 space-y-3">
-        {cart.length === 0 && (
-          <div className="text-center text-gray-400 py-12">
-            Savat bo'sh
-            <div>
-              <button
-                onClick={() => navigate(`/tg${window.location.search}`)}
-                className="mt-3 text-sm font-medium"
-                style={{ color: primary }}
-              >
-                Menyuga qaytish
-              </button>
-            </div>
-          </div>
+        {cart.length > 0 && (
+          <button onClick={() => clear()} className="ml-auto min-h-11 px-3 text-[15px]" style={{ color: 'var(--tg-hint)' }}>
+            Tozalash
+          </button>
         )}
+      </header>
 
-        {cart.map((l) => (
-          <div key={l.key} className="bg-white rounded-xl border border-gray-200 p-3">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-gray-900">{l.item.name_uz}</span>
-              <button onClick={() => remove(l.key)} className="text-gray-400 hover:text-red-500">
-                <X size={18} />
-              </button>
-            </div>
-
-            {l.item.sell_type === 'weight' ? (
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="number"
-                  step={Number(l.item.weight_step) || 0.1}
-                  min={minWeightKg(l.item)}
-                  value={l.weight_kg ?? ''}
-                  onChange={(e) => update(l.key, { weight_kg: Number(e.target.value) })}
-                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-                <span className="text-xs text-gray-500">kg</span>
-              </div>
-            ) : (
-              <div className="mt-2 flex items-center gap-3">
-                <button
-                  onClick={() => update(l.key, { quantity: Math.max(0.1, Math.round((l.quantity - 1) * 100) / 100) })}
-                  className="p-1.5 border border-gray-200 rounded-lg"
-                >
-                  <Minus size={14} />
-                </button>
-                <input
-                  type="number"
-                  step={0.1}
-                  min={0.1}
-                  value={l.quantity}
-                  onChange={(e) => update(l.key, { quantity: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
-                  className="w-16 text-sm text-center border border-gray-200 rounded-lg py-1"
-                />
-                <button
-                  onClick={() => update(l.key, { quantity: Math.round((l.quantity + 1) * 100) / 100 })}
-                  className="p-1.5 border border-gray-200 rounded-lg"
-                >
-                  <Plus size={14} />
-                </button>
-              </div>
-            )}
-
-            {(l.item.modifiers ?? []).length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {(l.item.modifiers ?? []).map((m) => (
-                  <button
-                    key={m.id}
-                    onClick={() => toggleId(l, 'modifier_ids', m.id)}
-                    className="px-2 py-0.5 rounded text-[11px] border"
-                    style={
-                      l.modifier_ids.includes(m.id)
-                        ? { backgroundColor: primary, color: 'white', borderColor: primary }
-                        : { backgroundColor: 'white', color: '#4b5563', borderColor: '#e5e7eb' }
-                    }
-                  >
-                    {m.name_uz}
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {(l.item.addons ?? []).length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {(l.item.addons ?? []).map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => toggleId(l, 'addon_ids', a.id)}
-                    className={`px-2 py-0.5 rounded text-[11px] border ${
-                      l.addon_ids.includes(a.id)
-                        ? 'bg-green-700 text-white border-green-700'
-                        : 'bg-white text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    + {a.name_uz} ({formatMoney(Number(a.price))})
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-2 text-right text-sm font-semibold text-gray-800">
-              {formatMoney(lineTotal(l))}
-            </div>
-          </div>
-        ))}
-
-        {cart.length > 0 && !tableId && (
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <div role="radiogroup" aria-label="Qanday olasiz?" className="grid grid-cols-2 gap-2">
-              {([['takeaway', 'Olib ketaman'], ['delivery', 'Yetkazib bering']] as const).map(([val, label]) => (
-                <button
-                  key={val}
-                  type="button"
-                  role="radio"
-                  aria-checked={orderType === val}
-                  onClick={() => setOrderType(val)}
-                  className="min-h-11 rounded-lg border text-sm font-medium"
-                  style={orderType === val ? { backgroundColor: primary, borderColor: primary, color: 'white' } : { borderColor: '#d1d5db', color: '#374151' }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            {orderType === 'delivery' && (
-              <div className="mt-3">
-                <label htmlFor="tg-address" className="block text-sm font-medium text-gray-700 mb-1">Manzil</label>
-                <input
-                  id="tg-address"
-                  value={addressValue}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Ko'cha, uy, mo'ljal"
-                  className="w-full min-h-11 px-3 border border-gray-300 rounded-lg text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-600">
-                  {hasLocation
-                    ? "📍 Botga yuborgan joylashuvingiz kuryerga xarita sifatida boradi."
-                    : "Manzilni aniq yozing — kuryer shu bo'yicha keladi."}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {cart.length > 0 && !tableId && branches.length > 1 && (
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filial</label>
-            <select
-              value={branchId ?? ''}
-              onChange={(e) => setBranchId(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-
-      {cart.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 space-y-2">
-          {error && <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{error}</div>}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <span>Taomlar</span>
-              <span>{formatMoney(subtotal)}</span>
-            </div>
-            {serviceChargeAmount > 0 && (
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>Xizmat haqi ({serviceChargePct}%)</span>
-                <span>{formatMoney(serviceChargeAmount)}</span>
-              </div>
-            )}
-            <div className="flex items-center justify-between text-sm font-semibold text-gray-900 pt-1 border-t border-gray-100">
-              <span>Jami</span>
-              <span>{formatMoney(total)}</span>
-            </div>
-          </div>
-          <button
-            onClick={() => { setError(''); mutation.mutate(); }}
-            disabled={mutation.isPending || !online || (orderType === 'delivery' && !tableId && !hasLocation && !addressValue.trim())}
-            className="w-full px-4 py-3 rounded-xl text-white text-sm font-medium disabled:opacity-50"
-            style={{ backgroundColor: primary }}
-          >
-            {!online ? "Aloqa yo'q" : mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
+      {cart.length === 0 ? (
+        <div className="px-6 py-20 text-center">
+          <ShoppingBag size={44} className="mx-auto mb-3" style={{ color: 'var(--tg-hint)' }} aria-hidden="true" />
+          <p className="text-[17px] font-semibold">Savat bo'sh</p>
+          <p className="mt-1 text-[15px]" style={{ color: 'var(--tg-hint)' }}>Menyudan taom tanlang — shu yerda paydo bo'ladi.</p>
+          <button onClick={goMenu} className="mt-5 min-h-12 px-6 rounded-2xl text-base font-semibold" style={{ background: 'var(--tg-accent)', color: 'var(--tg-on-accent)' }}>
+            Menyuga o'tish
           </button>
         </div>
+      ) : (
+        <div className="p-4 space-y-3">
+          <ul className="rounded-2xl px-3" style={{ background: 'var(--tg-card)' }}>
+            {cart.map((l) => {
+              const summary = addonSummary(l);
+              const mods = (l.item.modifiers ?? []).filter((m) => l.modifier_ids.includes(m.id)).map((m) => m.name_uz).join(', ');
+              return (
+                <li key={l.key} className="flex gap-3 py-3 border-b last:border-b-0" style={divider}>
+                  <button type="button" onClick={() => setEditing(l)} className="h-16 w-16 shrink-0 rounded-xl overflow-hidden" aria-label={`${l.item.name_uz} — o'zgartirish`}>
+                    <DishImage src={l.item.image} name={l.item.name_uz} seed={l.item.id} />
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <button type="button" onClick={() => setEditing(l)} className="text-left">
+                      <div className="text-[15px] font-semibold leading-snug">{l.item.name_uz}</div>
+                      {(summary || mods) && (
+                        <div className="text-sm leading-snug mt-0.5" style={{ color: 'var(--tg-hint)' }}>
+                          {[summary && `+ ${summary}`, mods].filter(Boolean).join('; ')}
+                        </div>
+                      )}
+                    </button>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      {l.item.sell_type === 'weight' ? (
+                        <button type="button" onClick={() => setEditing(l)} className="min-h-11 px-3 rounded-full text-[15px] font-semibold" style={{ background: 'color-mix(in srgb, var(--tg-hint) 14%, transparent)' }}>
+                          {l.weight_kg} kg
+                        </button>
+                      ) : (
+                        <Stepper
+                          value={`${l.quantity}`}
+                          label={l.item.name_uz}
+                          onMinus={() => (l.quantity <= 1 ? remove(l.key) : update(l.key, { quantity: l.quantity - 1 }))}
+                          onPlus={() => update(l.key, { quantity: l.quantity + 1 })}
+                        />
+                      )}
+                      <span className="text-base font-bold tabular-nums">{formatMoney(Math.round(lineTotal(l)))}</span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => remove(l.key)} aria-label={`${l.item.name_uz} — olib tashlash`} className="h-11 w-11 -mr-2 flex items-center justify-center" style={{ color: 'var(--tg-hint)' }}>
+                    <Trash2 size={18} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+
+          {!tableId && (
+            <section className="rounded-2xl p-4" style={{ background: 'var(--tg-card)' }} aria-label="Qanday olasiz?">
+              <div role="radiogroup" aria-label="Qanday olasiz?" className="grid grid-cols-2 gap-1 p-1 rounded-xl" style={{ background: 'var(--tg-bg)' }}>
+                {([['takeaway', 'Olib ketaman'], ['delivery', 'Yetkazib bering']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    role="radio"
+                    aria-checked={orderType === val}
+                    onClick={() => setOrderType(val)}
+                    className="min-h-11 rounded-lg text-[15px] font-semibold"
+                    style={orderType === val ? { background: 'var(--tg-card)', boxShadow: '0 1px 3px rgba(0,0,0,.12)' } : { color: 'var(--tg-hint)' }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {orderType === 'delivery' && (
+                <div className="mt-3">
+                  <label htmlFor="tg-address" className="block text-sm font-medium mb-1">Manzil</label>
+                  <input
+                    id="tg-address"
+                    value={addressValue}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Ko'cha, uy, mo'ljal"
+                    className="w-full h-12 px-3 rounded-xl text-[15px] outline-none"
+                    style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
+                  />
+                  <p className="mt-1.5 text-sm" style={{ color: 'var(--tg-hint)' }}>
+                    {hasLocation ? '📍 Botga yuborgan joylashuvingiz kuryerga xarita sifatida boradi.' : "Manzilni aniq yozing — kuryer shu bo'yicha keladi."}
+                  </p>
+                </div>
+              )}
+              {branches.length > 1 && (
+                <div className="mt-3">
+                  <label htmlFor="tg-branch" className="block text-sm font-medium mb-1">Filial</label>
+                  <select id="tg-branch" value={branchId ?? ''} onChange={(e) => setBranchId(Number(e.target.value))} className="w-full h-12 px-3 rounded-xl text-[15px]" style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
+                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="rounded-2xl p-4 space-y-1.5 text-[15px]" style={{ background: 'var(--tg-card)' }}>
+            <div className="flex justify-between"><span style={{ color: 'var(--tg-hint)' }}>Taomlar</span><span className="tabular-nums">{formatMoney(subtotal)}</span></div>
+            {serviceChargeAmount > 0 && (
+              <div className="flex justify-between"><span style={{ color: 'var(--tg-hint)' }}>Xizmat haqi ({serviceChargePct}%)</span><span className="tabular-nums">{formatMoney(serviceChargeAmount)}</span></div>
+            )}
+            <div className="flex justify-between pt-2 border-t text-[17px] font-bold" style={divider}><span>Jami</span><span className="tabular-nums">{formatMoney(total)}</span></div>
+          </section>
+        </div>
+      )}
+
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-30 px-4 pt-2 pb-[max(12px,env(safe-area-inset-bottom))]" style={{ background: 'linear-gradient(to top, var(--tg-bg) 75%, transparent)' }}>
+          {error && <div role="alert" className="mb-2 rounded-xl px-3 py-2 text-sm bg-red-50 text-red-700">{error}</div>}
+          <button
+            onClick={() => { setError(''); mutation.mutate(); }}
+            disabled={blocked}
+            className="w-full min-h-14 rounded-2xl px-5 flex items-center justify-between text-base font-semibold disabled:opacity-50"
+            style={{ background: 'var(--tg-accent)', color: 'var(--tg-on-accent)' }}
+          >
+            <span>{!online ? "Aloqa yo'q" : mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}</span>
+            <span className="tabular-nums font-bold">{formatMoney(total)}</span>
+          </button>
+        </div>
+      )}
+
+      {editing && (
+        <TgItemSheet
+          item={editing.item}
+          initial={editing}
+          onClose={closeEdit}
+          onSubmit={(line) => { update(editing.key, line); setEditing(null); }}
+        />
       )}
     </div>
   );

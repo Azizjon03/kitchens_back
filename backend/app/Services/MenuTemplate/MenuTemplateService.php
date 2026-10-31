@@ -2,6 +2,7 @@
 
 namespace App\Services\MenuTemplate;
 
+use App\Services\Media\ImageStore;
 use App\Models\Addon;
 use App\Models\Catalog\CatalogCategory;
 use App\Models\Catalog\CatalogItem;
@@ -135,6 +136,8 @@ class MenuTemplateService
             'sell_type' => $item->sell_type, 'price' => $item->price,
             'min_weight' => $item->min_weight, 'weight_step' => $item->weight_step,
             'sort_order' => $item->sort_order, 'is_available' => true,
+            // #35: katalog rasmi restoranning o'z nusxasiga ko'chiriladi (katalog rasmi almashsa ham buzilmaydi)
+            'image' => $item->image ? app(ImageStore::class)->copy($item->image, "menu/{$company->id}") : null,
         ], fn ($v) => $v !== null));
         $this->itemsAdded++;
 

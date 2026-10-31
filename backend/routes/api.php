@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\SuperAdmin\AuditLogController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CatalogController;
+use App\Http\Controllers\Api\V1\MediaController;
 use App\Http\Controllers\Api\V1\PublicPageController;
 use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
 use App\Http\Controllers\Api\V1\SuperAdmin\TelegramBotController as SuperTelegramBotController;
@@ -38,6 +39,9 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     });
+
+    // #35: taom rasmlari (ommaviy, uzoq kesh)
+    Route::get('media/{path}', [MediaController::class, 'show'])->where('path', '[A-Za-z0-9/_-]+\.(webp|png|jpg)');
 
     // Telegram Mini App (customer-facing, authenticated via Telegram initData)
     Route::prefix('tg')->middleware(['telegram', 'throttle:60,1,tg'])->group(function () {
@@ -92,6 +96,8 @@ Route::prefix('v1')->group(function () {
                 Route::patch('categories/reorder', [CategoryController::class, 'reorder']);
                 Route::apiResource('categories', CategoryController::class);
                 Route::patch('menu-items/{menuItem}/availability', [MenuItemController::class, 'toggleAvailability']);
+                Route::post('menu-items/{menuItem}/image', [MediaController::class, 'uploadMenuItem'])->middleware('throttle:30,1,media');
+                Route::delete('menu-items/{menuItem}/image', [MediaController::class, 'deleteMenuItem']);
                 Route::apiResource('menu-items', MenuItemController::class);
                 Route::apiResource('modifiers', ModifierController::class);
                 Route::apiResource('addons', AddonController::class);
@@ -164,6 +170,8 @@ Route::prefix('v1')->group(function () {
             Route::post('catalog/items', [CatalogController::class, 'storeItem']);
             Route::put('catalog/items/{item}', [CatalogController::class, 'updateItem']);
             Route::delete('catalog/items/{item}', [CatalogController::class, 'destroyItem']);
+            Route::post('catalog/items/{item}/image', [MediaController::class, 'uploadCatalogItem']);
+            Route::delete('catalog/items/{item}/image', [MediaController::class, 'deleteCatalogItem']);
             Route::post('catalog/addons', [CatalogController::class, 'storeAddon']);
             Route::put('catalog/addons/{addon}', [CatalogController::class, 'updateAddon']);
             Route::delete('catalog/addons/{addon}', [CatalogController::class, 'destroyAddon']);
