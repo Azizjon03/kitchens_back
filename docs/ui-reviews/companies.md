@@ -62,3 +62,63 @@ Hisob: 6.15 / 10.0 → **6.2**
 
 - 16+ kompaniyali holat — bazada 5 ta kompaniya; pagination muammosi koddan (`:213-225`, `CompanyController.php:36`).
 - Muvaffaqiyatli yaratish oqimi — taqiqlangan amal (to'liq forma saqlash); faqat takroriy slug (422, hech narsa yaratilmadi) yuborildi.
+
+## Raund 2 — 2026-10-31 — 9.1 / 10 (UI)
+
+Vizual: tekshirildi (1440, 768) — `.playwright-mcp/ui-companies-r2-1440.png`, `ui-companies-r2-page2-1440.png`, `ui-companies-r2-notfound-1440.png`, `ui-companies-r2-error-1440.png`, `ui-companies-r2-loading-1440.png`, `ui-companies-r2-768.png`, `ui-companies-r2-modal-dupslug-1440.png`
+Lint: `ui-lint: 0 xato, 2 ogohlantirish (4 fayl)` — CompaniesPage.tsx'da topilma yo'q (ogohlantirishlar Waiter/TgMenu `uz-UZ` K5)
+
+| # | Mezon | Ball | Izoh |
+| --- | --- | --- | --- |
+| 1 | Ma'lumot ierarxiyasi | 2.0 / 2.0 | O'zgarmagan: nom, slug, telefon, holat |
+| 2 | Ro'yxat, filter, qidiruv, pagination | 1.5 / 1.5 | Server qidiruvi + sahifalash ishlaydi: "Sahifa 1 / 2 (jami 20 ta)", 2-sahifadagi "Canary" qidiruvda topildi; qator bosilsa `/companies/20`, `cursor: pointer`; `keepPreviousData` — sahifa almashganda jadval qoladi (3 s kechikishda 15 qator ko'rindi) |
+| 3 | Holatlar | 1.5 / 1.5 | Yuklanish "Kompaniyalar yuklanmoqda...", 500 → qizil blok + o'zbekcha matn + "Qayta urinish" (bosilganda 15 qator qaytdi), topilmadi ≠ bo'sh, "Qidiruvni tozalash" ishlaydi |
+| 4 | Dizayn tizimiga rioya | 1.35 / 1.5 | Qidiruv filter-kartasiz, `th` `text-gray-500 px-6` — o'zgarmagan (kichik) |
+| 5 | Formalar | 0.4 / 1.0 | O'zgarmagan: `htmlFor`/`id` va `*` yo'q (o'rta, tekshirildi: 7 ta `for=""`); 422 `errors.slug` maydonga bog'lanmagan, `aria-invalid` 0 ta (o'rta); parolda Eye yo'q (kichik) |
+| 6 | Accessibility va ergonomika | 1.0 / 1.0 | 768 da jadval sig'adi (718/718 px) |
+| 7 | Vizual estetika va izchillik | 0.9 / 1.0 | "Batafsil" yonida hamon `ExternalLink` (kichik) |
+| 8 | Matn va til | 0.4 / 0.5 | "Egasi (Owner)" (kichik); telefon maskasiz `+998712955885` (kichik). Takroriy slug: lokal `APP_LOCALE=en` → "The slug has already been taken." — `lang/uz/validation.php:110` da o'zbekcha matn bor, `.env.example` `APP_LOCALE=uz`; ayirilmadi |
+
+Hisob: 9.05 / 10.0 → **9.1**
+
+### Talablar (ustuvorlik bo'yicha)
+
+1. **[5, o'rta]** `frontend/src/pages/CompaniesPage.tsx:101-185` — 1-raund #5 bajarilmagan: 7 ta label'da `htmlFor` yo'q (brauzerda `for=""`), majburiy maydonlarda `*` yo'q.
+   **Qabul talabi:** har label `htmlFor` ↔ input `id`; `required` maydonlar yonida `<span className="text-red-500">*</span>`; "Email (ixtiyoriy)" yulduzchasiz (ui-forms §1).
+2. **[5, o'rta]** `frontend/src/pages/CompaniesPage.tsx:46, 62-64` — 1-raund #6 bajarilmagan: takroriy slugda xato faqat forma tepasida, `[aria-invalid]` 0 ta. `lib/apiError.ts:44` da `apiFieldErrors()` tayyor, lekin ishlatilmagan.
+   **Qabul talabi:** `apiFieldErrors(err).slug` slug input ostida `mt-1 text-xs text-red-600`, input `aria-invalid="true"`; umumiy blokda faqat maydonga bog'lanmagan xabar (ui-forms §3).
+3. **[4, kichik]** `frontend/src/pages/CompaniesPage.tsx:264-275, 308-312` — 1-raund #8: qidiruv filter-kartasiz, `th` `text-gray-500 px-6`.
+   **Qabul talabi:** qidiruv `bg-white rounded-xl border border-gray-200 p-4 mb-4` kartasida; `th`/`td` — `px-4 py-3`, `th` `text-gray-600` (ui-data-table §1, §4).
+4. **[8, kichik]** `frontend/src/pages/CompaniesPage.tsx:137, 324` — "Egasi (Owner)"; jadvalda telefon maskasiz.
+   **Qabul talabi:** "Kompaniya egasi (admin)"; `formatPhone(company.phone)` → `+998 (71) 295-58-85` (ui-foundations §4).
+5. **[5, kichik]** `frontend/src/pages/CompaniesPage.tsx:174-185` — parolda ko'rsatish tugmasi yo'q.
+   **Qabul talabi:** `Eye`/`EyeOff` tugma `aria-label="Parolni ko'rsatish"` bilan.
+6. **[7, kichik]** `frontend/src/pages/CompaniesPage.tsx:341` — `ExternalLink` ichki sahifaga.
+   **Qabul talabi:** ikonka olib tashlanadi yoki `ChevronRight`.
+
+### Tavsiya (ball ayirilmagan — "Hozirgi holat")
+
+- `backend/.../SuperAdmin/CompanyController.php:36` — `orderByDesc('created_at')` qo'shimcha `orderBy('id')` siz; QA kompaniyalarining ko'pi bir soniyada yaratilgan (1-sahifada tartib 5,7,8…12,1,2,3,4,6). Bir marta "QA Sahifa 5" 1- va 2-sahifada ikkalasida ko'rindi — o'sha paytda parallel E2E kompaniya qo'shayotgan edi, keyingi 3 ta tekshiruvda (23/23 noyob) takrorlanmadi. Barqaror tartib uchun `->orderByDesc('id')` qo'shish tavsiya etiladi (ui-data-table §3 naqshi).
+- Sahifa almashganda (`keepPreviousData`) yangi so'rov ketayotgani ko'rinmaydi — kichik `isFetching` indikatori ixtiyoriy.
+- `ErrorState` "Qayta urinish" to'ldirilgan `bg-red-600` — ekranda amber "Yangi kompaniya" bilan ikkinchi to'ldirilgan tugma; skill §5 tugma uslubini belgilamaydi, umumiy komponentda ikkinchi darajali (`border`) variant ko'rib chiqilsin.
+- Tizimli (1-raunddan): oq matn `amber-500` ustida 2.15:1; "Batafsil" `text-amber-600` 3.19:1; modal `X` `aria-label`siz, `Escape` bilan yopilmaydi (tekshirildi); filter URL'da emas.
+- Konsolda bir marta `useAuth must be used within an AuthProvider` — boshqa agent `frontend/src/lib/auth.tsx` ni tahrirlayotgan paytdagi Vite HMR; sahifa qayta yuklangach takrorlanmadi, baholanmadi.
+
+### Oldingi raund talablari
+
+- 1-raund #1 (server qidiruv + pagination) — bajarildi (`:225-239, :353-377`; "Sahifa 1 / 2 (jami 20 ta)", 2-sahifadagi "Canary" qidiruvda topildi, qidiruvda pager yo'qoldi)
+- 1-raund #2 (qator bosiladi) — bajarildi (`:317-321`; Slug katagini bosish → `/companies/20`; "Batafsil" katagida `stopPropagation` `:336`)
+- 1-raund #3 (xato holati) — bajarildi (`:281-284`; 500 → "Kompaniyalarni yuklab bo'lmadi" + "Serverda xatolik…" + "Qayta urinish", `ui-companies-r2-error-1440.png`)
+- 1-raund #4 (bo'sh ≠ topilmadi) — bajarildi (`:285-302`; `"zzzz-qa-yoq" bo'yicha kompaniya topilmadi` + "Qidiruvni tozalash" — bosilganda input tozalandi, 15 qator qaytdi). Bo'sh holat ikonka + "Hali kompaniya qo'shilmagan" + sarlavhadagi tugmaga ishora (alohida tugma emas) — koddan, bazada ma'lumot bor
+- 1-raund #5 (`htmlFor`/`id`, `*`) — bajarilmadi (`:101-175`, 7 ta `for=""`)
+- 1-raund #6 (422 maydon ostida) — bajarilmadi (`:62-64`, `[aria-invalid]` 0 ta, xato faqat tepada)
+- 1-raund #7 (slug xabari o'zbekcha) — bajarildi, lokal muhitda ko'rinmaydi (`backend/lang/uz/validation.php:110` "Bu manzil (slug) boshqa kompaniyada ishlatilgan…", `.env.example` `APP_LOCALE=uz`; lokal `.env` `APP_LOCALE=en` → modalda inglizcha)
+- 1-raund #8 (filter kartasi, `th`) — bajarilmadi (`:264-275, :308-312`)
+- 1-raund #9 ("Egasi (Owner)", telefon maskasi) — bajarilmadi (`:137, :324`)
+- 1-raund #10 (parol Eye) — bajarilmadi (`:174-185`)
+- 1-raund #11 (`ExternalLink`) — bajarilmadi (`:341`)
+
+### Tekshirilmadi
+
+- Haqiqiy bo'sh baza holati — bazada 20+ kompaniya; koddan (`:297-302`).
+- Muvaffaqiyatli yaratish — taqiqlangan amal; faqat takroriy slug (422, hech narsa yaratilmadi) yuborildi.

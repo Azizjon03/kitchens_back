@@ -90,6 +90,11 @@ export function tgErrorMessage(
 
   if (axiosErr?.response?.status === 404 && opts?.notFound) return opts.notFound;
 
+  // 5xx: backend matni ("Server Error") mijoz uchun emas
+  if ((axiosErr?.response?.status ?? 0) >= 500) {
+    return "Serverda vaqtinchalik nosozlik. Birozdan keyin qayta urinib ko'ring.";
+  }
+
   return (
     axiosErr?.response?.data?.error?.message ||
     axiosErr?.response?.data?.message ||

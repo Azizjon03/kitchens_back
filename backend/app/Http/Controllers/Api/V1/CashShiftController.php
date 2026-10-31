@@ -81,44 +81,17 @@ class CashShiftController extends Controller
             ->first();
 
         if (! $cashShift) {
-            return $this->error('NO_OPEN_SHIFT', 'You do not have an open cash shift.', 422);
+            return $this->error('NO_OPEN_SHIFT', "Sizda ochiq smena yo'q.", 422);
         }
 
-        // Calculate expected amount: opening + cash payments - cash refunds
-        $cashPayments = Payment::where('cash_shift_id', $cashShift->id)
-            ->where('status', 'completed')
-            ->where('method', 'cash')
-            ->sum('amount');
-
-        $cashChanges = Payment::where('cash_shift_id', $cashShift->id)
-            ->where('status', 'completed')
-            ->where('method', 'cash')
-            ->sum('change_amount');
-
-        $cashRefunds = DB::table('refunds')
-            ->where('refund_method', 'cash')
-            ->where('status', 'completed')
-            ->where('created_at', '>=', $cashShift->opened_at)
-            ->where('created_at', '<=', now())
-            ->whereIn('order_id', function ($query) use ($cashShift) {
-                $query->select('order_id')
-                    ->from('payments')
-                    ->where('cash_shift_id', $cashShift->id);
-            })
-            ->sum('amount');
-
-        $expectedAmount = bcadd(
-            $cashShift->opening_amount,
-            bcsub(bcsub($cashPayments, $cashChanges, 2), $cashRefunds, 2),
-            2
-        );
+        $expectedAmount = $this->expectedCash($cashShift);
 
         $difference = bcsub($data['closing_amount'], $expectedAmount, 2);
 
         if (bccomp($difference, '0', 2) !== 0 && empty($data['difference_reason'])) {
             return $this->error(
                 'DIFFERENCE_REASON_REQUIRED',
-                'A reason is required when the closing amount differs from the expected amount.',
+                "Yopish summasi kutilgan summadan ({$expectedAmount}) farq qiladi — farq sababini yozing.",
                 422
             );
         }
@@ -145,10 +118,46 @@ class CashShiftController extends Controller
             ->first();
 
         if (! $cashShift) {
-            return $this->error('NO_OPEN_SHIFT', 'No open cash shift found.', 404);
+            return $this->error('NO_OPEN_SHIFT', "Ochiq smena yo'q.", 404);
         }
 
+        // Ochiq smenada kutilgan summa bazada yo'q (yopishda yoziladi) — jonli hisoblanadi,
+        // aks holda UI ochilish summasini "kutilgan" deb ko'rsatib, kassir yopa olmasdi.
+        $cashShift->expected_amount = $this->expectedCash($cashShift);
+
         return $this->success($cashShift);
+    }
+
+    /** Kassadagi kutilgan naqd: ochilish + naqd to'lovlar − qaytim − naqd qaytarishlar. */
+    private function expectedCash(CashShift $cashShift): string
+    {
+        $cashPayments = Payment::where('cash_shift_id', $cashShift->id)
+            ->where('status', 'completed')
+            ->where('method', 'cash')
+            ->sum('amount');
+
+        $cashChanges = Payment::where('cash_shift_id', $cashShift->id)
+            ->where('status', 'completed')
+            ->where('method', 'cash')
+            ->sum('change_amount');
+
+        $cashRefunds = DB::table('refunds')
+            ->where('refund_method', 'cash')
+            ->where('status', 'completed')
+            ->where('created_at', '>=', $cashShift->opened_at)
+            ->where('created_at', '<=', now())
+            ->whereIn('order_id', function ($query) use ($cashShift) {
+                $query->select('order_id')
+                    ->from('payments')
+                    ->where('cash_shift_id', $cashShift->id);
+            })
+            ->sum('amount');
+
+        return bcadd(
+            (string) $cashShift->opening_amount,
+            bcsub(bcsub((string) $cashPayments, (string) $cashChanges, 2), (string) $cashRefunds, 2),
+            2
+        );
     }
 
     public function report(CashShift $cashShift): JsonResponse

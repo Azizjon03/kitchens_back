@@ -25,6 +25,7 @@ import {
   Soup,
 } from 'lucide-react';
 import type { Role } from '../types';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface NavItem {
   label: string;
@@ -56,12 +57,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
       setTimeout(onClose, 1500);
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string }; detail?: string } } };
-      setError(
-        axiosErr.response?.data?.error?.message ||
-        axiosErr.response?.data?.detail ||
-        'Xatolik yuz berdi'
-      );
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -171,7 +167,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={mutation.isPending || success}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'O\'zgartirish'}
             </button>
@@ -242,7 +238,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </p>
             </div>
             <button
-              className="ml-auto lg:hidden text-gray-500 hover:text-gray-700"
+              aria-label="Menyuni yopish"
+              className="ml-auto lg:hidden min-h-11 min-w-11 -mr-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={20} />
@@ -284,14 +281,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="text-gray-400 hover:text-amber-500 transition-colors"
+                aria-label="Parolni o'zgartirish"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                 title="Parolni o'zgartirish"
               >
                 <KeyRound size={18} />
               </button>
               <button
                 onClick={logout}
-                className="text-gray-400 hover:text-red-500 transition-colors"
+                aria-label="Chiqish"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                 title="Chiqish"
               >
                 <LogOut size={18} />
@@ -302,7 +301,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* min-w-0: usiz keng jadval flex ustunni cho'zib, mobil sahifani yonga suradi */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         {/* Mobile header */}
         <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
           <button

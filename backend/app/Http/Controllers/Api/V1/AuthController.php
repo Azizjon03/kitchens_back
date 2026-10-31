@@ -9,7 +9,9 @@ use App\Models\PasswordResetCode;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
@@ -42,6 +44,9 @@ class AuthController extends Controller
      * attempt for a phone that does not exist still pays for one hash
      * comparison, keeping its response time comparable to a real attempt.
      */
+    /** Restoran tanlash tokenining amal qilish muddati (#10). */
+    private const SELECTION_TTL_MINUTES = 5;
+
     private const DUMMY_PASSWORD_HASH = '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi';
 
     public function login(Request $request): JsonResponse
@@ -76,17 +81,76 @@ class AuthController extends Controller
         $user = $this->resolveLoginCandidate($matches);
 
         if ($user === null) {
-            return $this->error(
-                'AMBIGUOUS_CREDENTIALS',
-                'Bu telefon raqam va parol bir nechta kompaniyaga mos keldi. Administratoringizga murojaat qiling.',
-                409
-            );
+            // Bitta odam bir nechta restoranda bir xil parol bilan (#10): taxmin qilmaymiz,
+            // foydalanuvchining o'zi tanlaydi. Token faqat to'g'ri parol bilan olingan.
+            return $this->companySelection($this->usableCandidates($matches));
         }
 
         if (! $user->is_active) {
-            return $this->error('ACCOUNT_DISABLED', 'Your account has been deactivated.', 403);
+            return $this->error('ACCOUNT_DISABLED', 'Akkauntingiz faolsizlantirilgan.', 403);
         }
 
+        return $this->issueToken($user);
+    }
+
+    /**
+     * Restoran tanlangandan keyin token berish (#10). selection_token — login javobida
+     * berilgan, 5 daqiqa amal qiladigan shifrlangan ro'yxat; parol qayta so'ralmaydi.
+     */
+    public function selectCompany(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'selection_token' => 'required|string',
+            'user_id' => 'required|integer',
+        ]);
+
+        try {
+            $payload = json_decode(Crypt::decryptString($data['selection_token']), true, flags: JSON_THROW_ON_ERROR);
+        } catch (DecryptException|\JsonException) {
+            $payload = null;
+        }
+
+        $valid = is_array($payload)
+            && ($payload['exp'] ?? 0) >= now()->timestamp
+            && in_array((int) $data['user_id'], $payload['ids'] ?? [], true);
+
+        $user = $valid ? User::with('company')->find($data['user_id']) : null;
+
+        if ($user === null || ! $this->isUsable($user)) {
+            return $this->error(
+                'INVALID_SELECTION',
+                "Tanlov muddati o'tgan yoki noto'g'ri. Qaytadan kiring.",
+                422
+            );
+        }
+
+        return $this->issueToken($user);
+    }
+
+    private function companySelection(Collection $accounts): JsonResponse
+    {
+        $token = Crypt::encryptString(json_encode([
+            'ids' => $accounts->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
+            'exp' => now()->addMinutes(self::SELECTION_TTL_MINUTES)->timestamp,
+        ]));
+
+        return $this->success([
+            'requires_company_selection' => true,
+            'selection_token' => $token,
+            'accounts' => $accounts->map(fn (User $u) => [
+                'user_id' => $u->id,
+                'role' => $u->role,
+                'company' => $u->company ? [
+                    'id' => $u->company->id,
+                    'name' => $u->company->name,
+                    'slug' => $u->company->slug,
+                ] : null,
+            ])->values(),
+        ]);
+    }
+
+    private function issueToken(User $user): JsonResponse
+    {
         $this->pruneExpiredTokens($user);
 
         $token = $user->createToken('auth')->plainTextToken;
@@ -95,6 +159,16 @@ class AuthController extends Controller
             'user' => $user->load('company', 'branch'),
             'token' => $token,
         ]);
+    }
+
+    private function isUsable(User $user): bool
+    {
+        return $user->is_active && ($user->company === null || $user->company->is_active);
+    }
+
+    private function usableCandidates(Collection $matches): Collection
+    {
+        return $matches->filter(fn (User $user) => $this->isUsable($user))->values();
     }
 
     public function logout(Request $request): JsonResponse
@@ -278,10 +352,7 @@ class AuthController extends Controller
         // More than one account shares this phone AND this password. Prefer the
         // one that could actually be used; stay ambiguous if that is still
         // more than one, rather than silently signing into the wrong tenant.
-        $usable = $matches
-            ->filter(fn (User $user) => $user->is_active
-                && ($user->company === null || $user->company->is_active))
-            ->values();
+        $usable = $this->usableCandidates($matches);
 
         return $usable->count() === 1 ? $usable->first() : null;
     }

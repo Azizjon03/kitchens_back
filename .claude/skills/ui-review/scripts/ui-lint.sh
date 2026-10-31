@@ -18,6 +18,8 @@
 #   K5 manual-format       (ogohlantirish, lib/format.ts paydo bo'lsa — xato)
 #                                  toLocaleString / Intl.* sahifada qo'lda
 #   K6 generic-error-only  (ogohlantirish) 'Xatolik yuz berdi' server xabarisiz yolg'iz ishlatilgan
+#   K7 low-contrast-button (xato)  oq matn *-500 rangli fonda (amber 2.15:1, green 2.22:1) — #13 qarori:
+#                                  amber/green-700, blue/red/purple-600
 set -uo pipefail
 
 root=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ui-lint: git repo emas" >&2; exit 2; }
@@ -75,6 +77,7 @@ out=$(
     grep_rule K2 api-error-detail xato 'data\??\.detail'
     grep_rule K3 blocking-dialog xato '(^|[^.a-zA-Z_])(window\.)?(alert|confirm|prompt)\('
     grep_rule K4 hardcoded-host xato "['\"\`]https?://(localhost|127\.0\.0\.1|[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)" '/lib/echo\.ts$'
+    grep_rule K7 low-contrast-button xato '(bg-(amber|green|blue|red|purple)-500[^"`]*text-white|text-white[^"`]*bg-(amber|green|blue|red|purple)-500)'
     grep_rule K5 manual-format "$k5_level" 'toLocale(Date|Time)?String|Intl\.(NumberFormat|DateTimeFormat)' '/lib/format\.ts$'
     for f in "${files[@]}"; do
         grep -n "Xatolik yuz berdi" "$f" | grep -vE 'error\??\.message|message \|\||getErrorMessage|errors' | while IFS= read -r hit; do

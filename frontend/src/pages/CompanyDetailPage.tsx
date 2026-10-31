@@ -16,6 +16,7 @@ import {
   EyeOff,
   X,
 } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface Plan {
   id: number;
@@ -121,8 +122,7 @@ function EditCompanyModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { detail?: string; message?: string } } };
-      setError(axiosErr.response?.data?.detail || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -272,7 +272,7 @@ function EditCompanyModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
@@ -365,7 +365,7 @@ function ChangePlanModal({
           <button
             onClick={() => selectedPlanId && mutation.mutate(selectedPlanId)}
             disabled={!selectedPlanId || selectedPlanId === currentPlanId || mutation.isPending}
-            className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
           >
             {mutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
           </button>
