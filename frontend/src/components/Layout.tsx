@@ -167,7 +167,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
             <button
               type="submit"
               disabled={mutation.isPending || success}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'O\'zgartirish'}
             </button>

@@ -41,7 +41,7 @@ o'ylab topilmaydi. Jadval/karta-grid → `ui-data-table`; forma/modal →
       <h1 className="text-2xl font-bold text-gray-900">Buyurtmalar</h1>
       <p className="text-gray-500 text-sm mt-1">Barcha buyurtmalarni ko'rish va boshqarish</p>
     </div>
-    <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors">
+    <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors">
       <Plus size={18} /> Yangi buyurtma
     </button>
   </div>
@@ -51,7 +51,7 @@ o'ylab topilmaydi. Jadval/karta-grid → `ui-data-table`; forma/modal →
 
 | Element | Klass |
 | --- | --- |
-| Asosiy tugma | `bg-amber-500 text-white hover:bg-amber-600 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50` |
+| Asosiy tugma | `bg-amber-700 text-white hover:bg-amber-800 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50` |
 | Ikkinchi darajali | `border border-gray-300 text-gray-700 hover:bg-gray-50` (qolgani bir xil) |
 | Matn-havola amal | `text-amber-600 hover:text-amber-700 font-medium text-sm` |
 | Xavfli tasdiq | `bg-red-500 text-white hover:bg-red-600` (faqat tasdiq modalida) |
@@ -72,7 +72,7 @@ Semantik tokenlar yo'q — Tailwind palitrasi, lekin **qat'iy rollar bilan**:
 
 | Maqsad | Rang |
 | --- | --- |
-| Brend / asosiy amal / faol nav | `amber-500` (hover `amber-600`), fon `amber-50`, matn `amber-700` |
+| Brend / asosiy amal / faol nav | oq matnli tugma `amber-700` (hover `amber-800`); matnsiz brend belgi (logo) `amber-500`; fon `amber-50`, matn `amber-700` |
 | Sahifa foni / karta | `bg-gray-50` / `bg-white` |
 | Asosiy / ikkilamchi matn | `text-gray-900` / `text-gray-500` |
 | Chegara | `border-gray-200` (input — `border-gray-300`) |
@@ -167,9 +167,12 @@ Har `useQuery` bloki to'rt holatni ko'rsatadi:
 - Ikonka-tugma (`X`, `Pencil`, `Trash2`) — `aria-label`; `title` yetarli emas
   (sensorli ekranda ko'rinmaydi).
 
-> **Hozirgi holat (tizimli):** `bg-amber-500` ustidagi oq matn kontrasti
-> ≈ 2.2:1 — butun loyiha tugmasi; sahifa bo'yicha ayirilmaydi, hisobotda
-> "tizimli" deb bir marta qayd etiladi. Ikonka-tugmalarda faqat `title`
+> **Qaror (2026-10-31, #13):** oq matnli rangli tugma faqat WCAG AA (≥ 4.5:1)
+> o'tadigan tusda — o'lchangan: `amber-700` 5.05, `green-700` 4.94, `blue-600`
+> 5.26, `red-600` 4.76, `purple-600` 5.53. `*-500` + `text-white` — **taqiq**
+> (amber-500 2.15, green-500 2.22). KDS "Tayyor" — `green-700` (istisno emas,
+> shu qoida). Hover — bir pog'ona to'qroq.
+> **Hozirgi holat:** Ikonka-tugmalarda faqat `title`
 > (aria-label faqat Tg'da), tugmalarda focus halqasi yo'q, modallarda
 > `Escape` yo'q, Tg "+" tugmasi 36px. Yangi kodda — standart.
 

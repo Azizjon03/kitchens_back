@@ -43,7 +43,7 @@ function DeleteConfirmModal({
           <button
             onClick={onConfirm}
             disabled={isPending}
-            className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
           >
             {isPending ? "O'chirilmoqda..." : "O'chirish"}
           </button>
@@ -161,7 +161,7 @@ function ModifierModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
@@ -300,7 +300,7 @@ function AddonModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors disabled:opacity-50"
             >
               {mutation.isPending ? 'Saqlanmoqda...' : 'Saqlash'}
             </button>
@@ -407,7 +407,7 @@ export default function ModifiersPage() {
                 setEditModifier(undefined);
                 setShowModifierModal(true);
               }}
-              className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+              className="inline-flex items-center gap-2 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
             >
               <Plus size={18} />
               Yangi modifikator
@@ -495,7 +495,7 @@ export default function ModifiersPage() {
                 setEditAddon(undefined);
                 setShowAddonModal(true);
               }}
-              className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors"
+              className="inline-flex items-center gap-2 bg-amber-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-800 transition-colors"
             >
               <Plus size={18} />
               Yangi qo'shimcha

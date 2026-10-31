@@ -158,9 +158,21 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     const modal = companyModal(page);
     await expect(modal).toBeVisible();
 
-    // Label'lar input bilan bog'lanmagan (htmlFor yo'q) — label matni + placeholder bo'yicha tekshiramiz
-    for (const label of ['Kompaniya nomi', 'Slug', 'Telefon', "To'liq ism", 'Telefon raqam', 'Email (ixtiyoriy)', 'Parol']) {
-      await expect(modal.locator('label', { hasText: new RegExp(`^${label.replace(/[()]/g, '\\$&')}$`) })).toBeVisible();
+    // Har label o'z inputiga bog'langan (htmlFor/id); majburiylarida "*"
+    const fields: [string, string, boolean][] = [
+      ['company-name', 'Kompaniya nomi', true],
+      ['company-slug', 'Slug', true],
+      ['company-phone', 'Telefon', true],
+      ['company-owner_full_name', "To'liq ism", true],
+      ['company-owner_phone', 'Telefon raqam', true],
+      ['company-owner_email', 'Email (ixtiyoriy)', false],
+      ['company-owner_password', 'Parol', true],
+    ];
+    for (const [id, text, required] of fields) {
+      const label = modal.locator(`label[for="${id}"]`);
+      await expect(label).toContainText(text);
+      await expect(modal.locator(`#${id}`)).toBeVisible();
+      await expect(label.locator('span', { hasText: '*' })).toHaveCount(required ? 1 : 0);
     }
     await expect(modal.getByText('Egasi (Owner)')).toBeVisible();
 

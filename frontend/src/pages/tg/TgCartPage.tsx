@@ -179,7 +179,7 @@ export default function TgCartPage() {
                     onClick={() => toggleId(l, 'addon_ids', a.id)}
                     className={`px-2 py-0.5 rounded text-[11px] border ${
                       l.addon_ids.includes(a.id)
-                        ? 'bg-green-500 text-white border-green-500'
+                        ? 'bg-green-700 text-white border-green-700'
                         : 'bg-white text-gray-600 border-gray-200'
                     }`}
                   >

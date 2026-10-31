@@ -151,7 +151,7 @@ function OrderComposer({
                   key={c.id}
                   onClick={() => setActiveCat(c.id)}
                   className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                    activeCat === c.id ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'
+                    activeCat === c.id ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
                   {c.name_uz}
@@ -256,7 +256,7 @@ function OrderComposer({
                           onClick={() => toggleId(l, 'modifier_ids', m.id)}
                           className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
                             l.modifier_ids.includes(m.id)
-                              ? 'bg-amber-500 text-white border-amber-500'
+                              ? 'bg-amber-700 text-white border-amber-700'
                               : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
@@ -300,7 +300,7 @@ function OrderComposer({
               <button
                 onClick={() => mutation.mutate()}
                 disabled={cart.length === 0 || mutation.isPending}
-                className="w-full min-h-12 px-4 py-3 bg-amber-500 text-white rounded-lg text-base font-medium hover:bg-amber-600 disabled:opacity-50"
+                className="w-full min-h-12 px-4 py-3 bg-amber-700 text-white rounded-lg text-base font-medium hover:bg-amber-800 disabled:opacity-50"
               >
                 {mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
               </button>
@@ -581,7 +581,7 @@ export default function WaiterPage() {
                 <button
                   onClick={() => serveMutation.mutate(o.id)}
                   disabled={serveMutation.isPending && serveMutation.variables === o.id}
-                  className="w-full min-h-11 px-3 py-2.5 bg-amber-500 text-white rounded-lg text-base font-medium hover:bg-amber-600 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                  className="w-full min-h-11 px-3 py-2.5 bg-amber-700 text-white rounded-lg text-base font-medium hover:bg-amber-800 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                 >
                   <Check size={18} /> {serveMutation.isPending && serveMutation.variables === o.id ? 'Saqlanmoqda...' : 'Berildi'}
                 </button>

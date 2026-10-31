@@ -15,6 +15,7 @@ expect '^K3 blocking-dialog (xato)' 'K3 confirm()'
 expect '^K4 hardcoded-host (xato)' 'K4 localhost'
 expect '^K5 manual-format' 'K5 toLocaleString'
 expect '^K6 generic-error-only' 'K6 yolg'"'"'iz umumiy xato'
+expect '^K7 low-contrast-button (xato)' 'K7 oq matn amber-500 da'
 out=$(cd "$here" && bash "$lint" "$tmp/Good.tsx"); code=$?
 [ "$code" -eq 0 ] && echo "ok   good: chiqish kodi 0" || { echo "FAIL good: chiqish kodi $code"; fail=1; }
 expect 'ui-lint: 0 xato, 0 ogohlantirish' 'good: toza'
