@@ -214,13 +214,17 @@ export default function CompaniesPage() {
   const navigate = useNavigate();
 
   // Qidiruv serverda (#8): avval faqat 1-sahifa (15 ta) olinib, brauzerda filtrlanardi
+  // Faqat qidiruv matni haqiqatan o'zgarganda: mountda setPage(1) chaqirilib, tez bosilgan
+  // "Keyingi" ni 1-sahifaga qaytarib yuborardi (e2e'da topilgan race)
   useEffect(() => {
+    const q = search.trim();
+    if (q === debouncedSearch) return;
     const t = setTimeout(() => {
-      setDebouncedSearch(search.trim());
+      setDebouncedSearch(q);
       setPage(1);
     }, 300);
     return () => clearTimeout(t);
-  }, [search]);
+  }, [search, debouncedSearch]);
 
   const { data, isLoading, isError, error, refetch } = useQuery<{
     data: Company[];

@@ -80,6 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [storeSession]);
 
   const logout = useCallback(() => {
+    // Tokenni serverda ham bekor qilamiz — aks holda u muddati tugaguncha (7 kun) amal qiladi.
+    // Javob kutilmaydi: tarmoq bo'lmasa ham foydalanuvchi baribir chiqadi.
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      api.post('/auth/logout', null, { headers: { Authorization: `Bearer ${token}` } }).catch(() => {});
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     resetEcho();

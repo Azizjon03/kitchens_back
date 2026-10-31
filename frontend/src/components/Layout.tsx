@@ -301,7 +301,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* min-w-0: usiz keng jadval flex ustunni cho'zib, mobil sahifani yonga suradi */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         {/* Mobile header */}
         <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
           <button
