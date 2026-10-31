@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import type { Table, Branch } from '../types';
 import Layout from '../components/Layout';
+import PageGuide from '../components/PageGuide';
+import TableTemplatesPanel from '../components/TableTemplatesPanel';
+import { useTableTemplates } from '../lib/tableTemplates';
 import {
   Plus,
   Pencil,
@@ -11,6 +14,7 @@ import {
   Grid3X3,
   Users,
   MapPin,
+  LayoutTemplate,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 
@@ -48,7 +52,9 @@ function TableModal({
     seats: table?.seats?.toString() || '4',
     zone: table?.zone || '',
     branch_id: table?.branch_id || (branches[0]?.id ?? 0),
+    table_template_id: table?.table_template_id ? String(table.table_template_id) : '',
   });
+  const { data: templates = [] } = useTableTemplates();
   const [error, setError] = useState('');
 
   const mutation = useMutation({
@@ -59,6 +65,8 @@ function TableModal({
         number: form.number.trim(),
         seats: parseInt(form.seats),
         zone: form.zone || null,
+        // Bo'sh tanlov — stolga oldindan hech narsa qo'yilmaydi (#24)
+        table_template_id: form.table_template_id ? Number(form.table_template_id) : null,
       };
       if (isEdit) {
         return (await api.put(`/tables/${table.id}`, payload)).data;
@@ -157,6 +165,26 @@ function TableModal({
             />
           </div>
 
+          <div>
+            <label htmlFor="table-template" className="block text-sm font-medium text-gray-700 mb-1">
+              Stolga oldindan qo'yiladigan narsalar
+            </label>
+            <select
+              id="table-template"
+              value={form.table_template_id}
+              onChange={(e) => setForm((p) => ({ ...p, table_template_id: e.target.value }))}
+              className={`${inputClass} min-h-11`}
+            >
+              <option value="">Yo'q — bo'sh stol</option>
+              {templates.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">
+              Shablonlar "Stol shablonlari" bo'limida tuziladi. Hisobga faqat ochilgani qo'shiladi.
+            </p>
+          </div>
+
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -226,7 +254,8 @@ export default function TablesPage() {
   const [filterBranch, setFilterBranch] = useState<string>('');
   const [showModal, setShowModal] = useState(false);
   const [editTable, setEditTable] = useState<Table | undefined>();
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; number: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; number: string } | null>(null);
+  const [tab, setTab] = useState<'tables' | 'templates'>('tables');
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -282,6 +311,38 @@ export default function TablesPage() {
         </button>
       </div>
 
+      <PageGuide
+        id="tables"
+        title="Stollar bo'limi nima uchun?"
+        intro="Bu yerda zaldagi stollaringiz turadi. Ofitsiant bo'sh stolni tanlab buyurtma qabul qiladi."
+        steps={[
+          '"Yangi stol" tugmasini bosing va stol raqamini yozing (masalan 1, 2 yoki A1).',
+          "Nechta odam sig'ishini (o'rindiq) kiriting.",
+          'Stolga har doim bir xil narsalar qo\'yilsa (masalan 3 sharbat, 4 mohito) — "Stol shablonlari" bo\'limida shablon tuzing va stolga tanlang.',
+          "Mehmon ketayotganda ofitsiant nechtasi ochilganini belgilaydi — faqat o'shalar hisobga qo'shiladi.",
+        ]}
+      />
+
+      <div role="tablist" className="mb-6 inline-flex rounded-xl border border-gray-200 bg-white p-1">
+        {([['tables', 'Stollar'], ['templates', 'Stol shablonlari']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={`min-h-11 px-4 rounded-lg text-sm font-medium transition-colors ${
+              tab === key ? 'bg-amber-700 text-white' : 'text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'templates' ? (
+        <TableTemplatesPanel />
+      ) : (
+      <>
       {/* Filters */}
       <div className="mb-4 flex items-center gap-4">
         {branches.length > 1 && (
@@ -357,6 +418,12 @@ export default function TablesPage() {
                       <span>{table.zone}</span>
                     </div>
                   )}
+                  {table.template && (
+                    <div className="flex items-center gap-1.5 text-xs text-indigo-700">
+                      <LayoutTemplate size={12} aria-hidden="true" />
+                      <span>{table.template.name}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status buttons */}
@@ -404,6 +471,9 @@ export default function TablesPage() {
       )}
 
       {/* Modals */}
+      </>
+      )}
+
       {showModal && (
         <TableModal
           table={editTable}

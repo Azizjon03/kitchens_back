@@ -33,7 +33,7 @@ class TableController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Table::with('assignedWaiter');
+        $query = Table::with(['assignedWaiter', 'template:id,name']);
 
         if ($request->filled('branch_id')) {
             $query->where('branch_id', $request->branch_id);
