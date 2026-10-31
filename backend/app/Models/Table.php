@@ -16,7 +16,7 @@ class Table extends Model
     protected $fillable = [
         'company_id', 'branch_id', 'number', 'seats', 'zone',
         'status', 'qr_code', 'qr_token', 'assigned_waiter_id',
-        'merged_with_table_id',
+        'merged_with_table_id', 'table_template_id',
     ];
 
     protected $casts = [
@@ -33,5 +33,11 @@ class Table extends Model
     public function assignedWaiter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_waiter_id');
+    }
+
+    /** Stolga oldindan qo'yiladigan narsalar shabloni (#24) */
+    public function template(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(TableTemplate::class, 'table_template_id');
     }
 }

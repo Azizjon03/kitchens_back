@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\V1\SuperAdmin\CompanyController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
+use App\Http\Controllers\Api\V1\TableSetController;
+use App\Http\Controllers\Api\V1\TableTemplateController;
 use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -74,6 +76,8 @@ Route::prefix('v1')->group(function () {
                 Route::apiResource('menu-items', MenuItemController::class);
                 Route::apiResource('modifiers', ModifierController::class);
                 Route::apiResource('addons', AddonController::class);
+                // Stol shablonlari (#24)
+                Route::apiResource('table-templates', TableTemplateController::class)->except(['show']);
             });
 
             // Tables
@@ -98,6 +102,9 @@ Route::prefix('v1')->group(function () {
             Route::get('pos/menu', [OrderController::class, 'menu']);
             Route::post('orders', [OrderController::class, 'store']);
             Route::put('orders/{order}', [OrderController::class, 'update']);
+            // Stol to'plami (#24): ishlatilgan narsalarni belgilash
+            Route::get('orders/{order}/table-set', [TableSetController::class, 'show']);
+            Route::put('orders/{order}/table-set', [TableSetController::class, 'update']);
             Route::post('orders/{order}/cancel', [OrderController::class, 'cancel']);
             Route::post('orders/{order}/discount', [OrderController::class, 'applyDiscount']);
         });

@@ -398,6 +398,36 @@ class OrderService
      *
      * @return array{discount_amount: string, total: string}
      */
+    /**
+     * Buyurtma summasini barcha qatorlardan qayta hisoblaydi (stol to'plami qatorlari ham, #24):
+     * xizmat haqi, chegirma (joriy subtotal'ga qayta cheklangan) va jami.
+     */
+    public function recalculateTotals(Order $order, Company $company): void
+    {
+        $subtotal = $this->decimal($order->orderItems()->sum('total_price'), 2);
+
+        $serviceChargeAmount = bcmul(
+            $subtotal,
+            bcdiv($this->decimal($order->service_charge_pct, 2), '100', 4),
+            2
+        );
+
+        $totals = $this->computeTotals(
+            $subtotal,
+            $serviceChargeAmount,
+            $order->discount_type,
+            $order->discount_value,
+            $company->getMaxDiscountPct()
+        );
+
+        $order->update([
+            'subtotal' => $subtotal,
+            'service_charge_amount' => $serviceChargeAmount,
+            'discount_amount' => $totals['discount_amount'],
+            'total' => $totals['total'],
+        ]);
+    }
+
     public function computeTotals(
         string $subtotal,
         string $serviceChargeAmount,
