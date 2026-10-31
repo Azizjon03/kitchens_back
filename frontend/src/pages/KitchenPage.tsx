@@ -204,8 +204,9 @@ export default function KitchenPage() {
     queryKey: ['kds-orders', branchId],
     enabled: branchId !== null,
     queryFn: async () => {
+      // active=1 — barcha faol buyurtmalar, eskidan yangiga (sahifalashsiz, #5)
       const fetchStatus = async (status: string) => {
-        const res = await api.get('/orders', { params: { branch_id: branchId, status } });
+        const res = await api.get('/orders', { params: { branch_id: branchId, status, active: 1 } });
         const payload = res.data.data;
         const list = payload?.data ?? payload ?? [];
         return list as Array<{
@@ -219,8 +220,8 @@ export default function KitchenPage() {
           }>;
         }>;
       };
-      const [preparing, ready] = await Promise.all([fetchStatus('preparing'), fetchStatus('ready')]);
-      return [...preparing, ...ready].map((o) => ({
+      const list = await fetchStatus('preparing,ready');
+      return list.map((o) => ({
         id: o.id,
         company_id: o.company_id,
         branch_id: o.branch_id,

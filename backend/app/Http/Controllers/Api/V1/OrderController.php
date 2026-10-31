@@ -18,12 +18,16 @@ class OrderController extends Controller
 {
     use ApiResponse;
 
+    /** Faol buyurtmalar uchun xavfsizlik chegarasi — oddiy restoranda bu son hech qachon yetmaydi. */
+    private const ACTIVE_ORDERS_LIMIT = 500;
+
     public function index(Request $request): JsonResponse
     {
         $query = Order::with(['table', 'user', 'orderItems.menuItem']);
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            // Bir nechta holat vergul bilan: ?status=preparing,ready
+            $query->whereIn('status', explode(',', (string) $request->input('status')));
         }
 
         if ($request->filled('table_id')) {
@@ -44,6 +48,19 @@ class OrderController extends Controller
 
         if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        // KDS / ofitsiant ekrani (?active=1): filialning BARCHA faol buyurtmalari, eskidan
+        // yangiga — eng uzoq kutayotgani birinchi. Sahifalash bu yerda eng shoshilinch
+        // buyurtmalarni ekrandan tushirib qoldirardi (#5). Terminal holatlar chiqarilmaydi.
+        if ($request->boolean('active')) {
+            $orders = $query->whereNotIn('status', OrderService::TERMINAL_STATUSES)
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->limit(self::ACTIVE_ORDERS_LIMIT)
+                ->get();
+
+            return $this->success($orders);
         }
 
         $orders = $query->orderByDesc('created_at')->paginate(20);

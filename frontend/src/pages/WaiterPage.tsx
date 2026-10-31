@@ -331,17 +331,12 @@ export default function WaiterPage() {
     queryKey: ['waiter-orders', branchId],
     enabled: branchId !== null,
     queryFn: async () => {
-      const fetchStatus = async (status: string) => {
-        const res = await api.get('/orders', { params: { branch_id: branchId, status } });
-        const payload = res.data.data;
-        return (payload?.data ?? payload ?? []) as Order[];
-      };
-      const [prep, ready, served] = await Promise.all([
-        fetchStatus('preparing'),
-        fetchStatus('ready'),
-        fetchStatus('served'),
-      ]);
-      return [...prep, ...ready, ...served];
+      // active=1 — barcha faol buyurtmalar, eskidan yangiga (sahifalashsiz, #5)
+      const res = await api.get('/orders', {
+        params: { branch_id: branchId, status: 'preparing,ready,served', active: 1 },
+      });
+      const payload = res.data.data;
+      return (payload?.data ?? payload ?? []) as Order[];
     },
   });
 
