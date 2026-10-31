@@ -238,7 +238,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </p>
             </div>
             <button
-              className="ml-auto lg:hidden text-gray-500 hover:text-gray-700"
+              aria-label="Menyuni yopish"
+              className="ml-auto lg:hidden min-h-11 min-w-11 -mr-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               onClick={() => setSidebarOpen(false)}
             >
               <X size={20} />
@@ -280,14 +281,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => setShowPasswordModal(true)}
-                className="text-gray-400 hover:text-amber-500 transition-colors"
+                aria-label="Parolni o'zgartirish"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                 title="Parolni o'zgartirish"
               >
                 <KeyRound size={18} />
               </button>
               <button
                 onClick={logout}
-                className="text-gray-400 hover:text-red-500 transition-colors"
+                aria-label="Chiqish"
+                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
                 title="Chiqish"
               >
                 <LogOut size={18} />

@@ -4,6 +4,7 @@ import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
+import { Check, ChefHat } from 'lucide-react';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
@@ -109,17 +110,21 @@ function OrderCard({
 
   return (
     <div className={`bg-white rounded-xl border-2 ${border} overflow-hidden flex flex-col`}>
-      <div className={`flex items-center justify-between px-3 py-2 ${headerBg}`}>
-        <span className="font-bold text-sm">
-          {TYPE_LABELS[order.type] ?? order.type}
-          {order.table ? ` #${order.table.number}` : ''}
-        </span>
-        <span className="text-xs font-semibold">#{order.id} · {mins} daq</span>
+      <div className={`flex items-center justify-between gap-2 px-3 py-2 2xl:px-4 2xl:py-3 ${headerBg}`}>
+        <div className="min-w-0">
+          <div className="font-bold text-base 2xl:text-lg truncate">
+            {TYPE_LABELS[order.type] ?? order.type}
+            {order.table ? ` #${order.table.number}` : ''}
+          </div>
+          <div className="text-xs font-medium">#{order.id}</div>
+        </div>
+        {/* Kutish vaqti — oshpazning asosiy signali, kartadagi eng yirik raqam */}
+        <span className="text-xl 2xl:text-2xl font-bold tabular-nums whitespace-nowrap">{mins} daq</span>
       </div>
 
-      <div className="flex-1 p-3 space-y-2">
+      <div className="flex-1 p-3 2xl:p-4 space-y-2">
         {order.items.map((item) => (
-          <div key={item.id} className="text-sm">
+          <div key={item.id} className="text-base 2xl:text-lg">
             <div className="flex justify-between font-medium text-gray-900">
               <span>{item.name_uz || item.name_ru}</span>
               <span className="ml-2 whitespace-nowrap">
@@ -131,7 +136,7 @@ function OrderCard({
                 {item.modifiers.map((m) => (
                   <span
                     key={m.id}
-                    className="inline-flex px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[11px] font-bold uppercase"
+                    className="inline-flex px-2 py-0.5 rounded bg-red-100 text-red-800 text-sm font-bold uppercase"
                   >
                     {m.name_uz || m.name_ru}
                   </span>
@@ -139,15 +144,15 @@ function OrderCard({
               </div>
             )}
             {item.addons.length > 0 && (
-              <div className="mt-0.5 text-xs text-gray-500">
+              <div className="mt-0.5 text-sm text-gray-700">
                 {item.addons.map((a) => `+ ${a.name_uz || a.name_ru}`).join(', ')}
               </div>
             )}
-            {item.note && <div className="mt-0.5 text-xs italic text-gray-500">“{item.note}”</div>}
+            {item.note && <div className="mt-0.5 text-sm italic text-gray-700">“{item.note}”</div>}
           </div>
         ))}
         {order.note && (
-          <div className="text-xs italic text-gray-600 border-t border-gray-100 pt-2">
+          <div className="text-sm italic text-gray-700 border-t border-gray-100 pt-2">
             Izoh: {order.note}
           </div>
         )}
@@ -157,14 +162,16 @@ function OrderCard({
         <button
           onClick={() => onReady(order.id)}
           disabled={isPending}
-          className="m-3 mt-0 px-4 py-2.5 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors disabled:opacity-50"
+          className="m-3 mt-0 min-h-12 inline-flex items-center justify-center gap-2 px-4 py-3 bg-green-700 text-white rounded-lg text-lg font-semibold hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-700 focus:ring-offset-2 transition-colors disabled:opacity-50"
         >
-          Tayyor
+          <Check size={20} aria-hidden="true" />
+          {isPending ? 'Saqlanmoqda...' : 'Tayyor'}
         </button>
       )}
       {order.status === 'ready' && (
-        <div className="m-3 mt-0 px-4 py-2 text-center text-blue-600 text-sm font-semibold border border-blue-200 rounded-lg bg-blue-50">
-          Tayyor ✓ — berishni kutmoqda
+        <div className="m-3 mt-0 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
+          <Check size={18} aria-hidden="true" />
+          Tayyor — berishni kutmoqda
         </div>
       )}
     </div>
@@ -320,7 +327,7 @@ export default function KitchenPage() {
   return (
     <Layout>
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold text-gray-900">Oshxona (KDS)</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Oshxona</h1>
         {branches.length > 1 && (
           <select
             value={branchId ?? ''}
@@ -349,17 +356,18 @@ export default function KitchenPage() {
         <ErrorState error={ordersError} onRetry={() => refetchOrders()} title="Buyurtmalarni yuklab bo'lmadi" large />
       ) : sorted.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <ChefHat size={48} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
           <p className="text-gray-500 text-lg">Hozircha faol buyurtmalar yo'q</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 2xl:gap-5">
           {sorted.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
               now={now}
               onReady={(id) => readyMutation.mutate(id)}
-              isPending={readyMutation.isPending}
+              isPending={readyMutation.isPending && readyMutation.variables === order.id}
             />
           ))}
         </div>

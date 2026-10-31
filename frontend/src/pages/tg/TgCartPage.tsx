@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import tgApi, { tgInit, tgTableId } from '../../lib/tgApi';
+import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
 import { useTgCart, cartTotal, lineTotal, type TgCartLine } from '../../lib/tgCart';
 import type { Category } from '../../types';
 import { ArrowLeft, Minus, Plus, X } from 'lucide-react';
@@ -69,8 +69,7 @@ export default function TgCartPage() {
       navigate(`/tg/order/${order.id}${window.location.search}`);
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string }; message?: string } } };
-      setError(axiosErr.response?.data?.error?.message || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(tgErrorMessage(err, { fallback: "Buyurtmani yuborib bo'lmadi." }));
     },
   });
 

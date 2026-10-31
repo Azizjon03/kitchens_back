@@ -116,8 +116,7 @@ function OrderComposer({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string }; message?: string } } };
-      setError(axiosErr.response?.data?.error?.message || axiosErr.response?.data?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
@@ -128,7 +127,11 @@ function OrderComposer({
       <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Stol #{table.number} — yangi buyurtma</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            aria-label="Oynani yopish"
+            className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+          >
             <X size={20} />
           </button>
         </div>
@@ -141,7 +144,7 @@ function OrderComposer({
                 <button
                   key={c.id}
                   onClick={() => setActiveCat(c.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap ${
+                  className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
                     activeCat === c.id ? 'bg-amber-500 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
@@ -154,10 +157,10 @@ function OrderComposer({
                 <button
                   key={item.id}
                   onClick={() => addItem(item)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-amber-50 text-left"
+                  className="w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-amber-50 text-left"
                 >
-                  <span className="text-sm text-gray-900">{item.name_uz}</span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-base text-gray-900">{item.name_uz}</span>
+                  <span className="text-sm text-gray-600 tabular-nums">
                     {formatPrice(Number(item.price))}
                     {item.sell_type === 'weight' ? '/kg' : ''}
                   </span>
@@ -179,8 +182,12 @@ function OrderComposer({
                 <div key={l.key} className="border border-gray-200 rounded-lg p-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-gray-900">{l.item.name_uz}</span>
-                    <button onClick={() => removeLine(l.key)} className="text-gray-400 hover:text-red-500">
-                      <X size={16} />
+                    <button
+                      onClick={() => removeLine(l.key)}
+                      aria-label={`${l.item.name_uz} — savatdan olib tashlash`}
+                      className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
+                    >
+                      <X size={18} />
                     </button>
                   </div>
 
@@ -192,9 +199,10 @@ function OrderComposer({
                         min={Number(l.item.min_weight) || 0.1}
                         value={l.weight_kg ?? ''}
                         onChange={(e) => updateLine(l.key, { weight_kg: Number(e.target.value) })}
-                        className={`${inputClass} w-24`}
+                        aria-label="Vazn, kg"
+                        className="w-24 h-11 px-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
                       />
-                      <span className="text-xs text-gray-500">kg</span>
+                      <span className="text-sm text-gray-600">kg</span>
                     </div>
                   ) : (
                     <div className="mt-2 flex items-center gap-2">
@@ -202,9 +210,10 @@ function OrderComposer({
                         onClick={() =>
                           updateLine(l.key, { quantity: Math.max(0.1, Math.round((l.quantity - 1) * 100) / 100) })
                         }
-                        className="p-1 border border-gray-200 rounded"
+                        aria-label="Miqdorni kamaytirish"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50"
                       >
-                        <Minus size={14} />
+                        <Minus size={18} />
                       </button>
                       <input
                         type="number"
@@ -214,15 +223,17 @@ function OrderComposer({
                         onChange={(e) =>
                           updateLine(l.key, { quantity: Math.max(0.1, parseFloat(e.target.value) || 0.1) })
                         }
-                        className="w-16 text-sm text-center border border-gray-200 rounded py-1"
+                        aria-label="Miqdor"
+                        className="w-16 h-11 text-base text-center border border-gray-300 rounded-lg"
                       />
                       <button
                         onClick={() =>
                           updateLine(l.key, { quantity: Math.round((l.quantity + 1) * 100) / 100 })
                         }
-                        className="p-1 border border-gray-200 rounded"
+                        aria-label="Miqdorni oshirish"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50"
                       >
-                        <Plus size={14} />
+                        <Plus size={18} />
                       </button>
                     </div>
                   )}
@@ -233,7 +244,7 @@ function OrderComposer({
                         <button
                           key={m.id}
                           onClick={() => toggleId(l, 'modifier_ids', m.id)}
-                          className={`px-2 py-0.5 rounded text-[11px] border ${
+                          className={`min-h-10 px-3 py-1.5 rounded-lg text-sm border ${
                             l.modifier_ids.includes(m.id)
                               ? 'bg-amber-500 text-white border-amber-500'
                               : 'bg-white text-gray-600 border-gray-200'
@@ -251,9 +262,9 @@ function OrderComposer({
                         <button
                           key={a.id}
                           onClick={() => toggleId(l, 'addon_ids', a.id)}
-                          className={`px-2 py-0.5 rounded text-[11px] border ${
+                          className={`min-h-10 px-3 py-1.5 rounded-lg text-sm border ${
                             l.addon_ids.includes(a.id)
-                              ? 'bg-green-500 text-white border-green-500'
+                              ? 'bg-green-700 text-white border-green-700'
                               : 'bg-white text-gray-600 border-gray-200'
                           }`}
                         >
@@ -279,7 +290,7 @@ function OrderComposer({
               <button
                 onClick={() => mutation.mutate()}
                 disabled={cart.length === 0 || mutation.isPending}
-                className="w-full px-4 py-2.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50"
+                className="w-full min-h-12 px-4 py-3 bg-amber-500 text-white rounded-lg text-base font-medium hover:bg-amber-600 disabled:opacity-50"
               >
                 {mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
               </button>
@@ -293,11 +304,32 @@ function OrderComposer({
 
 // ─── Page ────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, string> = {
-  preparing: 'Tayyorlanmoqda',
-  ready: 'Tayyor',
-  served: 'Berildi',
+// Ranglar OrdersPage STATUS_MAP bilan bir xil — bir holat hamma sahifada bir xil ko'rinadi
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  preparing: { label: 'Tayyorlanmoqda', className: 'bg-amber-100 text-amber-700' },
+  ready: { label: 'Tayyor', className: 'bg-blue-100 text-blue-700' },
+  served: { label: 'Berildi', className: 'bg-purple-100 text-purple-700' },
 };
+
+const TABLE_STATUS_LABELS: Record<string, string> = {
+  free: "Bo'sh",
+  occupied: 'Band',
+  reserved: 'Bron',
+  cleaning: 'Tozalanmoqda',
+  merged: 'Birlashtirilgan',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  dine_in: 'Zalda',
+  takeaway: 'Olib ketish',
+  delivery: 'Yetkazib berish',
+};
+
+function formatTime(iso?: string) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 export default function WaiterPage() {
   const { user } = useAuth();
@@ -402,7 +434,8 @@ export default function WaiterPage() {
     onError: (err) => setActionError(apiErrorMessage(err, "Buyurtmani 'Berildi' qilib bo'lmadi")),
   });
 
-  const tableLabel = (o: Order) => (o.table ? `Stol #${o.table.number}` : `#${o.id}`);
+  const tableLabel = (o: Order) =>
+    o.table ? `Stol #${o.table.number}` : `${TYPE_LABELS[o.type] ?? o.type} #${o.id}`;
 
   const sortedOrders = useMemo(
     () => [...orders].sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '')),
@@ -473,7 +506,7 @@ export default function WaiterPage() {
               }`}
             >
               #{t.number}
-              <span className="text-[10px] font-normal">{isFree ? 'Bo\'sh' : t.status}</span>
+              <span className="text-xs font-medium">{TABLE_STATUS_LABELS[t.status] ?? t.status}</span>
             </button>
           );
         })}
@@ -505,24 +538,23 @@ export default function WaiterPage() {
                 <span className="font-semibold text-gray-900">{tableLabel(o)}</span>
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    o.status === 'ready'
-                      ? 'bg-blue-50 text-blue-700'
-                      : o.status === 'served'
-                        ? 'bg-gray-100 text-gray-600'
-                        : 'bg-amber-50 text-amber-700'
+                    STATUS_MAP[o.status]?.className ?? 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  {STATUS_LABELS[o.status] ?? o.status}
+                  {STATUS_MAP[o.status]?.label ?? o.status}
                 </span>
               </div>
-              <p className="text-xs text-gray-500 mb-3">{formatPrice(Number(o.total))}</p>
+              <div className="flex items-center justify-between mb-3 text-sm">
+                <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
+                <span className="font-medium text-gray-900 tabular-nums">{formatPrice(Number(o.total))}</span>
+              </div>
               {o.status === 'ready' && o.type === 'dine_in' && (
                 <button
                   onClick={() => serveMutation.mutate(o.id)}
-                  disabled={serveMutation.isPending}
-                  className="w-full px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 inline-flex items-center justify-center gap-1"
+                  disabled={serveMutation.isPending && serveMutation.variables === o.id}
+                  className="w-full min-h-11 px-3 py-2.5 bg-amber-500 text-white rounded-lg text-base font-medium hover:bg-amber-600 disabled:opacity-50 inline-flex items-center justify-center gap-1"
                 >
-                  <Check size={16} /> Berildi
+                  <Check size={18} /> {serveMutation.isPending && serveMutation.variables === o.id ? 'Saqlanmoqda...' : 'Berildi'}
                 </button>
               )}
             </div>

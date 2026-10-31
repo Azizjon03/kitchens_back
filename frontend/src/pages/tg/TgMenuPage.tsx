@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit } from '../../lib/tgApi';
 import { useTgCart, cartTotal, cartCount } from '../../lib/tgCart';
 import type { Category, MenuItem } from '../../types';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { AlertTriangle, Plus, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('uz-UZ').format(price) + " so'm";
@@ -46,24 +46,34 @@ export default function TgMenuPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      // Brend rangi hali noma'lum — neytral spinner (boshqa kompaniyada rang "sakramaydi")
+      <div role="status" className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin" />
+        <span className="sr-only">Yuklanmoqda...</span>
       </div>
     );
   }
 
   if (isError || !data) {
     const message = tgErrorMessage(error, { fallback: "Menyuni yuklab bo'lmadi." });
+    const code = (error as { response?: { data?: { error?: { code?: string } } } } | null)?.response?.data?.error?.code;
+    // Restoran yo'q/nofaol — qayta urinish foyda bermaydi
+    const retryable = code !== 'COMPANY_NOT_FOUND' && code !== 'COMPANY_REQUIRED';
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center gap-4">
-        <p className="text-gray-600">{message}</p>
-        <button
-          onClick={() => refetch()}
-          disabled={isRefetching}
-          className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium disabled:opacity-50"
-        >
-          {isRefetching ? 'Qayta yuklanmoqda...' : 'Qayta urinish'}
-        </button>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-6">
+        <div role="alert" className="w-full max-w-sm flex flex-col items-center text-center gap-3 rounded-xl border border-red-200 bg-red-50 p-6">
+          <AlertTriangle size={36} className="text-red-500" aria-hidden="true" />
+          <p className="text-red-700">{message}</p>
+          {retryable && (
+            <button
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              className="min-h-11 px-5 py-2.5 rounded-lg bg-gray-900 text-white text-base font-medium disabled:opacity-50"
+            >
+              {isRefetching ? 'Qayta yuklanmoqda...' : 'Qayta urinish'}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -83,12 +93,11 @@ export default function TgMenuPage() {
             <button
               key={c.id}
               onClick={() => setActiveCat(c.id)}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap"
-              style={
-                activeCat === c.id
-                  ? { backgroundColor: primary, color: 'white' }
-                  : { backgroundColor: '#f3f4f6', color: '#4b5563' }
-              }
+              className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
+                activeCat === c.id ? 'text-white' : 'bg-gray-100 text-gray-700'
+              }`}
+              // style faqat faol (brend rangi) holatda — nofaol holat Tailwind palitrasidan
+              style={activeCat === c.id ? { backgroundColor: primary } : undefined}
             >
               {c.name_uz}
             </button>
@@ -105,23 +114,36 @@ export default function TgMenuPage() {
               {item.description_uz && (
                 <p className="text-xs text-gray-500 truncate">{item.description_uz}</p>
               )}
-              <p className="text-sm font-semibold mt-1" style={{ color: primary }}>
+              {/* Narx — o'qilishi uchun to'q matn; brend rangi tugmada (amber matn oq fonda ~2:1) */}
+              <p className="text-base font-semibold mt-1 text-gray-900 tabular-nums">
                 {formatPrice(Number(item.price))}
                 {item.sell_type === 'weight' ? '/kg' : ''}
               </p>
+              {item.sell_type === 'weight' && (
+                <p className="text-xs text-gray-500">
+                  kamida {Number(item.min_weight) || 0.1} kg
+                </p>
+              )}
             </div>
             <button
               onClick={() => add(item)}
-              className="ml-3 shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-white"
+              className="ml-3 shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-white"
               style={{ backgroundColor: primary }}
-              aria-label="Savatga qo'shish"
+              aria-label={`${item.name_uz} — savatga qo'shish`}
             >
               <Plus size={18} />
             </button>
           </div>
         ))}
-        {items.length === 0 && (
-          <p className="text-center text-sm text-gray-400 py-8">Bu kategoriyada taom yo'q</p>
+        {categories.length === 0 ? (
+          <div className="text-center py-12">
+            <UtensilsCrossed size={40} className="text-gray-300 mx-auto mb-3" aria-hidden="true" />
+            <p className="text-gray-600">Menyu hozircha bo'sh</p>
+          </div>
+        ) : (
+          items.length === 0 && (
+            <p className="text-center text-sm text-gray-500 py-8">Bu kategoriyada taom yo'q</p>
+          )
         )}
       </div>
 

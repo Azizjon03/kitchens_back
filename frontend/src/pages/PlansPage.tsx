@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
 import Layout from '../components/Layout';
 import { CreditCard, Plus, X, Check, Minus } from 'lucide-react';
+import { apiErrorMessage } from '../lib/apiError';
 
 interface Plan {
   id: number;
@@ -90,8 +91,7 @@ function PlanModal({
       onClose();
     },
     onError: (err: unknown) => {
-      const axiosErr = err as { response?: { data?: { error?: { message?: string } } } };
-      setError(axiosErr.response?.data?.error?.message || 'Xatolik yuz berdi');
+      setError(apiErrorMessage(err));
     },
   });
 
