@@ -91,17 +91,99 @@ try {
 } catch { }
 
 try { $Host.UI.RawUI.WindowTitle = "Kitchens printer - __AGENT__ (yopmang)" } catch { }
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$Headers = @{ 'X-Agent-Token' = $Token; 'Accept' = 'application/json' }
 
-function Api([string]$Method, [string]$Path, $Body = $null) {
-    # DisableKeepAlive: Wi-Fi/LAN almashganda eski ("o'lik") ulanish qayta ishlatilmaydi
-    $p = @{ Method = $Method; Uri = "$Server/api/v1/agent/$Path"; Headers = $Headers; TimeoutSec = 20; UseBasicParsing = $true; DisableKeepAlive = $true }
-    if ($null -ne $Body) {
-        $p.Body = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 5 -Compress))
-        $p.ContentType = 'application/json; charset=utf-8'
+$script:ServerUri = [Uri]$Server
+
+# HTTP chunked javobni yig'ish (bayt darajasida)
+function ConvertFrom-Chunked([byte[]]$Bytes) {
+    $out = New-Object System.IO.MemoryStream
+    $i = 0
+    while ($i -lt $Bytes.Length) {
+        $j = $i
+        while ($j -lt ($Bytes.Length - 1) -and -not ($Bytes[$j] -eq 13 -and $Bytes[$j + 1] -eq 10)) { $j++ }
+        $sizeText = [Text.Encoding]::ASCII.GetString($Bytes, $i, $j - $i).Split(';')[0].Trim()
+        if ($sizeText -eq '') { break }
+        $size = [Convert]::ToInt32($sizeText, 16)
+        $i = $j + 2
+        if ($size -eq 0) { break }
+        $out.Write($Bytes, $i, $size)
+        $i += $size + 2
     }
-    Invoke-RestMethod @p
+    return ,$out.ToArray()
+}
+
+# Serverga so'rov - har doim IPv4 orqali. Ba'zi provayderlarda IPv6 ishlamaydi:
+# Windows PowerShell avval IPv6 ni sinab "The operation has timed out" bilan to'xtaydi
+# (brauzer esa o'zi IPv4 ga o'tadi). Shuning uchun ulanish qo'lda: TCP (IPv4) + TLS (SNI).
+function Api([string]$Method, [string]$Path, $Body = $null) {
+    $uri = $script:ServerUri
+    $hostName = $uri.DnsSafeHost
+    $bodyBytes = $null
+    if ($null -ne $Body) { $bodyBytes = [Text.Encoding]::UTF8.GetBytes(($Body | ConvertTo-Json -Depth 5 -Compress)) }
+
+    $ip = [System.Net.Dns]::GetHostAddresses($hostName) |
+        Where-Object { $_.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork } | Select-Object -First 1
+    if (-not $ip) { throw "Server manzili topilmadi (IPv4): $hostName" }
+
+    $client = New-Object System.Net.Sockets.TcpClient([System.Net.Sockets.AddressFamily]::InterNetwork)
+    try {
+        $wait = $client.BeginConnect($ip, $uri.Port, $null, $null)
+        if (-not $wait.AsyncWaitHandle.WaitOne(10000) -or -not $client.Connected) {
+            throw "Serverga ulanib bo'lmadi ($hostName, $ip`:$($uri.Port))"
+        }
+        $client.EndConnect($wait)
+        $client.ReceiveTimeout = 20000
+        $client.SendTimeout = 20000
+        $stream = $client.GetStream()
+        if ($uri.Scheme -eq 'https') {
+            $ssl = New-Object System.Net.Security.SslStream($stream, $false)
+            $ssl.ReadTimeout = 20000
+            $ssl.WriteTimeout = 20000
+            $ssl.AuthenticateAsClient($hostName, $null, [System.Security.Authentication.SslProtocols]::Tls12, $true)
+            $stream = $ssl
+        }
+
+        $head = "$Method /api/v1/agent/$Path HTTP/1.1`r`nHost: $($uri.Authority)`r`nX-Agent-Token: $Token`r`nAccept: application/json`r`nUser-Agent: KitchensPrint/$Version`r`nConnection: close`r`n"
+        if ($null -ne $bodyBytes) {
+            $head += "Content-Type: application/json; charset=utf-8`r`nContent-Length: $($bodyBytes.Length)`r`n"
+        } elseif ($Method -ne 'GET') {
+            $head += "Content-Length: 0`r`n"
+        }
+        $head += "`r`n"
+        $headBytes = [Text.Encoding]::ASCII.GetBytes($head)
+        $stream.Write($headBytes, 0, $headBytes.Length)
+        if ($null -ne $bodyBytes) { $stream.Write($bodyBytes, 0, $bodyBytes.Length) }
+        $stream.Flush()
+
+        $ms = New-Object System.IO.MemoryStream
+        $buf = New-Object byte[] 16384
+        while (($n = $stream.Read($buf, 0, $buf.Length)) -gt 0) { $ms.Write($buf, 0, $n) }
+        $raw = $ms.ToArray()
+    } finally {
+        $client.Close()
+    }
+
+    # Sarlavha va tana: birinchi bo'sh qator (CRLF CRLF)
+    $split = -1
+    for ($k = 0; $k -lt $raw.Length - 3; $k++) {
+        if ($raw[$k] -eq 13 -and $raw[$k + 1] -eq 10 -and $raw[$k + 2] -eq 13 -and $raw[$k + 3] -eq 10) { $split = $k; break }
+    }
+    if ($split -lt 0) { throw "Server javobi to'liq kelmadi" }
+    $headers = [Text.Encoding]::ASCII.GetString($raw, 0, $split)
+    $bodyRaw = New-Object byte[] ($raw.Length - $split - 4)
+    [Array]::Copy($raw, $split + 4, $bodyRaw, 0, $bodyRaw.Length)
+    if ($headers -match '(?im)^transfer-encoding:\s*chunked') { $bodyRaw = ConvertFrom-Chunked $bodyRaw }
+
+    $code = 0
+    if ($headers -match '^HTTP/\d(\.\d)?\s+(\d{3})') { $code = [int]$Matches[2] }
+    if ($code -ge 400 -or $code -eq 0) {
+        $err = New-Object System.Exception("Server javobi: HTTP $code")
+        $err.Data['StatusCode'] = $code
+        throw $err
+    }
+    $text = [Text.Encoding]::UTF8.GetString($bodyRaw)
+    if ($text.Trim() -eq '') { return $null }
+    return ($text | ConvertFrom-Json)
 }
 
 function Send-ToPrinter([string]$Ip, [int]$Port, [byte[]]$Bytes) {
@@ -158,7 +240,7 @@ while ($true) {
         }
     } catch {
         $code = $null
-        try { $code = [int]$_.Exception.Response.StatusCode } catch { }
+        try { $code = [int]$_.Exception.Data['StatusCode'] } catch { }
         if ($code -eq 401) {
             Log "Kalit bekor qilingan - panelda kompyuterni qayta ulang va yangi faylni yuklab oling."
             Wait-Ms 60000
