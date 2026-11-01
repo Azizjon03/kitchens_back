@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\StaffTelegramWebhookController;
+use App\Http\Controllers\Api\V1\SuperAdmin\StaffBotController as SuperStaffBotController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -176,6 +177,12 @@ Route::prefix('v1')->group(function () {
             // Standart menyu katalogi (#23) — global, faqat super admin
             Route::get('catalog', [CatalogController::class, 'index']);
             Route::get('telegram-bots', [SuperTelegramBotController::class, 'index']); // #26
+            // #37: platformaning xodimlar boti
+            Route::get('staff-bot', [SuperStaffBotController::class, 'show']);
+            Route::put('staff-bot', [SuperStaffBotController::class, 'update'])->middleware('throttle:10,1,staff-bot');
+            Route::patch('staff-bot/settings', [SuperStaffBotController::class, 'settings']);
+            Route::post('staff-bot/check', [SuperStaffBotController::class, 'check'])->middleware('throttle:10,1,staff-bot');
+            Route::delete('staff-bot', [SuperStaffBotController::class, 'destroy']);
             Route::post('catalog/categories', [CatalogController::class, 'storeCategory']);
             Route::put('catalog/categories/{category}', [CatalogController::class, 'updateCategory']);
             Route::delete('catalog/categories/{category}', [CatalogController::class, 'destroyCategory']);

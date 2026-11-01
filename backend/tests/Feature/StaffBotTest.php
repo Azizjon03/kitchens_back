@@ -26,6 +26,8 @@ class StaffBotTest extends TestCase
 
     private const TOKEN = '777000:staff-bot-token';
 
+    private string $webhookUrl = '';
+
     private Company $company;
     private Branch $branch;
     private User $admin;
@@ -42,7 +44,20 @@ class StaffBotTest extends TestCase
             'services.telegram.frontend_url' => 'https://kitchens.uz',
             'services.telegram.webhook_base' => 'https://kitchens.uz',
         ]);
-        Http::fake(fn (HttpRequest $req) => Http::response(['ok' => true, 'result' => ['message_id' => 1]]));
+        Http::fake(function (HttpRequest $req) {
+            $path = parse_url($req->url(), PHP_URL_PATH);
+            $method = basename($path);
+            if ($method === 'getMe') {
+                return str_contains($path, 'bad')
+                    ? Http::response(['ok' => false, 'description' => 'Unauthorized'], 401)
+                    : Http::response(['ok' => true, 'result' => ['id' => 777, 'is_bot' => true, 'username' => 'kitchens_xodim_bot']]);
+            }
+            if ($method === 'getWebhookInfo') {
+                return Http::response(['ok' => true, 'result' => ['url' => $this->webhookUrl, 'pending_update_count' => 2]]);
+            }
+
+            return Http::response(['ok' => true, 'result' => ['message_id' => 1]]);
+        });
 
         $this->company = Company::create(['name' => 'Oliyaviy', 'slug' => 'oliyaviy', 'phone' => '+998700000000', 'is_active' => true, 'settings_json' => ['service_charge_pct' => 0]]);
         $this->branch = Branch::create(['company_id' => $this->company->id, 'name' => 'Asosiy filial', 'is_active' => true]);
@@ -273,5 +288,67 @@ class StaffBotTest extends TestCase
         $this->assertSame(0, Artisan::call('telegram:staff-setup'));
         $this->assertSame('https://kitchens.uz/api/v1/telegram/staff-webhook', $this->sent('setWebhook')[0]['url']);
         $this->assertSame('https://kitchens.uz/tg/staff', $this->sent('setChatMenuButton')[0]['menu_button']['web_app']['url']);
+    }
+
+    private function superAdmin(): User
+    {
+        return User::create(['company_id' => null, 'name' => 'Super', 'phone' => '+998909999999', 'role' => 'super_admin', 'password' => 'secret123', 'is_active' => true]);
+    }
+
+    public function test_super_admin_sets_token_in_panel_and_it_replaces_env(): void
+    {
+        config(['services.telegram.staff_token' => null, 'services.telegram.staff_username' => null]);
+        Sanctum::actingAs($this->superAdmin());
+
+        $this->getJson('/api/v1/super/staff-bot')->assertOk()->assertJsonPath('data.configured', false)->assertJsonPath('data.status', 'not_configured');
+
+        $this->putJson('/api/v1/super/staff-bot', ['token' => 'abc'])->assertStatus(422);
+        $this->putJson('/api/v1/super/staff-bot', ['token' => '123456:bad'.str_repeat('x', 30)])->assertStatus(422)->assertJsonPath('error.code', 'INVALID_TOKEN');
+
+        $token = '123456:'.str_repeat('A', 35);
+        $res = $this->putJson('/api/v1/super/staff-bot', ['token' => $token])->assertOk()
+            ->assertJsonPath('data.configured', true)->assertJsonPath('data.source', 'panel')
+            ->assertJsonPath('data.username', 'kitchens_xodim_bot')->assertJsonPath('data.status', 'connected');
+        $this->assertStringNotContainsString($token, $res->getContent());
+        $this->assertNotSame($token, \DB::table('staff_bot_settings')->value('token')); // shifrlangan
+        $this->assertSame('https://kitchens.uz/api/v1/telegram/staff-webhook', $this->sent('setWebhook')[0]['url']);
+
+        // Webhook panel tokeni bilan imzolangan
+        $this->withHeaders(['X-Telegram-Bot-Api-Secret-Token' => substr(hash_hmac('sha256', 'staff-webhook', $token), 0, 48)])
+            ->postJson('/api/v1/telegram/staff-webhook', ['update_id' => 1])->assertOk();
+    }
+
+    public function test_super_admin_toggles_login_code_checks_and_disconnects(): void
+    {
+        Sanctum::actingAs($this->superAdmin());
+        $this->putJson('/api/v1/super/staff-bot', ['token' => '123456:'.str_repeat('B', 35)])->assertOk();
+
+        $this->patchJson('/api/v1/super/staff-bot/settings', ['login_code' => false])->assertOk()->assertJsonPath('data.login_code', false);
+        $this->postJson('/api/v1/auth/login', ['phone' => '+998900000003', 'password' => 'secret123'])->assertJsonStructure(['data' => ['token']]);
+
+        $this->patchJson('/api/v1/super/staff-bot/settings', ['login_code' => true])->assertOk()->assertJsonPath('data.login_code', true);
+        $this->postJson('/api/v1/auth/login', ['phone' => '+998900000003', 'password' => 'secret123'])->assertJsonPath('data.requires_telegram_verification', true);
+
+        // Webhook boshqa manzilda — tekshirish qayta o'rnatadi
+        $this->webhookUrl = 'https://old.example/hook';
+        $before = count($this->sent('setWebhook'));
+        $this->postJson('/api/v1/super/staff-bot/check')->assertOk()->assertJsonPath('data.status', 'connected');
+        $this->assertSame($before + 1, count($this->sent('setWebhook')));
+
+        $this->link($this->chef, 1);
+        $row = collect($this->getJson('/api/v1/super/staff-bot')->json('data.companies'))->firstWhere('id', $this->company->id);
+        $this->assertSame(1, $row['staff_linked']);
+        $this->assertSame(3, $row['staff_total']);
+
+        config(['services.telegram.staff_token' => null]);
+        $this->deleteJson('/api/v1/super/staff-bot')->assertOk()->assertJsonPath('data.configured', false);
+        $this->assertNotEmpty($this->sent('deleteWebhook'));
+    }
+
+    public function test_only_super_admin_manages_staff_bot(): void
+    {
+        Sanctum::actingAs($this->admin);
+        $this->getJson('/api/v1/super/staff-bot')->assertForbidden();
+        $this->putJson('/api/v1/super/staff-bot', ['token' => '123456:'.str_repeat('C', 35)])->assertForbidden();
     }
 }

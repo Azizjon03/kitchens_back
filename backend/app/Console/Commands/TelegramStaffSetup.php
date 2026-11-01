@@ -6,8 +6,8 @@ use App\Services\Telegram\StaffBot;
 use Illuminate\Console\Command;
 
 /**
- * #37: xodimlar botini ulash — tokenni .env'ga (TELEGRAM_STAFF_BOT_TOKEN) qo'ygandan
- * keyin bir marta ishga tushiriladi: webhook, buyruqlar va «Ochish» menyu tugmasi.
+ * #37: xodimlar botini qayta sozlash (webhook, buyruqlar, «Ochish» tugmasi).
+ * Odatda super admin paneli buni o'zi qiladi; bu buyruq .env rejimi va zaxira uchun.
  */
 class TelegramStaffSetup extends Command
 {
@@ -18,52 +18,28 @@ class TelegramStaffSetup extends Command
     public function handle(StaffBot $bot): int
     {
         if (! $bot->configured()) {
-            $this->error('TELEGRAM_STAFF_BOT_TOKEN .env da yo\'q.');
+            $this->error("Xodimlar boti tokeni yo'q — super admin panelida kiriting (Xodimlar boti).");
 
             return self::FAILURE;
         }
 
         $me = $bot->call('getMe');
         if (! ($me['ok'] ?? false)) {
-            $this->error('Token noto\'g\'ri: '.($me['description'] ?? 'javob yo\'q'));
+            $this->error("Token noto'g'ri: ".($me['description'] ?? "javob yo'q"));
 
             return self::FAILURE;
         }
-        $username = $me['result']['username'] ?? '';
-        $this->info("Bot: @{$username}");
-        if ($bot->username() !== $username) {
-            $this->warn("TELEGRAM_STAFF_BOT_USERNAME={$username} ni .env ga yozing (hozir: ".($bot->username() ?? 'bo\'sh').')');
-        }
+        $this->info('Bot: @'.($me['result']['username'] ?? ''));
 
-        $steps = [
-            'setWebhook' => [
-                'url' => $bot->webhookUrl(),
-                'secret_token' => $bot->webhookSecret(),
-                'allowed_updates' => ['message', 'callback_query'],
-                'drop_pending_updates' => true,
-            ],
-            'setMyCommands' => ['commands' => [
-                ['command' => 'start', 'description' => 'Boshlash'],
-                ['command' => 'hisobot', 'description' => 'Bugungi hisobot (rahbar, menejer)'],
-            ]],
-            'setChatMenuButton' => ['menu_button' => [
-                'type' => 'web_app', 'text' => 'Ochish', 'web_app' => ['url' => $bot->miniAppUrl()],
-            ]],
-            'setMyDescription' => ['description' => "Kitchens restoran xodimlari uchun: buyurtmalar, oshxona, hisobotlar.\n\nKirish uchun «Boshlash» ni bosing."],
-        ];
-
-        foreach ($steps as $method => $params) {
-            $res = $bot->call($method, $params);
-            $ok = (bool) ($res['ok'] ?? false);
-            $this->line(($ok ? '✓ ' : '✗ ').$method.($ok ? '' : ': '.($res['description'] ?? '')));
-            if (! $ok && $method === 'setWebhook') {
-                return self::FAILURE;
-            }
+        $failed = false;
+        foreach ($bot->setup() as $method => $r) {
+            $this->line(($r['ok'] ? '✓ ' : '✗ ').$method.($r['ok'] ? '' : ': '.$r['error']));
+            $failed = $failed || ($method === 'setWebhook' && ! $r['ok']);
         }
 
         $this->info('Webhook: '.$bot->webhookUrl());
         $this->info('Mini App: '.$bot->miniAppUrl());
 
-        return self::SUCCESS;
+        return $failed ? self::FAILURE : self::SUCCESS;
     }
 }

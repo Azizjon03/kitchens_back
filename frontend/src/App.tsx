@@ -8,6 +8,7 @@ import { lazy, Suspense } from 'react';
 const PublicPageSettingsPage = lazy(() => import('./pages/PublicPageSettingsPage'));
 const TelegramBotPage = lazy(() => import('./pages/TelegramBotPage'));
 const SuperTelegramBotsPage = lazy(() => import('./pages/SuperTelegramBotsPage'));
+const SuperStaffBotPage = lazy(() => import('./pages/SuperStaffBotPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
@@ -212,6 +213,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="super_admin">
                   <SuperTelegramBotsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/staff-bot"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SuperStaffBotPage />
                 </ProtectedRoute>
               }
             />

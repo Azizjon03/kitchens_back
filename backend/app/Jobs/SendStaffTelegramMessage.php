@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\Telegram\StaffBot;
 use App\Services\Telegram\TelegramClient;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -21,9 +22,9 @@ class SendStaffTelegramMessage implements ShouldQueue
     {
     }
 
-    public function handle(TelegramClient $client): void
+    public function handle(TelegramClient $client, StaffBot $bot): void
     {
-        $token = config('services.telegram.staff_token');
+        $token = $bot->token();
         if (! $token) {
             return;
         }

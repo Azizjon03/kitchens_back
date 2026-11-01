@@ -27,10 +27,10 @@ class TelegramVerification
     {
     }
 
-    /** Kod yoqilgan bo'lsa (TELEGRAM_LOGIN_CODE) va bot sozlangan bo'lsa. */
+    /** Kod yoqilgan bo'lsa (super admin paneli yoki TELEGRAM_LOGIN_CODE) va bot sozlangan bo'lsa. */
     public function enabled(): bool
     {
-        return (bool) config('services.telegram.login_code') && $this->bot->configured();
+        return $this->bot->configured() && $this->bot->loginCodeEnabled();
     }
 
     /** Super admin'dan tashqari — Telegram'i bog'lanmagan har kim. */

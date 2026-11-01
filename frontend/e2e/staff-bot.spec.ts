@@ -105,4 +105,44 @@ test.describe('Xodimlar boti (#37)', () => {
     await page.getByRole('button', { name: 'Kirish' }).click();
     await expect(page).toHaveURL(/\/kitchen$/);
   });
+
+  test('super admin xodimlar botini paneldan ulaydi va kodni yoqadi', async ({ page }) => {
+    const base = {
+      configured: false, source: null, username: null, bot_url: null, status: 'not_configured', last_error: null,
+      last_checked_at: null, pending_updates: 0, login_code: false, webhook_url: 'https://kitchens.uz/api/v1/telegram/staff-webhook',
+      mini_app_url: 'https://kitchens.uz/tg/staff', linked_total: 0,
+      companies: [{ id: 1, name: 'Oliyaviy', is_active: true, staff_total: 4, staff_linked: 0 }],
+    };
+    const connected = { ...base, configured: true, source: 'panel', username: 'kitchens_xodim_bot', bot_url: 'https://t.me/kitchens_xodim_bot', status: 'connected' };
+    let putBody: Record<string, string> | null = null;
+    await page.addInitScript(() => {
+      localStorage.setItem('access_token', 'sa');
+      localStorage.setItem('user', JSON.stringify({ id: 1, name: 'Super', phone: '+998906921469', role: 'super_admin', is_active: true }));
+    });
+    await page.route('**/api/v1/auth/me', (r) => r.fulfill({ json: { success: true, data: { id: 1, name: 'Super', role: 'super_admin', is_active: true } } }));
+    await page.route('**/api/v1/super/staff-bot', (r) => {
+      if (r.request().method() === 'PUT') {
+        putBody = r.request().postDataJSON();
+        return r.fulfill({ json: { success: true, data: connected } });
+      }
+      return r.fulfill({ json: { success: true, data: base } });
+    });
+    await page.route('**/api/v1/super/staff-bot/settings', (r) => r.fulfill({ json: { success: true, data: { ...connected, login_code: true } } }));
+
+    await page.goto('/staff-bot');
+    await expect(page.getByRole('heading', { name: 'Xodimlar boti' })).toBeVisible();
+    await expect(page.getByText('Sozlanmagan')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: /tasdiqlash kodi/ })).toBeDisabled();
+
+    await page.getByLabel('Token').fill(' 123456789:' + 'A'.repeat(35) + ' ');
+    await page.getByRole('button', { name: 'Ulash' }).click();
+    await expect(page.getByRole('status')).toContainText('Bot ulandi');
+    expect(putBody).toEqual({ token: '123456789:' + 'A'.repeat(35) });
+    await expect(page.getByRole('link', { name: /@kitchens_xodim_bot/ })).toBeVisible();
+    await expect(page.getByText('Token saqlangan')).toBeVisible();
+
+    await page.getByRole('checkbox', { name: /tasdiqlash kodi/ }).click(); // holat server javobidan keyin o'zgaradi
+    await expect(page.getByRole('status')).toContainText('Tasdiqlash kodi yoqildi');
+    await expect(page.getByRole('checkbox', { name: /tasdiqlash kodi/ })).toBeChecked();
+  });
 });
