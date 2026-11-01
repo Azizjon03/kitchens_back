@@ -145,6 +145,7 @@ export const FIELD_HINTS = {
   seats: "Stolga nechta odam sig'adi. Ofitsiant katta guruhga mos stolni tanlashi uchun.",
   openingCash: "Smena boshida kassada turgan naqd pul (qaytim uchun). Kun oxirida shu summa ham hisobga olinadi.",
   closingCash: "Kassadagi naqd pulni sanab yozing. Tizim kutilgan summa bilan solishtiradi.",
+  addonMax: "Mijoz bitta taomga shu qo'shimchadan nechtagacha qo'sha oladi. Masalan go'sht uchun 3 — oshga 1, 2 yoki 3 marta go'sht.",
   tableTemplate: "Stolga oldindan qo'yiladigan narsalar to'plami. Faqat mehmon ochganlari hisobga qo'shiladi.",
 } as const;
 

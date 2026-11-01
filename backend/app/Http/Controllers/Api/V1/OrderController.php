@@ -99,6 +99,10 @@ class OrderController extends Controller
             'items.*.modifier_ids.*' => $this->existsInCompany('modifiers', $companyId),
             'items.*.addon_ids' => 'nullable|array',
             'items.*.addon_ids.*' => $this->existsInCompany('addons', $companyId),
+            // #35: qo'shimcha soni (oshga 2× go'sht)
+            'items.*.addons' => 'nullable|array|max:20',
+            'items.*.addons.*.id' => 'required|integer',
+            'items.*.addons.*.quantity' => 'required|integer|min:1|max:50',
             'note' => 'nullable|string|max:1000',
         ]);
 
@@ -133,6 +137,10 @@ class OrderController extends Controller
             'items.*.modifier_ids.*' => $this->existsInCompany('modifiers', $companyId),
             'items.*.addon_ids' => 'nullable|array',
             'items.*.addon_ids.*' => $this->existsInCompany('addons', $companyId),
+            // #35: qo'shimcha soni (oshga 2× go'sht)
+            'items.*.addons' => 'nullable|array|max:20',
+            'items.*.addons.*.id' => 'required|integer',
+            'items.*.addons.*.quantity' => 'required|integer|min:1|max:50',
             'note' => 'nullable|string|max:1000',
         ]);
 

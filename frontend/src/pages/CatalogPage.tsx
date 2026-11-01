@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api from '../lib/api';
 import Layout from '../components/Layout';
+import ImagePicker from '../components/ImagePicker';
 import PageGuide from '../components/PageGuide';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
@@ -39,6 +40,8 @@ interface CatalogItem {
   min_weight: string | number | null;
   weight_step: string | number | null;
   is_active: boolean;
+  /** #35: restoran katalogdan qo'shganda rasm ham nusxalanadi */
+  image?: string | null;
 }
 
 interface CatalogSub {
@@ -428,6 +431,8 @@ function ItemModal({
   });
   const { error, fieldErrors, reset, handle } = useFormErrors();
   const isWeight = form.sell_type === 'weight';
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -443,8 +448,18 @@ function ItemModal({
         payload.min_weight = form.min_weight ? Number(form.min_weight) : undefined;
         payload.weight_step = form.weight_step ? Number(form.weight_step) : undefined;
       }
-      if (edit) return (await api.put(`/super/catalog/items/${edit.id}`, payload)).data;
-      return (await api.post('/super/catalog/items', payload)).data;
+      const saved = edit
+        ? (await api.put(`/super/catalog/items/${edit.id}`, payload)).data
+        : (await api.post('/super/catalog/items', payload)).data;
+      const id = saved.data.id as number;
+      if (imageFile) {
+        const fd = new FormData();
+        fd.append('image', imageFile);
+        await api.post(`/super/catalog/items/${id}/image`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      } else if (imageRemoved && edit?.image) {
+        await api.delete(`/super/catalog/items/${id}/image`);
+      }
+      return saved;
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
@@ -468,6 +483,14 @@ function ItemModal({
         className="p-6 space-y-4 overflow-y-auto"
       >
         <FormError error={error} />
+
+        <ImagePicker
+          current={edit?.image}
+          file={imageFile}
+          removed={imageRemoved}
+          onFile={(f) => { setImageFile(f); if (f) setImageRemoved(false); }}
+          onRemove={() => setImageRemoved(true)}
+        />
 
         <div>
           <label htmlFor="item-category" className="block text-sm font-medium text-gray-700 mb-1">

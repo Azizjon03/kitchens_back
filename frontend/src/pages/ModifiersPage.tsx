@@ -4,6 +4,8 @@ import api from '../lib/api';
 import type { Modifier, Addon } from '../types';
 import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
+import HelpHint from '../components/HelpHint';
+import { FIELD_HINTS } from '../lib/guides';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney } from '../lib/format';
@@ -187,6 +189,7 @@ function AddonModal({
     name_ru: addon?.name_ru || '',
     price: addon?.price?.toString() || '',
     is_active: addon?.is_active ?? true,
+    max_quantity: String(addon?.max_quantity ?? 5),
   });
   const [error, setError] = useState('');
 
@@ -197,6 +200,7 @@ function AddonModal({
         name_ru: form.name_ru,
         price: parseFloat(form.price),
         is_active: form.is_active,
+        max_quantity: Math.max(1, parseInt(form.max_quantity) || 1),
       };
       if (isEdit) {
         return (await api.put(`/addons/${addon.id}`, payload)).data;
@@ -271,6 +275,22 @@ function AddonModal({
               value={form.price}
               onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
               placeholder="0"
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="addon-max" className="block text-sm font-medium text-gray-700 mb-1">
+              Bitta taomga ko'pi bilan <HelpHint text={FIELD_HINTS.addonMax} label="Eng ko'p son haqida" />
+            </label>
+            <input
+              id="addon-max"
+              type="number"
+              min="1"
+              max="20"
+              step="1"
+              value={form.max_quantity}
+              onChange={(e) => setForm((p) => ({ ...p, max_quantity: e.target.value }))}
               className={inputClass}
             />
           </div>
@@ -530,6 +550,7 @@ export default function ModifiersPage() {
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Nomi (UZ)</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Nomi (RU)</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Narx</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-600">Ko'pi bilan</th>
                     <th className="text-left px-4 py-3 font-medium text-gray-600">Holat</th>
                     <th className="text-right px-4 py-3 font-medium text-gray-600">Amallar</th>
                   </tr>
@@ -540,6 +561,7 @@ export default function ModifiersPage() {
                       <td className="px-4 py-3 text-gray-900">{addon.name_uz}</td>
                       <td className="px-4 py-3 text-gray-500">{addon.name_ru || '—'}</td>
                       <td className="px-4 py-3 text-gray-900 font-medium">{formatMoney(addon.price)}</td>
+                      <td className="px-4 py-3 text-gray-700">×{addon.max_quantity ?? 5}</td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

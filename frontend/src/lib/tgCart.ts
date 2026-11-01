@@ -8,7 +8,36 @@ export interface TgCartLine {
   quantity: number;
   weight_kg?: number;
   modifier_ids: number[];
-  addon_ids: number[];
+  /** #35: qo'shimcha id → son (oshga 2× go'sht) */
+  addons: Record<number, number>;
+}
+
+/** Eski savat (addon_ids) — yangi formatga: har biri 1 ta */
+function migrate(l: TgCartLine & { addon_ids?: number[] }): TgCartLine {
+  if (l.addons) return l;
+  const addons: Record<number, number> = {};
+  (l.addon_ids ?? []).forEach((id) => (addons[id] = 1));
+  return { ...l, addons };
+}
+
+/** Bir xil taom + bir xil tanlov → bitta qator (soni oshadi) */
+function sameConfig(a: TgCartLine, b: Omit<TgCartLine, 'key'>): boolean {
+  if (a.item.id !== b.item.id || a.item.sell_type === 'weight') return false;
+  const norm = (r: Record<number, number>) => JSON.stringify(Object.entries(r).filter(([, q]) => q > 0).sort());
+  return norm(a.addons) === norm(b.addons) && [...a.modifier_ids].sort().join() === [...b.modifier_ids].sort().join();
+}
+
+/** Qatordagi qo'shimchalar matni: "Go'sht ×2, Limon" */
+export function addonSummary(l: TgCartLine): string {
+  const list = l.item.addons ?? [];
+  return Object.entries(l.addons)
+    .filter(([, q]) => q > 0)
+    .map(([id, q]) => {
+      const a = list.find((x) => x.id === Number(id));
+      return a ? (q > 1 ? `${a.name_uz} ×${q}` : a.name_uz) : null;
+    })
+    .filter(Boolean)
+    .join(', ');
 }
 
 const STORAGE_PREFIX = 'tg_cart';
@@ -36,7 +65,7 @@ try {
 export function loadCart(): TgCartLine[] {
   try {
     const raw = localStorage.getItem(storageKey());
-    return raw ? (JSON.parse(raw) as TgCartLine[]) : [];
+    return raw ? (JSON.parse(raw) as TgCartLine[]).map(migrate) : [];
   } catch {
     return [];
   }
@@ -65,12 +94,13 @@ export function lineTotal(l: TgCartLine): number {
     l.item.sell_type === 'weight'
       ? Number(l.item.price) * (l.weight_kg || 0)
       : Number(l.item.price) * l.quantity;
-  const addonsList = l.item.addons ?? [];
-  const addonSum = l.addon_ids.reduce(
-    (s, id) => s + Number(addonsList.find((a) => a.id === id)?.price ?? 0),
-    0,
-  );
-  return base + addonSum * l.quantity;
+  return base + addonUnitTotal(l.item, l.addons) * (l.item.sell_type === 'weight' ? 1 : l.quantity);
+}
+
+/** Bir porsiyaga qo'shimchalar narxi */
+export function addonUnitTotal(item: MenuItem, addons: Record<number, number>): number {
+  const list = item.addons ?? [];
+  return Object.entries(addons).reduce((s, [id, q]) => s + Number(list.find((a) => a.id === Number(id))?.price ?? 0) * q, 0);
 }
 
 export function cartTotal(cart: TgCartLine[]): number {
@@ -78,7 +108,12 @@ export function cartTotal(cart: TgCartLine[]): number {
 }
 
 export function cartCount(cart: TgCartLine[]): number {
-  return cart.reduce((s, l) => s + l.quantity, 0);
+  return cart.reduce((s, l) => s + (l.item.sell_type === 'weight' ? 1 : l.quantity), 0);
+}
+
+/** Taom savatda nechta (kartochkadagi belgi uchun) */
+export function itemCount(cart: TgCartLine[], itemId: number): number {
+  return cart.filter((l) => l.item.id === itemId).reduce((s, l) => s + (l.item.sell_type === 'weight' ? 1 : l.quantity), 0);
 }
 
 /** Reactive cart state backed by localStorage and synced across components. */
@@ -100,18 +135,19 @@ export function useTgCart() {
     };
   }, []);
 
-  const add = useCallback((item: MenuItem) => {
+  /** Taom oynasidan — tanlangan qo'shimchalar bilan; bir xil tanlov bo'lsa soni qo'shiladi */
+  const addLine = useCallback((line: Omit<TgCartLine, 'key'>) => {
     const next = loadCart();
-    next.push({
-      key: `${item.id}-${Date.now()}-${next.length}`,
-      item,
-      quantity: 1,
-      weight_kg: item.sell_type === 'weight' ? minWeightKg(item) : undefined,
-      modifier_ids: [],
-      addon_ids: [],
-    });
+    const same = next.find((l) => sameConfig(l, line));
+    if (same) same.quantity = Math.round((same.quantity + line.quantity) * 100) / 100;
+    else next.push({ ...line, key: `${line.item.id}-${Date.now()}-${next.length}` });
     persist(next);
   }, []);
+
+  /** Tez qo'shish (kartochkadagi "+") — qo'shimchasiz */
+  const add = useCallback((item: MenuItem) => {
+    addLine({ item, quantity: 1, weight_kg: item.sell_type === 'weight' ? minWeightKg(item) : undefined, modifier_ids: [], addons: {} });
+  }, [addLine]);
 
   const update = useCallback((key: string, patch: Partial<TgCartLine>) => {
     persist(loadCart().map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -123,5 +159,5 @@ export function useTgCart() {
 
   const clear = useCallback(() => clearCart(), []);
 
-  return { cart, add, update, remove, clear };
+  return { cart, add, addLine, update, remove, clear };
 }

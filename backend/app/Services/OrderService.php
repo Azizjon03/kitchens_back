@@ -136,18 +136,26 @@ class OrderService
             }
 
             $addons = collect();
+            // #35: qo'shimcha soni — `addons: [{id, quantity}]` (oshga 2× go'sht); eski `addon_ids` = har biri 1 ta
+            $addonQty = $this->addonQuantities($itemData, $field);
 
-            if (! empty($itemData['addon_ids'])) {
+            if ($addonQty !== []) {
                 $addons = $this->resolveAddons(
                     $menuItem,
-                    $itemData['addon_ids'],
+                    array_keys($addonQty),
                     $companyId,
-                    "{$field}.addon_ids"
+                    "{$field}.addons"
                 );
+
+                foreach ($addons as $addon) {
+                    if ($addonQty[$addon->id] > $addon->max_quantity) {
+                        $this->fail("{$field}.addons", "\"{$addon->name_uz}\" ko'pi bilan {$addon->max_quantity} ta qo'shiladi.");
+                    }
+                }
 
                 // Add-ons are priced per portion. Weight lines always carry a
                 // quantity of 1, so multiplying stays correct for both types.
-                $addonTotal = $this->decimal($addons->sum('price'), 2);
+                $addonTotal = $this->decimal($addons->sum(fn ($a) => bcmul($this->decimal($a->price, 2), (string) $addonQty[$a->id], 2)), 2);
                 $line['total_price'] = bcadd(
                     $line['total_price'],
                     bcmul($addonTotal, $line['quantity'], 2),
@@ -177,6 +185,7 @@ class OrderService
                     'order_item_id' => $orderItem->id,
                     'addon_id' => $addon->id,
                     'price' => $addon->price,
+                    'quantity' => $addonQty[$addon->id],
                 ]);
             }
 
@@ -240,6 +249,33 @@ class OrderService
         }
 
         return $modifiers;
+    }
+
+    /**
+     * #35: qatordagi qo'shimchalar soni — id => son. `addons: [{id, quantity}]`
+     * va eski `addon_ids` (har biri 1) birlashtiriladi.
+     *
+     * @param  array<string, mixed>  $itemData
+     * @return array<int, int>
+     *
+     * @throws ValidationException
+     */
+    private function addonQuantities(array $itemData, string $field): array
+    {
+        $qty = [];
+        foreach ($this->normalizeIds((array) ($itemData['addon_ids'] ?? []), "{$field}.addon_ids") as $id) {
+            $qty[$id] = 1;
+        }
+        foreach ((array) ($itemData['addons'] ?? []) as $row) {
+            $id = $row['id'] ?? null;
+            $n = $row['quantity'] ?? 1;
+            if (! is_numeric($id) || (int) $id != $id || ! is_numeric($n) || (int) $n != $n || (int) $n < 1) {
+                $this->fail("{$field}.addons", "Qo'shimcha id va soni butun son bo'lishi kerak.");
+            }
+            $qty[(int) $id] = (int) $n;
+        }
+
+        return $qty;
     }
 
     /**

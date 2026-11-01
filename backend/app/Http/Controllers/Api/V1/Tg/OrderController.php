@@ -42,6 +42,10 @@ class OrderController extends Controller
             'items.*.modifier_ids.*' => 'integer',
             'items.*.addon_ids' => 'nullable|array',
             'items.*.addon_ids.*' => 'integer',
+            // #35: qo'shimcha soni (oshga 2× go'sht)
+            'items.*.addons' => 'nullable|array|max:20',
+            'items.*.addons.*.id' => 'required|integer',
+            'items.*.addons.*.quantity' => 'required|integer|min:1|max:50',
             'note' => 'nullable|string|max:1000',
             // #26: yetkazib berish — manzil yoki xarita nuqtasi (bot ro'yxatidagi joylashuv avtomatik)
             'type' => 'nullable|in:takeaway,delivery',
