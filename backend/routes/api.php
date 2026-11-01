@@ -145,6 +145,7 @@ Route::prefix('v1')->group(function () {
             Route::get('orders/delivery', [OrderController::class, 'delivery'])->middleware('role:company_admin,manager,cashier'); // #39
             Route::patch('orders/{order}/confirm', [OrderController::class, 'confirm'])->middleware('role:company_admin,manager,cashier');
             Route::get('orders/{order}', [OrderController::class, 'show']);
+            Route::get('orders/{order}/receipt', [OrderController::class, 'receipt']); // #44
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
             // #40: oshxona bo'limlari — oshpaz o'z bo'limi taomlarini tayyor qiladi
             Route::get('kitchen-stations', [KitchenStationController::class, 'index']);

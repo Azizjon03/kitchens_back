@@ -14,6 +14,7 @@ import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
 import { X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
+import ReceiptButton from '../components/ReceiptButton';
 
 
 const inputClass =
@@ -359,6 +360,10 @@ export default function WaiterPage() {
                   <LayoutTemplate size={16} aria-hidden="true" /> Stoldagi narsalar
                 </button>
               )}
+              {/* #44: mehmonga hisob */}
+              <div className="mt-2">
+                <ReceiptButton orderId={o.id} kind="bill" label="Hisob chiqarish" className="w-full min-h-11 inline-flex items-center justify-center gap-2 px-3 border border-gray-300 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-50" />
+              </div>
             </div>
           ))}
         </div>

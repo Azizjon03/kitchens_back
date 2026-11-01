@@ -24,6 +24,7 @@ import { useAuth } from '../lib/auth';
 import TableSetModal from '../components/TableSetModal';
 import { formatMoney, formatDateTime } from '../lib/format';
 import NumberInput from '../components/NumberInput';
+import ReceiptButton from '../components/ReceiptButton';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -757,6 +758,13 @@ function OrderDetailModal({
         </div>
 
         <div className="p-6 overflow-y-auto flex-1 space-y-5">
+          {/* #44: chek — to'lovdan oldin hisob, to'lovdan keyin to'lov cheki */}
+          {order.status !== 'cancelled' && (
+            <div className="flex flex-wrap gap-2">
+              {!['paid', 'closed'].includes(order.status) && <ReceiptButton orderId={order.id} kind={order.customer_id && order.type !== 'dine_in' ? 'delivery' : 'bill'} label="Hisob chiqarish" />}
+              {(order.payments ?? []).some((p) => p.status === 'completed') && <ReceiptButton orderId={order.id} kind="payment" />}
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-100">
               {error}

@@ -9,6 +9,7 @@ import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney, formatTime } from '../lib/format';
 import { formatPhone } from '../lib/phone';
 import { useEscape } from '../lib/useEscape';
+import ReceiptButton from '../components/ReceiptButton';
 
 /**
  * #39: «Yetkazib berish» — botdan kelgan yetkazib berish va olib ketish buyurtmalari.
@@ -218,6 +219,8 @@ function OrderCard({ o, onReject }: { o: DeliveryOrder; onReject: (o: DeliveryOr
         <p className="text-sm text-gray-700">Mijoz kelib oladi — to'lovni kassada qabul qiling.</p>
       )}
       {o.status === 'delivered' && <p className="text-sm text-gray-700">Kuryer pulni topshirgach, to'lovni kassada qabul qiling.</p>}
+      {/* #44: paket bilan kuryerga beriladigan chek */}
+      {o.status !== 'pending' && <ReceiptButton orderId={o.id} kind="delivery" />}
     </article>
   );
 }
