@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\MenuService;
 use App\Services\KitchenService;
+use App\Support\Phone;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -127,6 +128,67 @@ class OrderController extends Controller
         return $this->success(
             $order->load(['table', 'user', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons', 'payments'])
         );
+    }
+
+    /**
+     * #44: chek uchun ma'lumot — restoran, filial, buyurtma, qatorlar (bo'lim, istaklar,
+     * qo'shimcha soni), to'lovlar va kassir. Oddiy (fiskal bo'lmagan) chek.
+     */
+    public function receipt(Request $request, Order $order): JsonResponse
+    {
+        $order->load(['table', 'user', 'branch', 'customer', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons', 'orderItems.station', 'payments.cashShift.user']);
+        $company = $order->company()->first();
+        $completed = $order->payments->where('status', 'completed');
+        $cashier = $completed->last()?->cashShift?->user;
+
+        return $this->success([
+            'company' => [
+                'name' => $company->name,
+                'address' => $order->branch?->address ?: $company->address,
+                'phone' => Phone::format($order->branch?->phone ?: $company->phone),
+                'menu_url' => rtrim((string) config('app.url'), '/').'/r/'.$company->slug,
+            ],
+            'order' => [
+                'id' => $order->id,
+                'type' => $order->type,
+                'status' => $order->status,
+                'created_at' => optional($order->created_at)->toIso8601String(),
+                'table' => $order->table?->number,
+                'seats' => $order->table?->seats,
+                'waiter' => $order->user?->name,
+                'note' => $order->note,
+                'subtotal' => (float) $order->subtotal,
+                'service_charge_pct' => (float) $order->service_charge_pct,
+                'service_charge_amount' => (float) $order->service_charge_amount,
+                'discount_amount' => (float) $order->discount_amount,
+                'delivery_fee' => (float) $order->delivery_fee,
+                'total' => (float) $order->total,
+                'customer' => $order->customer ? ['name' => $order->customer->name, 'phone' => Phone::format($order->customer->phone)] : null,
+                'delivery_address' => $order->delivery_address,
+                'delivery_lat' => $order->delivery_lat !== null ? (float) $order->delivery_lat : null,
+                'delivery_lng' => $order->delivery_lng !== null ? (float) $order->delivery_lng : null,
+            ],
+            'items' => $order->orderItems->reject(fn ($it) => $it->is_table_set && (float) $it->total_price === 0.0)->values()->map(fn ($it) => [
+                'name' => $it->menuItem?->name_uz ?? 'Taom',
+                'quantity' => (float) $it->quantity,
+                'weight_kg' => $it->weight_kg !== null ? (float) $it->weight_kg : null,
+                'unit_price' => (float) $it->unit_price,
+                'total' => (float) $it->total_price,
+                'note' => $it->note,
+                'station_id' => $it->kitchen_station_id,
+                'station' => $it->getRelationValue('station')?->name,
+                'is_table_set' => (bool) $it->is_table_set,
+                'modifiers' => $it->modifiers->pluck('name_uz')->values(),
+                'addons' => $it->addons->map(fn ($a) => ['name' => $a->name_uz, 'quantity' => (int) ($a->pivot->quantity ?? 1), 'price' => (float) ($a->pivot->price ?? $a->price)])->values(),
+            ]),
+            'payments' => $completed->values()->map(fn ($p) => [
+                'method' => $p->method,
+                'amount' => (float) $p->amount,
+                'change' => (float) $p->change_amount,
+                'paid_at' => optional($p->paid_at)->toIso8601String(),
+            ]),
+            'cashier' => $cashier?->name,
+        ]);
     }
 
     public function update(Request $request, Order $order, OrderService $orderService): JsonResponse

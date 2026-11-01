@@ -162,6 +162,7 @@ export interface Order {
   branch_id: number;
   table_id?: number;
   user_id?: number;
+  customer_id?: number | null;
   table?: Table;
   user?: User;
   type: 'dine_in' | 'takeaway' | 'delivery';

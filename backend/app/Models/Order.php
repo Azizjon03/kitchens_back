@@ -153,4 +153,10 @@ class Order extends Model
     {
         return $this->belongsTo(User::class, 'confirmed_by');
     }
+
+    /** #44: chek uchun */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

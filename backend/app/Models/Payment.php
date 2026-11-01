@@ -27,4 +27,10 @@ class Payment extends Model
     {
         return $this->belongsTo(Order::class);
     }
+
+    /** #44: chekdagi kassir — smena egasi */
+    public function cashShift(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(CashShift::class);
+    }
 }

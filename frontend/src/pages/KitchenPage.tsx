@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
@@ -9,6 +9,9 @@ import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
+import ReceiptButton from '../components/ReceiptButton';
+import ReceiptWidthSelect from '../components/ReceiptWidthSelect';
+import { printReceipt } from '../lib/receipt';
 
 // ─── Types matching Order::toBroadcastArray() ────────────────────
 
@@ -105,6 +108,7 @@ function OrderCard({
   visible: number[] | null;
   stationNames: Map<number, string>;
 }) {
+  const printName = visible?.length === 1 ? stationNames.get(visible[0]) ?? null : null;
   void now; // re-render trigger for elapsed time
   const mins = minutesSince(order.created_at);
   const mine = order.items.filter((i) => visible === null || visible.includes(i.station_id ?? -1));
@@ -145,7 +149,10 @@ function OrderCard({
           <div className="text-xs font-medium">#{order.id}</div>
         </div>
         {/* Kutish vaqti — oshpazning asosiy signali, kartadagi eng yirik raqam */}
-        <span className="text-xl 2xl:text-2xl font-bold tabular-nums whitespace-nowrap">{mins} daq</span>
+        <span className="ml-auto text-xl 2xl:text-2xl font-bold tabular-nums whitespace-nowrap">{mins} daq</span>
+        {/* #44: shu bo'lim taomlari qog'ozi */}
+        <ReceiptButton orderId={order.id} kind="kitchen" label="" kitchen={{ stationIds: visible, stationName: printName }}
+          className="min-h-11 min-w-11 -my-1 -mr-1 inline-flex items-center justify-center rounded-lg hover:bg-black/5" />
       </div>
 
       <div className="flex-1 p-3 2xl:p-4 space-y-2">
@@ -272,6 +279,21 @@ export default function KitchenPage() {
   const visible: number[] | null = selected !== 'all' ? [selected] : myStations.length > 0 ? myStations.map((st) => st.id) : null;
   const stationNames = useMemo(() => new Map(stations.map((st) => [st.id, st.name])), [stations]);
 
+  // #44: yangi buyurtmani avtomatik chop etish (shu qurilmada; Chrome --kiosk-printing bilan oynasiz)
+  const [autoPrint, setAutoPrint] = useState(() => {
+    try { return localStorage.getItem('kds-autoprint') === '1'; } catch { return false; }
+  });
+  const printRef = useRef<{ on: boolean; visible: number[] | null; name: string | null }>({ on: false, visible: null, name: null });
+  useEffect(() => {
+    printRef.current = { on: autoPrint, visible, name: visible?.length === 1 ? stationNames.get(visible[0]) ?? null : null };
+  });
+  const autoPrintOrder = (o: KdsOrder) => {
+    const { on, visible: vis, name } = printRef.current;
+    if (!on || o.status !== 'preparing') return;
+    if (vis && !o.items.some((i) => vis.includes(i.station_id ?? -1))) return; // bu bo'limga tegishli emas
+    printReceipt(o.id, 'kitchen', { stationIds: vis, stationName: name }).catch(() => {});
+  };
+
   // Default to first branch if user has none assigned.
   useEffect(() => {
     if (branchId === null && branches.length > 0) {
@@ -362,10 +384,13 @@ export default function KitchenPage() {
     channel.listen('.order.created', (e: { order: KdsOrder }) => {
       if (e.order.status === 'preparing') beep(); // #39: tasdiqlanmagan bot buyurtmasi oshxonaga tegishli emas
       upsert(e.order);
+      autoPrintOrder(e.order);
     });
 
-    channel.listen('.order.status', (e: { order: KdsOrder }) => {
+    channel.listen('.order.status', (e: { order: KdsOrder; previous_status?: string }) => {
       upsert(e.order);
+      // #39: menejer tasdiqlagan bot buyurtmasi — oshxona uchun «yangi»
+      if (e.previous_status === 'pending') autoPrintOrder(e.order);
     });
 
     return () => {
@@ -407,6 +432,12 @@ export default function KitchenPage() {
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Oshxona</h1>
         <div className="flex flex-wrap items-center gap-2">
+        <label className="inline-flex items-center gap-2 min-h-11 text-sm text-gray-700 cursor-pointer">
+          <input type="checkbox" checked={autoPrint} className="w-5 h-5 accent-amber-700"
+            onChange={(e) => { setAutoPrint(e.target.checked); try { localStorage.setItem('kds-autoprint', e.target.checked ? '1' : '0'); } catch { /* yo'q */ } }} />
+          Yangi buyurtmani chop etish
+        </label>
+        <ReceiptWidthSelect />
         {choices.length > 0 && (
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             Bo'lim
