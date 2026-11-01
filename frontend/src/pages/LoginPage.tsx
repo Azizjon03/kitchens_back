@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, homePathFor, type LoginAccount } from '../lib/auth';
+import { useAuth, homePathFor, type LoginAccount, type LoginResult, type TelegramChallenge } from '../lib/auth';
+import TelegramCodeStep from '../components/TelegramCodeStep';
 import { Building2, ChefHat, Eye, EyeOff } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 
@@ -37,14 +38,27 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [selection, setSelection] = useState<{ accounts: LoginAccount[]; token: string } | null>(null);
   const [selectingId, setSelectingId] = useState<number | null>(null);
+  const [challenge, setChallenge] = useState<TelegramChallenge | null>(null);
+
+  /** Kirish natijasi: ish ekrani, restoran tanlovi yoki Telegram kodi (#37) */
+  const proceed = (result: LoginResult) => {
+    if (result.status === 'select') {
+      setChallenge(null);
+      setSelection({ accounts: result.accounts, token: result.selectionToken });
+    } else if (result.status === 'telegram') {
+      setSelection(null);
+      setChallenge(result.challenge);
+    } else {
+      navigate(homePathFor(result.user.role), { replace: true });
+    }
+  };
 
   const handleSelect = async (userId: number) => {
     if (!selection) return;
     setError('');
     setSelectingId(userId);
     try {
-      const user = await selectCompany(selection.token, userId);
-      navigate(homePathFor(user.role), { replace: true });
+      proceed(await selectCompany(selection.token, userId));
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
       // Token muddati o'tgan bo'lsa — qaytadan parol bilan kirish kerak
@@ -64,12 +78,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const result = await login(unformatPhone(phone), password);
-      if (result.status === 'select') {
-        setSelection({ accounts: result.accounts, token: result.selectionToken });
-        return;
-      }
-      navigate(homePathFor(result.user.role), { replace: true });
+      proceed(await login(unformatPhone(phone), password));
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
     } finally {
@@ -89,8 +98,11 @@ export default function LoginPage() {
           <p className="text-gray-500 mt-1">Admin paneliga kirish</p>
         </div>
 
-        {/* Restoran tanlash (#10) */}
-        {selection ? (
+        {challenge ? (
+          <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-8">
+            <TelegramCodeStep challenge={challenge} onDone={proceed} onBack={() => { setChallenge(null); setError(''); }} />
+          </div>
+        ) : /* Restoran tanlash (#10) */ selection ? (
           <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 p-8">
             <h2 className="text-lg font-semibold text-gray-900">Qaysi restoranga kirasiz?</h2>
             <p className="text-sm text-gray-500 mt-1 mb-5">

@@ -100,7 +100,8 @@ export const GUIDES = {
     steps: [
       "«Yangi xodim» ni bosing: ismi, telefoni va parol yozing.",
       "Lavozimni tanlang: menejer (menyu va stollar), ofitsiant (buyurtma), oshpaz (oshxona ekrani), kassir (to'lov va smena).",
-      "Xodim telefoni va paroli bilan tizimga kiradi.",
+      "Xodim telefoni va paroli bilan tizimga kiradi. Xodimlar botida ham shu telefon va parol bilan bir marta kiradi.",
+      "Xodimlar botida ofitsiant buyurtma beradi, oshpaz «Tayyor» ni bosadi, rahbarga kunlik hisobot keladi.",
       "Ishdan ketgan xodimni o'chirib qo'ying — u tizimga kira olmaydi, tarixi saqlanadi.",
     ],
   },

@@ -8,6 +8,7 @@ import { lazy, Suspense } from 'react';
 const PublicPageSettingsPage = lazy(() => import('./pages/PublicPageSettingsPage'));
 const TelegramBotPage = lazy(() => import('./pages/TelegramBotPage'));
 const SuperTelegramBotsPage = lazy(() => import('./pages/SuperTelegramBotsPage'));
+const SuperStaffBotPage = lazy(() => import('./pages/SuperStaffBotPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const CompaniesPage = lazy(() => import('./pages/CompaniesPage'));
@@ -27,6 +28,7 @@ const WaiterPage = lazy(() => import('./pages/WaiterPage'));
 const TgMenuPage = lazy(() => import('./pages/tg/TgMenuPage'));
 const TgCartPage = lazy(() => import('./pages/tg/TgCartPage'));
 const TgOrderStatusPage = lazy(() => import('./pages/tg/TgOrderStatusPage'));
+const StaffTgEntryPage = lazy(() => import('./pages/StaffTgEntryPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -52,6 +54,8 @@ function App() {
             <Route path="/tg" element={<TgMenuPage />} />
             <Route path="/tg/cart" element={<TgCartPage />} />
             <Route path="/tg/order/:id" element={<TgOrderStatusPage />} />
+            {/* #37: xodimlar boti Mini App'i */}
+            <Route path="/tg/staff" element={<StaffTgEntryPage />} />
 
             <Route
               path="/dashboard"
@@ -209,6 +213,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="super_admin">
                   <SuperTelegramBotsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/staff-bot"
+              element={
+                <ProtectedRoute requiredRole="super_admin">
+                  <SuperStaffBotPage />
                 </ProtectedRoute>
               }
             />

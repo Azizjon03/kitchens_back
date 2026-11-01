@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\TelegramBot;
+use App\Services\Telegram\StaffBot;
 use App\Services\Telegram\TelegramBotService;
 use Illuminate\Console\Command;
 
@@ -13,8 +14,17 @@ class TelegramHealthCheck extends Command
 
     protected $description = 'Telegram botlar webhook holatini tekshirish va avtomatik tiklash';
 
-    public function handle(TelegramBotService $service): int
+    public function handle(TelegramBotService $service, StaffBot $staffBot): int
     {
+        // #37: xodimlar boti — webhook yo'qolgan bo'lsa qayta o'rnatiladi
+        if ($staffBot->configured()) {
+            try {
+                $this->line(($staffBot->check() ? 'OK ' : 'ERR').' xodimlar boti');
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
         TelegramBot::with('company')->each(function (TelegramBot $bot) use ($service) {
             try {
                 $ok = $service->check($bot);

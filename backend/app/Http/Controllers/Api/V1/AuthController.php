@@ -7,6 +7,9 @@ use App\Http\Controllers\Api\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Models\PasswordResetCode;
 use App\Models\User;
+use App\Services\Telegram\InitDataValidator;
+use App\Services\Telegram\StaffBot;
+use App\Services\Telegram\TelegramVerification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -56,22 +59,7 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $phone = User::normalizePhone((string) $request->input('phone'));
-        $password = (string) $request->input('password');
-
-        // `users` is unique on (company_id, phone), NOT on phone alone: the same
-        // number may legitimately belong to staff in several companies. Test the
-        // password against every candidate instead of blindly taking the first.
-        $candidates = User::with('company')->where('phone', $phone)->get();
-
-        $matches = $candidates
-            ->filter(fn (User $candidate) => Hash::check($password, $candidate->password))
-            ->values();
-
-        if ($candidates->isEmpty()) {
-            // No candidate was hashed above — burn one comparison anyway.
-            Hash::check($password, self::DUMMY_PASSWORD_HASH);
-        }
+        $matches = $this->credentialMatches((string) $request->input('phone'), (string) $request->input('password'));
 
         if ($matches->isEmpty()) {
             // Same message whether the phone or the password was wrong.
@@ -149,8 +137,155 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Parolni telefon bo'yicha barcha akkauntlarga qarshi tekshiradi.
+     *
+     * @return Collection<int, User>
+     */
+    private function credentialMatches(string $rawPhone, string $password): Collection
+    {
+        $phone = User::normalizePhone($rawPhone);
+
+        // `users` is unique on (company_id, phone), NOT on phone alone: the same
+        // number may legitimately belong to staff in several companies. Test the
+        // password against every candidate instead of blindly taking the first.
+        $candidates = User::with('company')->where('phone', $phone)->get();
+
+        $matches = $candidates
+            ->filter(fn (User $candidate) => Hash::check($password, $candidate->password))
+            ->values();
+
+        if ($candidates->isEmpty()) {
+            // No candidate was hashed above — burn one comparison anyway.
+            Hash::check($password, self::DUMMY_PASSWORD_HASH);
+        }
+
+        return $matches;
+    }
+
+    /**
+     * #37: Telegram'dagi kodni tekshirish (veb va Mini App uchun umumiy).
+     */
+    public function verifyTelegram(Request $request, TelegramVerification $verification): JsonResponse
+    {
+        $data = $request->validate([
+            'nonce' => 'required|string|max:64',
+            'code' => 'required|string|max:12',
+        ]);
+
+        $result = $verification->verify($data['nonce'], $data['code']);
+
+        if (! $result['ok']) {
+            return match ($result['error']) {
+                'WRONG_CODE' => $this->error('WRONG_CODE', "Kod noto'g'ri. Telegram'dagi oxirgi kodni yozing.", 422),
+                'NOT_SENT' => $this->error('CODE_NOT_SENT', "Avval Telegram'da botni oching — kod o'sha yerga keladi.", 422),
+                default => $this->error('VERIFICATION_EXPIRED', "Kod muddati o'tdi yoki urinishlar tugadi. Qaytadan kiring.", 422),
+            };
+        }
+
+        $usable = $this->usableCandidates($result['users']);
+        if ($usable->isEmpty()) {
+            return $this->error('ACCOUNT_DISABLED', 'Akkauntingiz faolsizlantirilgan.', 403);
+        }
+
+        return $usable->count() === 1 ? $this->issueToken($usable->first()) : $this->companySelection($usable);
+    }
+
+    /**
+     * #37: xodimlar boti Mini App'i — Telegram akkaunti bog'langan bo'lsa parolsiz kirish.
+     */
+    public function telegramStaffLogin(Request $request): JsonResponse
+    {
+        $tg = $this->staffTelegramUser($request);
+        if ($tg instanceof JsonResponse) {
+            return $tg;
+        }
+
+        $usable = $this->usableCandidates(
+            User::with('company')->where('telegram_id', (string) $tg['id'])->get()
+        );
+
+        if ($usable->isEmpty()) {
+            return $this->error('TELEGRAM_NOT_LINKED', 'Bu Telegram akkaunti hali ulanmagan. Telefon va parol bilan kiring.', 404);
+        }
+
+        return $usable->count() === 1 ? $this->issueToken($usable->first()) : $this->companySelection($usable);
+    }
+
+    /**
+     * #37: Mini App'da birinchi kirish — parol to'g'ri bo'lsa akkaunt shu Telegram'ga
+     * bog'lanadi (TELEGRAM_LOGIN_CODE yoqilgan bo'lsa — avval bot shu chatga kod yuboradi).
+     */
+    public function telegramStaffLink(Request $request, TelegramVerification $verification): JsonResponse
+    {
+        $request->validate([
+            'phone' => 'required|string|max:20',
+            'password' => 'required|string',
+        ]);
+
+        $tg = $this->staffTelegramUser($request);
+        if ($tg instanceof JsonResponse) {
+            return $tg;
+        }
+
+        $matches = $this->credentialMatches((string) $request->input('phone'), (string) $request->input('password'));
+        if ($matches->isEmpty()) {
+            return $this->error('INVALID_CREDENTIALS', 'Telefon raqam yoki parol noto\'g\'ri.', 401);
+        }
+
+        $usable = $this->usableCandidates($matches);
+        if ($usable->isEmpty()) {
+            return $this->error('ACCOUNT_DISABLED', 'Akkauntingiz faolsizlantirilgan.', 403);
+        }
+
+        if (! $verification->enabled()) {
+            // Kod o'chiq: parol to'g'ri — shu Telegram'ga darhol bog'lanadi
+            foreach ($usable as $user) {
+                $user->forceFill(['telegram_id' => (string) $tg['id'], 'telegram_linked_at' => now()])->save();
+            }
+
+            return $usable->count() === 1 ? $this->issueToken($usable->first()) : $this->companySelection($usable);
+        }
+
+        $challenge = $verification->start($usable, (string) $tg['id']);
+        if (! $challenge['code_sent']) {
+            return $this->error('CODE_NOT_SENT', "Kodni yuborib bo'lmadi. Botga /start yozing va qayta urinib ko'ring.", 422);
+        }
+
+        return $this->success(['requires_telegram_verification' => true] + $challenge);
+    }
+
+    /**
+     * Xodimlar boti initData'sini tekshiradi.
+     *
+     * @return array<string, mixed>|JsonResponse
+     */
+    private function staffTelegramUser(Request $request): array|JsonResponse
+    {
+        $bot = app(StaffBot::class);
+        $token = $bot->token();
+        if (! $token) {
+            return $this->error('STAFF_BOT_NOT_CONFIGURED', 'Xodimlar boti hali sozlanmagan.', 503);
+        }
+
+        $initData = (string) ($request->header('X-Telegram-Init-Data') ?? $request->input('init_data', ''));
+        $data = $initData !== '' ? app(InitDataValidator::class)->validate($initData, $token) : null;
+
+        if (! $data || empty($data['user']['id'])) {
+            return $this->error('INVALID_INIT_DATA', "Telegram ma'lumoti noto'g'ri. Botni qayta oching.", 401);
+        }
+
+        return $data['user'];
+    }
+
     private function issueToken(User $user): JsonResponse
     {
+        // #37: birinchi kirish — avval Telegram orqali tasdiqlash
+        $verification = app(TelegramVerification::class);
+        if ($verification->required($user)) {
+            return $this->success(['requires_telegram_verification' => true] + $verification->start(collect([$user])));
+        }
+
         $this->pruneExpiredTokens($user);
 
         $token = $user->createToken('auth')->plainTextToken;
@@ -181,6 +316,26 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return $this->success($request->user()->load('company', 'branch'));
+    }
+
+    /** #37: xodimlar boti havolasi va akkaunt Telegram'ga ulanganmi. */
+    public function telegramStatus(Request $request, StaffBot $bot): JsonResponse
+    {
+        return $this->success([
+            'configured' => $bot->configured(),
+            'bot_username' => $bot->username(),
+            'bot_url' => $bot->username() ? 'https://t.me/'.$bot->username() : null,
+            'linked' => $request->user()->telegram_id !== null,
+            'linked_at' => $request->user()->telegram_linked_at,
+        ]);
+    }
+
+    /** #37: o'z Telegram'ini uzish — keyingi kirishda yana kod so'raladi. */
+    public function unlinkTelegram(Request $request): JsonResponse
+    {
+        $request->user()->forceFill(['telegram_id' => null, 'telegram_linked_at' => null])->save();
+
+        return $this->success(null);
     }
 
     public function updateProfile(Request $request): JsonResponse

@@ -34,6 +34,10 @@ const GUIDE_STEPS = [
 
 export default function TelegramBotPage() {
   const queryClient = useQueryClient();
+  const { data: staffBot } = useQuery<{ configured: boolean; bot_url: string | null; bot_username: string | null; linked: boolean }>({
+    queryKey: ['auth-telegram'],
+    queryFn: async () => (await api.get('/auth/telegram')).data.data,
+  });
   const { data: bot, isLoading, isError, error, refetch } = useQuery<BotInfo | null>({
     queryKey: ['telegram-bot'],
     queryFn: async () => (await api.get('/telegram-bot')).data.data,
@@ -234,7 +238,17 @@ export default function TelegramBotPage() {
 
             <section className="bg-white rounded-xl border border-gray-200 p-5">
               <h2 className="font-semibold text-gray-900">Rahbarga kunlik hisobot</h2>
-              {bot.owner_connected ? (
+              {staffBot?.configured && staffBot.bot_url ? (
+                // #37: hisobot va ogohlantirishlar xodimlar botiga keladi
+                <p className="mt-2 text-sm text-gray-800">
+                  {staffBot.linked
+                    ? '✅ Telegram\'ingiz ulangan. '
+                    : ''}
+                  Hisobot (har kuni 23:00) va ogohlantirishlar{' '}
+                  <a href={staffBot.bot_url} target="_blank" rel="noreferrer" className="font-medium text-sky-800 underline">@{staffBot.bot_username}</a>{' '}
+                  xodimlar botiga keladi. {staffBot.linked ? 'Botda /hisobot — bugungi hisobot.' : 'Botni oching va telefon, parolingiz bilan bir marta kiring.'}
+                </p>
+              ) : bot.owner_connected ? (
                 <p className="mt-2 text-sm text-green-800">✅ Ulangan. Har kuni soat 23:00 da tushum, buyurtmalar soni va o'rtacha chek yuboriladi.</p>
               ) : (
                 <>

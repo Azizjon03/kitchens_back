@@ -19,6 +19,8 @@ export interface User {
   branch_id?: number;
   branch?: Branch;
   created_at?: string;
+  /** #37: xodimlar botiga ulanganmi */
+  telegram_linked?: boolean;
 }
 
 export interface Company {

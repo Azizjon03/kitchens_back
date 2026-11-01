@@ -39,6 +39,12 @@ return [
     'telegram' => [
         'webhook_base' => env('TELEGRAM_WEBHOOK_BASE', env('APP_URL')),
         'frontend_url' => env('FRONTEND_URL', env('APP_URL')),
+        // #37: platformaning bitta xodimlar boti (barcha restoranlar uchun)
+        'staff_token' => env('TELEGRAM_STAFF_BOT_TOKEN'),
+        'staff_username' => env('TELEGRAM_STAFF_BOT_USERNAME'),
+        // Birinchi kirishda bot orqali tasdiqlash kodi. Boshlang'ich bosqichda o'chiq:
+        // xodim botda telefon + parol bilan bir marta kiradi, vebda kirish o'zgarmaydi.
+        'login_code' => (bool) env('TELEGRAM_LOGIN_CODE', false),
     ],
 
 ];

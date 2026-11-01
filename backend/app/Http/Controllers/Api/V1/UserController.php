@@ -145,6 +145,16 @@ class UserController extends Controller
         return $this->success(null);
     }
 
+    /** #37: rahbar xodimning Telegram bog'lanishini uzadi (telefon almashsa, yo'qolsa). */
+    public function unlinkTelegram(Request $request, User $user): JsonResponse
+    {
+        $this->authorizeSameCompany($request, $user);
+
+        $user->forceFill(['telegram_id' => null, 'telegram_linked_at' => null])->save();
+
+        return $this->success($user->fresh()->load('branch'));
+    }
+
     private function authorizeSameCompany(Request $request, User $user): void
     {
         abort_unless(
