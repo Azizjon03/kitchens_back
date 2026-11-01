@@ -23,7 +23,7 @@ interface JobRow {
   id: number; order_id: number | null; kind: string; status: 'pending' | 'sent' | 'printed' | 'failed';
   error: string | null; created_at: string; printer?: { id: number; name: string } | null;
 }
-interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[] }
+interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[]; latest_agent_version?: string }
 
 const PSTATUS = {
   online: { label: 'Ishlayapti', cls: 'bg-green-100 text-green-800' },
@@ -206,6 +206,11 @@ export default function PrintersPage() {
                       <span className="font-medium text-gray-900">{a.name}</span>
                       <span className="text-sm text-gray-600">{a.last_seen_at ? `oxirgi: ${formatDateTime(a.last_seen_at)}` : 'hali ishga tushmagan'}{a.version ? ` · v${a.version}` : ''}</span>
                       <button type="button" onClick={() => removeAgent.mutate(a.id)} className="ml-auto min-h-11 px-2 text-sm text-gray-600 hover:text-red-700">Uzish</button>
+                      {a.version && data.latest_agent_version && a.version !== data.latest_agent_version && (
+                        <p className="w-full text-sm text-amber-800">
+                          Dastur eski (v{a.version}). Yangi versiya v{data.latest_agent_version} — oyna pauzaga tushmaydi, yopilsa o'zi qayta ishga tushadi. «Uzish» → «Kompyuterni ulash» bilan faylni qayta yuklab oling.
+                        </p>
+                      )}
                     </li>
                   ))}
                 </ul>
