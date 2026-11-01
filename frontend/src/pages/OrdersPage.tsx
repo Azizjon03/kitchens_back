@@ -8,7 +8,6 @@ import {
   Plus,
   X,
   Eye,
-  ClipboardList,
   ChevronLeft,
   ChevronRight,
   CreditCard,
@@ -24,6 +23,7 @@ import { apiErrorMessage } from '../lib/apiError';
 import { useAuth } from '../lib/auth';
 import TableSetModal from '../components/TableSetModal';
 import { formatMoney, formatDateTime } from '../lib/format';
+import NumberInput from '../components/NumberInput';
 
 // ─── Constants ───────────────────────────────────────────────────
 
@@ -147,14 +147,18 @@ function CreateOrderModal({
     const mi = availableItems.find((m) => m.id === selectedMenuItemId);
     if (!mi) return;
     const isWeight = mi.sell_type === 'weight';
+    // Eng kami: vazn 0.5 kg (yoki taomniki), porsiya 0.7
+    const minQty = isWeight ? Math.max(0.5, Number(mi.min_weight) || 0) : 0.7;
+    if (itemQty < minQty) setItemQty(minQty);
+    const qty = Math.max(itemQty, minQty);
     const existing = cart.findIndex((c) => c.menu_item_id === mi.id);
     if (existing >= 0) {
       setCart((prev) =>
         prev.map((c, i) => {
           if (i !== existing) return c;
           return isWeight
-            ? { ...c, weight_kg: Math.round(((c.weight_kg ?? 0) + itemQty) * 1000) / 1000 }
-            : { ...c, quantity: Math.round((c.quantity + itemQty) * 100) / 100 };
+            ? { ...c, weight_kg: Math.round(((c.weight_kg ?? 0) + qty) * 1000) / 1000 }
+            : { ...c, quantity: Math.round((c.quantity + qty) * 100) / 100 };
         }),
       );
     } else {
@@ -163,8 +167,8 @@ function CreateOrderModal({
         {
           menu_item_id: mi.id,
           menu_item: mi,
-          quantity: isWeight ? 1 : itemQty,
-          weight_kg: isWeight ? itemQty : undefined,
+          quantity: isWeight ? 1 : qty,
+          weight_kg: isWeight ? qty : undefined,
           note: itemNote || undefined,
         },
       ]);
@@ -269,7 +273,7 @@ function CreateOrderModal({
                     const id = e.target.value ? Number(e.target.value) : '';
                     setSelectedMenuItemId(id);
                     const mi = availableItems.find((m) => m.id === id);
-                    setItemQty(mi?.sell_type === 'weight' ? (Number(mi.min_weight) || 0.5) : 1);
+                    setItemQty(mi?.sell_type === 'weight' ? Math.max(0.5, Number(mi.min_weight) || 0) : 1);
                   }}
                   className={inputClass}
                 >
@@ -282,12 +286,13 @@ function CreateOrderModal({
                 </select>
               </div>
               <div className="relative">
-                <input
-                  type="number"
-                  min={selectedIsWeight ? (Number(selectedItem?.min_weight) || 0.1) : 0.1}
+                <NumberInput
+                  required
+                  aria-label={selectedIsWeight ? "Og'irlik, kg" : 'Soni'}
+                  min={selectedIsWeight ? Math.max(0.5, Number(selectedItem?.min_weight) || 0) : 0.7}
                   step={selectedIsWeight ? (Number(selectedItem?.weight_step) || 0.1) : 0.1}
                   value={itemQty}
-                  onChange={(e) => setItemQty(Math.max(0.001, parseFloat(e.target.value) || 0.1))}
+                  onChange={(e) => setItemQty(parseFloat(e.target.value) || 0)}
                   placeholder={selectedIsWeight ? 'Og\'irlik (kg)' : 'Soni (1, 0.7...)'}
                   className={inputClass}
                 />
@@ -458,8 +463,7 @@ function PaymentModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Summa</label>
-            <input
-              type="number"
+            <NumberInput
               min={0}
               step="0.01"
               value={amount}
@@ -558,8 +562,7 @@ function DiscountModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {discountType === 'percentage' ? 'Foiz (%)' : "Summa (so'm)"}
             </label>
-            <input
-              type="number"
+            <NumberInput
               min={0}
               max={discountType === 'percentage' ? 100 : undefined}
               step="0.01"

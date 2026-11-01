@@ -4,6 +4,7 @@ import api from '../lib/api';
 import Layout from '../components/Layout';
 import { History, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateTime } from '../lib/format';
+import { formatPhone } from '../lib/phone';
 
 interface AuditLog {
   id: number;
@@ -152,7 +153,7 @@ export default function HistoryPage() {
                       {log.user ? (
                         <div>
                           <p className="font-medium text-gray-900">{log.user.name}</p>
-                          <p className="text-xs text-gray-500">{log.user.phone}</p>
+                          <p className="text-xs text-gray-500">{formatPhone(log.user.phone)}</p>
                         </div>
                       ) : (
                         <span className="text-gray-400">Tizim</span>

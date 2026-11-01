@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney, formatDate } from '../lib/format';
+import PhoneInput from '../components/PhoneInput';
+import { formatPhone, toE164 } from '../lib/phone';
 
 interface Plan {
   id: number;
@@ -61,19 +63,7 @@ interface CompanyShowResponse {
   };
 }
 
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 12);
-  if (digits.length === 0) return '';
-  if (digits.length <= 3) return `+${digits}`;
-  if (digits.length <= 5) return `+${digits.slice(0, 3)} (${digits.slice(3)}`;
-  if (digits.length <= 8) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5)}`;
-  if (digits.length <= 10) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8)}`;
-  return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8, 10)}-${digits.slice(10, 12)}`;
-}
 
-function unformatPhone(value: string): string {
-  return '+' + value.replace(/\D/g, '');
-}
 
 interface EditCompanyForm {
   name: string;
@@ -96,7 +86,7 @@ function EditCompanyModal({
   const [form, setForm] = useState<EditCompanyForm>({
     name: company.name,
     slug: company.slug,
-    phone: formatPhone(company.phone || ''),
+    phone: toE164(company.phone || ''),
     address: company.address || '',
     inn: company.inn || '',
     primary_color: company.primary_color || '#f59e0b',
@@ -109,7 +99,7 @@ function EditCompanyModal({
     mutationFn: async (data: EditCompanyForm) => {
       const payload: Record<string, unknown> = {
         ...data,
-        phone: unformatPhone(data.phone),
+        phone: data.phone,
       };
       if (!data.admin_password) delete payload.admin_password;
       const res = await api.put(`/super/companies/${company.id}`, payload);
@@ -173,14 +163,8 @@ function EditCompanyModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
-              placeholder="+998 (90) 123-45-67"
-              className={inputClass}
-            />
+            <label htmlFor="cd-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <PhoneInput id="cd-phone" value={form.phone} onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))} />
           </div>
 
           <div>
@@ -431,7 +415,7 @@ export default function CompanyDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Telefon</p>
-                  <p className="text-sm font-medium text-gray-900">{company.phone || '—'}</p>
+                  <p className="text-sm font-medium text-gray-900">{formatPhone(company.phone) || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-xs text-gray-500 mb-1">Manzil</p>

@@ -6,6 +6,7 @@ import { useAuth, homePathFor, type LoginAccount, type LoginResult, type Telegra
 import { apiErrorMessage } from '../lib/apiError';
 import { tgInit, tgInitData } from '../lib/tgApi';
 import TelegramCodeStep from '../components/TelegramCodeStep';
+import PhoneInput from '../components/PhoneInput';
 
 const ROLE_LABELS: Record<string, string> = {
   company_admin: 'Rahbar', manager: 'Menejer', waiter: 'Ofitsiant', chef: 'Oshpaz', cashier: 'Kassir',
@@ -122,7 +123,7 @@ export default function StaffTgEntryPage() {
               {formError && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{formError}</p>}
               <div>
                 <label htmlFor="st-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam</label>
-                <input id="st-phone" type="tel" autoComplete="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" className={input} />
+                <PhoneInput id="st-phone" value={phone} onChange={setPhone} required autoComplete="tel" wrapperClassName="flex items-center w-full min-h-12 border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-amber-500" className="flex-1 min-w-0 py-2 pr-4 bg-transparent text-base outline-none placeholder:text-gray-400" />
               </div>
               <div>
                 <label htmlFor="st-pass" className="block text-sm font-medium text-gray-700 mb-1">Parol</label>

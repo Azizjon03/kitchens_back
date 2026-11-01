@@ -20,7 +20,9 @@ test.describe('Login sahifasi', () => {
     await expect(phoneInput).toBeVisible();
     await expect(phoneInput).toHaveAttribute('id', 'phone');
     await expect(phoneInput).toHaveAttribute('type', 'tel');
-    await expect(phoneInput).toHaveAttribute('placeholder', '+998 (90) 123-45-67');
+    await expect(phoneInput).toHaveAttribute('placeholder', '(90) 123-45-67');
+    // #42: +998 maydon yonida doim turadi
+    await expect(page.getByText('+998', { exact: true })).toBeVisible();
 
     // Password input
     const passwordInput = page.getByLabel('Parol');
@@ -33,12 +35,13 @@ test.describe('Login sahifasi', () => {
 
   test('telefon raqam kiritilganda maska qo\'llanishi kerak', async ({ page }) => {
     const phoneInput = page.locator('input#phone');
-    await phoneInput.pressSequentially('998906921469');
-    await expect(phoneInput).toHaveValue('+998 (90) 692-14-69');
+    // #42: +998 tashqarida, foydalanuvchi faqat 9 raqam yozadi
+    await phoneInput.pressSequentially('906921469');
+    await expect(phoneInput).toHaveValue('(90) 692-14-69');
 
-    // 12 raqamdan ortig'i kesiladi
+    // 9 raqamdan ortig'i kesiladi
     await phoneInput.pressSequentially('77');
-    await expect(phoneInput).toHaveValue('+998 (90) 692-14-69');
+    await expect(phoneInput).toHaveValue('(90) 692-14-69');
   });
 
   test('parolni ko\'rsatish/yashirish tugmasi ishlashi kerak', async ({ page }) => {

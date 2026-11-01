@@ -12,19 +12,11 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import PhoneInput from '../components/PhoneInput';
+import { formatPhone, toE164 } from '../lib/phone';
 
 // ─── Phone Mask ──────────────────────────────────────────────────
 
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 12);
-  if (digits.length === 0) return '';
-  if (digits.length <= 3) return `+${digits}`;
-  if (digits.length <= 5) return `+${digits.slice(0, 3)} (${digits.slice(3)}`;
-  if (digits.length <= 8) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5)}`;
-  if (digits.length <= 10) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8)}`;
-  return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8, 10)}-${digits.slice(10, 12)}`;
-}
-function unformatPhone(value: string): string { return '+' + value.replace(/\D/g, ''); }
 
 // ─── Branch Modal ────────────────────────────────────────────────
 
@@ -40,7 +32,7 @@ function BranchModal({
   const [form, setForm] = useState({
     name: branch?.name || '',
     address: branch?.address || '',
-    phone: branch?.phone ? formatPhone(branch.phone) : '+998 ',
+    phone: toE164(branch?.phone ?? ''),
     is_active: branch?.is_active ?? true,
   });
   const [error, setError] = useState('');
@@ -50,7 +42,7 @@ function BranchModal({
       const payload: Record<string, unknown> = {
         name: form.name,
         address: form.address || undefined,
-        phone: form.phone.replace(/\D/g, '').length > 3 ? unformatPhone(form.phone) : undefined,
+        phone: form.phone || undefined,
       };
       if (isEdit) {
         payload.is_active = form.is_active;
@@ -119,14 +111,8 @@ function BranchModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm((p) => ({ ...p, phone: formatPhone(e.target.value) }))}
-              placeholder="+998 (XX) XXX-XX-XX"
-              className={inputClass}
-            />
+            <label htmlFor="branch-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <PhoneInput id="branch-phone" value={form.phone} onChange={(v) => setForm((p) => ({ ...p, phone: v }))} />
           </div>
 
           {isEdit && (

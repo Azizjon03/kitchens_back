@@ -369,15 +369,10 @@ class OrderService
                 $this->fail("{$field}.weight_kg", "\"{$name}\": weight_kg must be greater than zero.");
             }
 
-            if ($menuItem->min_weight !== null) {
-                $minWeight = $this->decimal($menuItem->min_weight, 3);
-
-                if (bccomp($weight, $minWeight, 3) < 0) {
-                    $this->fail(
-                        "{$field}.weight_kg",
-                        "\"{$name}\": minimum weight is {$minWeight} kg."
-                    );
-                }
+            // Eng kam vazn — taomniki, lekin 0.5 kg dan kam emas
+            $minWeight = $this->decimal(max((float) ($menuItem->min_weight ?? 0), MenuItem::MIN_WEIGHT_KG), 3);
+            if (bccomp($weight, $minWeight, 3) < 0) {
+                $this->fail("{$field}.weight_kg", "\"{$name}\": eng kam vazn {$minWeight} kg.");
             }
 
             if ($menuItem->weight_step !== null) {
@@ -419,8 +414,9 @@ class OrderService
 
         $quantity = $this->decimal($itemData['quantity'] ?? 1, 2);
 
-        if (bccomp($quantity, '0.00', 2) <= 0) {
-            $this->fail("{$field}.quantity", "\"{$name}\": quantity must be greater than zero.");
+        // Eng kami 0.7 porsiya (masalan, 0.7 porsiya osh)
+        if (bccomp($quantity, MenuItem::MIN_PORTION, 2) < 0) {
+            $this->fail("{$field}.quantity", "\"{$name}\": eng kami ".MenuItem::MIN_PORTION." porsiya.");
         }
 
         return [

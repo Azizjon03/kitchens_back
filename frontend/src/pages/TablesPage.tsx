@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 import { useEscape } from '../lib/useEscape';
+import NumberInput from '../components/NumberInput';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   free: { label: 'Bo\'sh', bg: 'bg-green-100', text: 'text-green-700' },
@@ -155,10 +156,9 @@ function TableModal({
             </div>
             <div>
               <label htmlFor="table-seats" className="block text-sm font-medium text-gray-700 mb-1">O'rindiqlar <span className="text-red-600" aria-hidden="true">*</span> <HelpHint text={FIELD_HINTS.seats} label="O'rindiqlar haqida" /></label>
-              <input
+              <NumberInput
               id="table-seats"
               aria-invalid={!!fieldErrors.seats}
-                type="number"
                 required
                 min="1"
                 value={form.seats}

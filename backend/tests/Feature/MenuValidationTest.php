@@ -407,14 +407,28 @@ class MenuValidationTest extends TestCase
             'price' => 80000,
             'weight_step' => 0.1,
             'min_weight' => 0.3,
+        ])->assertStatus(422)->assertJsonValidationErrors('min_weight'); // eng kami 0.5 kg
+
+        $store = $this->postJson('/api/v1/menu-items', [
+            'category_id' => $this->category->id,
+            'name_uz' => 'Kabob (kg)',
+            'name_ru' => 'Кебаб (кг)',
+            'sell_type' => 'weight',
+            'price' => 80000,
+            'weight_step' => 0.1,
         ]);
 
-        $store->assertCreated();
+        $store->assertCreated()->assertJsonPath('data.min_weight', fn ($v) => (float) $v === 0.5);
         $newItemId = $store->json('data.id');
 
         $order = $this->placeTelegramOrder([
             ['menu_item_id' => $newItemId, 'quantity' => 1, 'weight_kg' => 0.4],
         ], 810012);
+        $order->assertStatus(422); // 0.5 kg dan kam
+
+        $order = $this->placeTelegramOrder([
+            ['menu_item_id' => $newItemId, 'quantity' => 1, 'weight_kg' => 0.6],
+        ], 810013);
 
         $order->assertCreated();
     }

@@ -10,6 +10,8 @@ import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { Building2, Plus, X, ExternalLink, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
+import PhoneInput from '../components/PhoneInput';
+import { formatPhone } from '../lib/phone';
 
 interface CreateCompanyForm {
   name: string;
@@ -32,19 +34,7 @@ const MENU_TEMPLATES: { value: MenuTemplate; label: string; hint: string }[] = [
   { value: 'bosh', label: "Bo'sh menyu", hint: "Hech narsa qo'shilmaydi — korxona menyuni o'zi to'ldiradi" },
 ];
 
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 12);
-  if (digits.length === 0) return '';
-  if (digits.length <= 3) return `+${digits}`;
-  if (digits.length <= 5) return `+${digits.slice(0, 3)} (${digits.slice(3)}`;
-  if (digits.length <= 8) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5)}`;
-  if (digits.length <= 10) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8)}`;
-  return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8, 10)}-${digits.slice(10, 12)}`;
-}
 
-function unformatPhone(value: string): string {
-  return '+' + value.replace(/\D/g, '');
-}
 
 function CreateCompanyModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -64,8 +54,8 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
     mutationFn: async (data: CreateCompanyForm) => {
       const payload = {
         ...data,
-        phone: unformatPhone(data.phone),
-        owner_phone: unformatPhone(data.owner_phone),
+        phone: data.phone,
+        owner_phone: data.owner_phone,
       };
       const res = await api.post('/super/companies', payload);
       return res.data;
@@ -156,16 +146,13 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label htmlFor="company-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon <span className="text-red-600" aria-hidden="true">*</span></label>
-            <input
+            <PhoneInput
               id="company-phone"
               aria-invalid={!!fieldErrors.phone}
               aria-describedby={fieldErrors.phone ? 'company-phone-error' : undefined}
-              type="tel"
               required
               value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: formatPhone(e.target.value) }))}
-              placeholder="+998 (90) 123-45-67"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+              onChange={(v) => setForm((prev) => ({ ...prev, phone: v }))}
             />
             {fieldErrors.phone && (
               <p id="company-phone-error" className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>
@@ -228,16 +215,13 @@ function CreateCompanyModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label htmlFor="company-owner_phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon raqam <span className="text-red-600" aria-hidden="true">*</span></label>
-            <input
+            <PhoneInput
               id="company-owner_phone"
               aria-invalid={!!fieldErrors.owner_phone}
               aria-describedby={fieldErrors.owner_phone ? 'company-owner_phone-error' : undefined}
-              type="tel"
               required
               value={form.owner_phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, owner_phone: formatPhone(e.target.value) }))}
-              placeholder="+998 (90) 123-45-67"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
+              onChange={(v) => setForm((prev) => ({ ...prev, owner_phone: v }))}
             />
             {fieldErrors.owner_phone && (
               <p id="company-owner_phone-error" className="mt-1 text-sm text-red-600">{fieldErrors.owner_phone}</p>
@@ -406,7 +390,7 @@ export default function CompaniesPage() {
                   >
                     <td className="px-6 py-4 font-medium text-gray-900">{company.name}</td>
                     <td className="px-6 py-4 text-gray-500">{company.slug}</td>
-                    <td className="px-6 py-4 text-gray-500">{company.phone}</td>
+                    <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{formatPhone(company.phone)}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

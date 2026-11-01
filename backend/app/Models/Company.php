@@ -104,4 +104,10 @@ class Company extends Model
     {
         return (int) $this->getSetting('cancel_time_limit_minutes', 60);
     }
+
+    /** #42: telefon har doim E.164 ko'rinishida saqlanadi */
+    public function setPhoneAttribute(?string $value): void
+    {
+        $this->attributes['phone'] = $value === null || trim($value) === '' ? null : \App\Support\Phone::normalize($value);
+    }
 }

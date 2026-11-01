@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 import { formatMoney } from '../lib/format';
+import NumberInput from '../components/NumberInput';
 
 // ─── Menyu daraxti (#23) ──────────────────────────────────────────
 // API barcha kategoriyalarni tekis qaytaradi (parent_id bilan). Menyu ikki darajali:
@@ -522,9 +523,8 @@ function MenuItemModal({
                 {form.sell_type === 'weight' ? "1 kg narxi (so'm)" : "Narxi (so'm)"} <span className="text-red-500">*</span>
                 {form.sell_type === 'weight' && <HelpHint text={FIELD_HINTS.weightPrice} label="1 kg narxi haqida" />}
               </label>
-              <input
+              <NumberInput
                 id="item-price"
-                type="number"
                 required
                 min="0"
                 step="100"
@@ -540,8 +540,7 @@ function MenuItemModal({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Tayyorlanish vaqti (min)
               </label>
-              <input
-                type="number"
+              <NumberInput
                 min="0"
                 value={form.cooking_time}
                 onChange={(e) => setForm((p) => ({ ...p, cooking_time: e.target.value }))}

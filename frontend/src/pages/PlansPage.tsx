@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { CreditCard, Plus, X, Check, Minus } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney } from '../lib/format';
+import NumberInput from '../components/NumberInput';
 
 interface Plan {
   id: number;
@@ -149,9 +150,9 @@ function PlanModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Oylik narx (so'm)</label>
-            <input
-              type="number"
+            <label htmlFor="plan-price" className="block text-sm font-medium text-gray-700 mb-1">Oylik narx (so'm)</label>
+            <NumberInput
+              id="plan-price"
               required
               min="0"
               step="1000"
@@ -163,9 +164,9 @@ function PlanModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max filiallar (-1 = cheksiz)</label>
-              <input
-                type="number"
+              <label htmlFor="plan-branches" className="block text-sm font-medium text-gray-700 mb-1">Max filiallar (-1 = cheksiz)</label>
+              <NumberInput
+                id="plan-branches"
                 required
                 min="-1"
                 value={form.max_branches}
@@ -174,9 +175,9 @@ function PlanModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max xodimlar (-1 = cheksiz)</label>
-              <input
-                type="number"
+              <label htmlFor="plan-staff" className="block text-sm font-medium text-gray-700 mb-1">Max xodimlar (-1 = cheksiz)</label>
+              <NumberInput
+                id="plan-staff"
                 required
                 min="-1"
                 value={form.max_staff}

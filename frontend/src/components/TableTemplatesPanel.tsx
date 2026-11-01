@@ -7,6 +7,7 @@ import { useEscape } from '../lib/useEscape';
 import { formatMoney } from '../lib/format';
 import { ErrorState, LoadingState } from './QueryState';
 import { useTableTemplates, type TableTemplate } from '../lib/tableTemplates';
+import NumberInput from './NumberInput';
 
 /**
  * Stol shablonlari (#24): stolga oldindan qo'yiladigan narsalar (masalan 3 sharbat, 4 mohito).
@@ -136,8 +137,7 @@ function TemplateModal({ template, onClose }: { template?: TableTemplate; onClos
                         </optgroup>
                       ))}
                     </select>
-                    <input
-                      type="number"
+                    <NumberInput
                       aria-label="Soni"
                       min={1}
                       max={99}
