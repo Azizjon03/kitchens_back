@@ -64,7 +64,7 @@ class User extends Authenticatable
      */
     public static function normalizePhone(string $phone): string
     {
-        return '+'.preg_replace('/\D/', '', $phone);
+        return \App\Support\Phone::normalize($phone); // #42: 9 raqam → +998
     }
 
     public function isSuperAdmin(): bool

@@ -1,23 +1,12 @@
-import { useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, homePathFor, type LoginAccount, type LoginResult, type TelegramChallenge } from '../lib/auth';
 import TelegramCodeStep from '../components/TelegramCodeStep';
 import { Building2, ChefHat, Eye, EyeOff } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
+import PhoneInput from '../components/PhoneInput';
 
-function formatPhone(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, 12);
-  if (digits.length === 0) return '';
-  if (digits.length <= 3) return `+${digits}`;
-  if (digits.length <= 5) return `+${digits.slice(0, 3)} (${digits.slice(3)}`;
-  if (digits.length <= 8) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5)}`;
-  if (digits.length <= 10) return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8)}`;
-  return `+${digits.slice(0, 3)} (${digits.slice(3, 5)}) ${digits.slice(5, 8)}-${digits.slice(8, 10)}-${digits.slice(10, 12)}`;
-}
 
-function unformatPhone(value: string): string {
-  return '+' + value.replace(/\D/g, '');
-}
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Tizim administratori',
@@ -68,9 +57,6 @@ export default function LoginPage() {
     }
   };
 
-  const handlePhoneChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatPhone(e.target.value));
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -78,7 +64,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      proceed(await login(unformatPhone(phone), password));
+      proceed(await login(phone, password));
     } catch (err: unknown) {
       setError(apiErrorMessage(err, 'Kirishda xatolik yuz berdi'));
     } finally {
@@ -157,15 +143,7 @@ export default function LoginPage() {
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Telefon raqam
               </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={handlePhoneChange}
-                required
-                placeholder="+998 (90) 123-45-67"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all placeholder:text-gray-400"
-              />
+              <PhoneInput id="phone" value={phone} onChange={setPhone} required autoComplete="tel" />
             </div>
 
             <div>

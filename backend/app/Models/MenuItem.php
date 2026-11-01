@@ -13,6 +13,12 @@ class MenuItem extends Model
 {
     use HasFactory, BelongsToCompany, SoftDeletes;
 
+    /** Vazn bilan sotiladigan taomning eng kam vazni, kg */
+    public const MIN_WEIGHT_KG = 0.5;
+
+    /** Porsiya bilan sotiladigan taomning eng kam miqdori */
+    public const MIN_PORTION = '0.70';
+
     protected $fillable = [
         'company_id', 'category_id', 'catalog_item_id', 'kitchen_station_id', 'name_uz', 'name_ru',
         'description_uz', 'description_ru', 'sell_type', 'price',

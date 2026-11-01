@@ -86,7 +86,10 @@ test.describe('Sidebar navigatsiya (super admin)', () => {
     // Avatar (ismning birinchi harfi), ism va telefon
     await expect(sidebar.locator('.bg-amber-100')).toHaveText(name.charAt(0).toUpperCase());
     await expect(sidebar.getByText(name, { exact: true })).toBeVisible();
-    await expect(sidebar.getByText(user.phone, { exact: true })).toBeVisible();
+    // #42: telefon bir xil ko'rinishda: +998 (90) 692-14-69
+    const d = String(user.phone).replace(/\D/g, '');
+    const shown = `+998 (${d.slice(3, 5)}) ${d.slice(5, 8)}-${d.slice(8, 10)}-${d.slice(10, 12)}`;
+    await expect(sidebar.getByText(shown, { exact: true })).toBeVisible();
   });
 
   // ============ LOGOUT ============

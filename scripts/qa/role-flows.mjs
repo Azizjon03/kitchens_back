@@ -161,7 +161,7 @@ if (orderId) {
   if (await openBtn.count()) {
     await openBtn.click();
     const dlg = p.locator('div.fixed.inset-0').last();
-    await dlg.locator('input[type=number]').first().fill('100000');
+    await dlg.locator('input[inputmode=decimal]').first().fill('100000');
     const [r] = await Promise.all([
       p.waitForResponse((x) => x.url().includes('/cash-shifts/open')),
       dlg.getByRole('button', { name: /^Ochish$/ }).click(),
@@ -186,7 +186,7 @@ if (orderId) {
   const closeDlg = p.locator('div.fixed.inset-0').last();
   const expectedTxt = await closeDlg.innerText();
   const expected = Number((expectedTxt.match(/Kutilgan summa:\s*([^\n]+)/) || [])[1]?.replace(/[.,]00\b/, '').replace(/\D/g, '') || 0);
-  await closeDlg.locator('input[type=number]').first().fill(String(expected || 100000));
+  await closeDlg.locator('input[inputmode=decimal]').first().fill(String(expected || 100000));
   const [cr] = await Promise.all([
     p.waitForResponse((x) => x.url().includes('/cash-shifts/close')),
     closeDlg.getByRole('button', { name: /^Yopish$/ }).click(),
@@ -206,7 +206,7 @@ if (orderId) {
   await p.getByRole('button', { name: /Yangi xodim/ }).click();
   const dlg = p.locator('div.fixed.inset-0').last();
   await dlg.getByPlaceholder('Xodim ismi').fill('QA Rol Kassir ' + T);
-  await dlg.getByPlaceholder('+998 90 123-45-67').fill('+9989' + T.padStart(8, '7'));
+  await dlg.getByLabel('Telefon').fill('9' + T.padStart(8, '7')); // #42: +998 maydon yonida
   await dlg.locator('input[type=password]').first().fill('Staff12345');
   const sel = dlg.locator('select').first();
   if (await sel.count()) await sel.selectOption('cashier').catch(() => {});

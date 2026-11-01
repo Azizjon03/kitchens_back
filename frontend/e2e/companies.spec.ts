@@ -178,7 +178,7 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     await expect(modal.getByPlaceholder('Milliy taomlar')).toBeVisible();
     await expect(modal.getByPlaceholder('milliy-taomlar')).toBeVisible();
     // Kompaniya telefoni va egasi telefoni — ikkita maskali input
-    await expect(modal.getByPlaceholder('+998 (90) 123-45-67')).toHaveCount(2);
+    await expect(modal.getByPlaceholder('(90) 123-45-67')).toHaveCount(2);
     await expect(modal.getByPlaceholder('Ism Familiya')).toBeVisible();
     const password = modal.getByPlaceholder('Kamida 8 ta belgi');
     await expect(password).toBeVisible();
@@ -202,12 +202,13 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     authenticatedPage: page,
   }) => {
     await page.getByRole('button', { name: 'Yangi kompaniya' }).click();
-    const phones = companyModal(page).getByPlaceholder('+998 (90) 123-45-67');
+    const phones = companyModal(page).getByPlaceholder('(90) 123-45-67');
 
-    await phones.nth(0).pressSequentially('998901234567');
-    await expect(phones.nth(0)).toHaveValue('+998 (90) 123-45-67');
-    await phones.nth(1).pressSequentially('998712000000');
-    await expect(phones.nth(1)).toHaveValue('+998 (71) 200-00-00');
+    // #42: +998 tashqarida turadi; 998 bilan yozilsa ham takrorlanmaydi
+    await phones.nth(0).pressSequentially('901234567');
+    await expect(phones.nth(0)).toHaveValue('(90) 123-45-67');
+    await phones.nth(1).fill('998712000000');
+    await expect(phones.nth(1)).toHaveValue('(71) 200-00-00');
   });
 
   test('bo\'sh form yuborilmasligi kerak (validatsiya)', async ({
@@ -248,7 +249,7 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     await modal.getByPlaceholder('Milliy taomlar').fill(companyName);
     await expect(modal.getByPlaceholder('milliy-taomlar')).toHaveValue(expectedSlug);
 
-    const phones = modal.getByPlaceholder('+998 (90) 123-45-67');
+    const phones = modal.getByPlaceholder('(90) 123-45-67');
     await phones.nth(0).fill(companyPhone);
     await modal.getByPlaceholder('Ism Familiya').fill('QA E2E Owner');
     await phones.nth(1).fill(ownerPhone);
@@ -270,7 +271,9 @@ test.describe('Kompaniyalar sahifasi (Companies)', () => {
     const row = page.locator('tbody tr').filter({ hasText: companyName });
     await expect(row).toHaveCount(1, { timeout: 10000 });
     await expect(row).toContainText(expectedSlug);
-    await expect(row).toContainText(`+${companyPhone}`);
+    // #42: ro'yxatda standart ko'rinish: +998 (71) 722-25-17
+    const p = companyPhone.slice(3);
+    await expect(row).toContainText(`+998 (${p.slice(0, 2)}) ${p.slice(2, 5)}-${p.slice(5, 7)}-${p.slice(7, 9)}`);
   });
 
   // ============ NAVIGATSIYA ============

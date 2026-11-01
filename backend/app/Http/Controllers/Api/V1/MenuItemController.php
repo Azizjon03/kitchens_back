@@ -209,6 +209,15 @@ class MenuItemController extends Controller
 
         $minWeight = array_key_exists('min_weight', $data) ? $data['min_weight'] : $existing?->min_weight;
 
+        // Eng kam vazn — 0.5 kg (berilmagan bo'lsa ham)
+        if ($minWeight === null || (float) $minWeight < MenuItem::MIN_WEIGHT_KG) {
+            if ($minWeight !== null && array_key_exists('min_weight', $data)) {
+                throw ValidationException::withMessages(['min_weight' => "Eng kam vazn ".MenuItem::MIN_WEIGHT_KG." kg dan kam bo'lmaydi."]);
+            }
+            $minWeight = MenuItem::MIN_WEIGHT_KG;
+        }
+        $data['min_weight'] = $minWeight;
+
         if ($minWeight !== null) {
             $minWeightDecimal = number_format((float) $minWeight, 3, '.', '');
             $stepDecimal = number_format((float) $weightStep, 3, '.', '');

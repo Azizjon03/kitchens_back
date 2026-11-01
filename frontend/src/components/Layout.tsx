@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import type { Role } from '../types';
 import { apiErrorMessage } from '../lib/apiError';
+import { formatPhone } from '../lib/phone';
 
 interface NavItem {
   label: string;
@@ -288,7 +289,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.full_name}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.phone}</p>
+                <p className="text-xs text-gray-500 truncate">{formatPhone(user?.phone)}</p>
               </div>
               <button
                 onClick={() => setShowPasswordModal(true)}

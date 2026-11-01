@@ -89,7 +89,7 @@ class NotifyTelegram
         }
         $lines[] = "💰 Jami: <b>{$this->money($order->total)} so'm</b>";
         if ($order->customer) {
-            $lines[] = '👤 '.e($order->customer->name ?? 'Mijoz').($order->customer->phone ? ', '.e($order->customer->phone) : '');
+            $lines[] = '👤 '.e($order->customer->name ?? 'Mijoz').($order->customer->phone ? ', '.e(\App\Support\Phone::format($order->customer->phone)) : '');
         }
         if ($order->delivery_address) {
             $lines[] = '📍 '.e($order->delivery_address);

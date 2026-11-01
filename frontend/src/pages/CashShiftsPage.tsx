@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { apiErrorMessage } from '../lib/apiError';
 import { formatMoney, formatDateTime } from '../lib/format';
+import NumberInput from '../components/NumberInput';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -132,8 +133,7 @@ function OpenShiftModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Boshlang'ich summa <HelpHint text={FIELD_HINTS.openingCash} label="Boshlang'ich summa haqida" />
             </label>
-            <input
-              type="number"
+            <NumberInput
               required
               min="0"
               step="0.01"
@@ -243,8 +243,7 @@ function CloseShiftModal({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Yopish summasi <HelpHint text={FIELD_HINTS.closingCash} label="Yopish summasi haqida" /></label>
-            <input
-              type="number"
+            <NumberInput
               required
               min="0"
               step="0.01"

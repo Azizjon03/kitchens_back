@@ -5,6 +5,8 @@ import type { User, Branch, Role } from '../types';
 import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { Plus, Pencil, Send, Trash2, X } from 'lucide-react';
+import PhoneInput from '../components/PhoneInput';
+import { formatPhone, toE164 } from '../lib/phone';
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
@@ -85,7 +87,7 @@ function StaffModal({
   const isEdit = !!staff;
   const [form, setForm] = useState({
     name: staff?.name || staff?.full_name || '',
-    phone: staff?.phone || '',
+    phone: toE164(staff?.phone || ''),
     role: (staff?.role as Role) || 'waiter',
     branch_id: staff?.branch_id ? String(staff.branch_id) : '',
     password: '',
@@ -158,15 +160,8 @@ function StaffModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
-            <input
-              type="text"
-              required
-              value={form.phone}
-              onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-              placeholder="+998 90 123-45-67"
-              className={inputClass}
-            />
+            <label htmlFor="staff-phone" className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <PhoneInput id="staff-phone" required value={form.phone} onChange={(v) => setForm((p) => ({ ...p, phone: v }))} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -366,7 +361,7 @@ export default function StaffPage() {
               {staff.map((u) => (
                 <tr key={u.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-900">{u.name || u.full_name}</td>
-                  <td className="px-4 py-3 text-gray-500">{u.phone}</td>
+                  <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{formatPhone(u.phone)}</td>
                   <td className="px-4 py-3">
                     <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
                       {roleLabel(u.role)}

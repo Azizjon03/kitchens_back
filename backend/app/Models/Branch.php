@@ -34,4 +34,10 @@ class Branch extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /** #42: telefon har doim E.164 ko'rinishida saqlanadi */
+    public function setPhoneAttribute(?string $value): void
+    {
+        $this->attributes['phone'] = $value === null || trim($value) === '' ? null : \App\Support\Phone::normalize($value);
+    }
 }

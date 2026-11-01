@@ -119,7 +119,8 @@ export function itemCount(cart: TgCartLine[], itemId: number): number {
 /** Reactive cart state backed by localStorage and synced across components. */
 /** Vaznli taomning minimal (va savatga qo'shilgandagi boshlang'ich) vazni — yagona manba. */
 export function minWeightKg(item: Pick<MenuItem, 'min_weight'>): number {
-  return Number(item.min_weight) || 0.1;
+  // Eng kami 0.5 kg
+  return Math.max(0.5, Number(item.min_weight) || 0);
 }
 
 export function useTgCart() {

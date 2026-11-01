@@ -379,12 +379,12 @@ class OrderPricingTest extends TestCase
             'items' => [[
                 'menu_item_id' => $this->weightItem->id,
                 'quantity' => 1,
-                'weight_kg' => 0.4,
+                'weight_kg' => 0.5,
             ]],
         ]);
 
         $response->assertCreated();
-        $this->assertSame('32000.00', (string) Order::firstOrFail()->total);
+        $this->assertSame('40000.00', (string) Order::firstOrFail()->total);
     }
 
     // --- editing an order ---------------------------------------------------
@@ -403,16 +403,21 @@ class OrderPricingTest extends TestCase
 
         $this->assertSame('80000.00', (string) Order::findOrFail($orderId)->total);
 
-        // Shrink the order to a single 10000 line: the stored 20000 discount
-        // must be re-clamped instead of driving the total below zero.
+        // 0.7 porsiyadan kam bo'lmaydi
         $this->putJson("/api/v1/orders/{$orderId}", [
-            'items' => [['menu_item_id' => $this->portionItem->id, 'quantity' => 0.2]],
+            'items' => [['menu_item_id' => $this->portionItem->id, 'quantity' => 0.5]],
+        ])->assertStatus(422);
+
+        // Shrink the order to a single 35000 line: the stored 20000 discount
+        // must be re-clamped (20% max) instead of staying at 20000.
+        $this->putJson("/api/v1/orders/{$orderId}", [
+            'items' => [['menu_item_id' => $this->portionItem->id, 'quantity' => 0.7]],
         ])->assertOk();
 
         $order = Order::findOrFail($orderId);
-        $this->assertSame('10000.00', (string) $order->subtotal);
-        $this->assertSame('2000.00', (string) $order->discount_amount);
-        $this->assertSame('8000.00', (string) $order->total);
+        $this->assertSame('35000.00', (string) $order->subtotal);
+        $this->assertSame('7000.00', (string) $order->discount_amount);
+        $this->assertSame('28000.00', (string) $order->total);
         $this->assertGreaterThanOrEqual(0, (float) $order->total);
     }
 

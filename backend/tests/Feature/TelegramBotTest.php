@@ -246,7 +246,7 @@ class TelegramBotTest extends TestCase
         $group = $messages->firstWhere('chat_id', '-100500');
         $this->assertStringContainsString("Yangi Telegram buyurtma #{$id}", $group['text']);
         $this->assertStringContainsString('Osh — 2 ta', $group['text']);
-        $this->assertStringContainsString('+998901234567', $group['text']);
+        $this->assertStringContainsString('+998 (90) 123-45-67', $group['text']);
         $this->assertStringContainsString('maps.google.com/?q=40.99', $group['text']);
         $this->assertStringContainsString('qabul qilindi', $messages->firstWhere('chat_id', '555')['text']);
 

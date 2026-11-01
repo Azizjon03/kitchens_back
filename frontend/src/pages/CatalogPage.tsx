@@ -19,6 +19,7 @@ import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 import { formatMoney, formatNumber } from '../lib/format';
 import { useEscape } from '../lib/useEscape';
+import NumberInput from '../components/NumberInput';
 
 /**
  * Standart menyu katalogi (#23) — faqat super admin.
@@ -425,7 +426,7 @@ function ItemModal({
     name_ru: edit?.name_ru ?? '',
     sell_type: edit?.sell_type ?? 'portion',
     price: edit ? String(Number(edit.price)) : '',
-    min_weight: edit?.min_weight != null ? String(Number(edit.min_weight)) : '0.1',
+    min_weight: edit?.min_weight != null ? String(Math.max(0.5, Number(edit.min_weight))) : '0.5',
     weight_step: edit?.weight_step != null ? String(Number(edit.weight_step)) : '0.1',
     is_active: edit?.is_active ?? true,
   });
@@ -590,9 +591,8 @@ function ItemModal({
           <label htmlFor="item-price" className="block text-sm font-medium text-gray-700 mb-1">
             {isWeight ? "1 kg narxi (so'm)" : "Narx (so'm)"} <span className="text-red-600" aria-hidden="true">*</span>
           </label>
-          <input
+          <NumberInput
             id="item-price"
-            type="number"
             required
             min="0"
             step="100"
@@ -612,10 +612,9 @@ function ItemModal({
               <label htmlFor="item-min_weight" className="block text-sm font-medium text-gray-700 mb-1">
                 Eng kam vazn (kg)
               </label>
-              <input
+              <NumberInput
                 id="item-min_weight"
-                type="number"
-                min="0.001"
+                min="0.5"
                 step="0.001"
                 value={form.min_weight}
                 onChange={(e) => setForm((p) => ({ ...p, min_weight: e.target.value }))}
@@ -629,9 +628,8 @@ function ItemModal({
               <label htmlFor="item-weight_step" className="block text-sm font-medium text-gray-700 mb-1">
                 Qadam (kg)
               </label>
-              <input
+              <NumberInput
                 id="item-weight_step"
-                type="number"
                 min="0.001"
                 step="0.001"
                 value={form.weight_step}
@@ -758,9 +756,8 @@ function AddonModal({
           <label htmlFor="addon-price" className="block text-sm font-medium text-gray-700 mb-1">
             Narx (so'm) <span className="text-red-600" aria-hidden="true">*</span>
           </label>
-          <input
+          <NumberInput
             id="addon-price"
-            type="number"
             required
             min="0"
             step="100"
