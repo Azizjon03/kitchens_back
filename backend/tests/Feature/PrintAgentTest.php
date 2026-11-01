@@ -65,6 +65,8 @@ class PrintAgentTest extends TestCase
         preg_match("/\\\$Token\s+=\s+'([^']+)'/", $script, $m);
         $this->assertStringContainsString("\$Server  = 'http", $script);
         $this->assertStringNotContainsString('__TOKEN__', $script);
+        // Windows PowerShell 5.1: BOM'siz UTF-8 ni ANSI deb o'qiydi — "—" qo'shtirnoqqa aylanib skript buziladi
+        $this->assertDoesNotMatchRegularExpression('/[^\x00-\x7F]/', $script, 'Agent skripti faqat ASCII bo\'lishi kerak');
 
         return $m[1];
     }

@@ -38,7 +38,8 @@ const JSTATUS = {
 };
 
 function download(filename: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' }));
+  // BOM (\uFEFF) — Windows PowerShell 5.1 faylni UTF-8 deb o'qisin; CRLF — Windows qator oxiri
+  const url = URL.createObjectURL(new Blob(['\uFEFF' + text.replace(/\r?\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;

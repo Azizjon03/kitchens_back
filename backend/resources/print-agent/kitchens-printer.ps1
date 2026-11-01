@@ -1,9 +1,9 @@
-# Kitchens — oshxona printer dasturi (print agent) v__VERSION__
+# Kitchens - oshxona printer dasturi (print agent) v__VERSION__
 # Restoran: __COMPANY__ / Kompyuter: __AGENT__
 #
 # O'rnatish: faylni o'ng tugma bilan bosing -> "Run with PowerShell".
 # Dastur o'zini %LOCALAPPDATA%\KitchensPrint papkasiga ko'chiradi va Windows yoqilganda
-# o'zi ishga tushadi. Oyna kichraytirilgan holda turadi — yopmang.
+# o'zi ishga tushadi. Oyna kichraytirilgan holda turadi - yopmang.
 # Ishlashi: har 2 soniyada serverdan chek vazifalarini oladi va bo'lim printeriga
 # (LAN, ESC/POS, 9100-port) to'g'ridan-to'g'ri yuboradi.
 
@@ -33,6 +33,8 @@ function Log([string]$msg) {
 if (-not $NoInstall -and $PSCommandPath -ne $Target) {
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
     Copy-Item -Path $PSCommandPath -Destination $Target -Force
+    # Internetdan yuklangan fayl belgisi (Zone.Identifier) - Windows bloklamasin
+    try { Unblock-File -Path $Target } catch { }
     $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $args = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Minimized -File `"$Target`""
     $shell = New-Object -ComObject WScript.Shell
@@ -66,7 +68,7 @@ function Send-ToPrinter([string]$Ip, [int]$Port, [byte[]]$Bytes) {
     try {
         $wait = $client.BeginConnect($Ip, $Port, $null, $null)
         if (-not $wait.AsyncWaitHandle.WaitOne(4000) -or -not $client.Connected) {
-            throw "Printer javob bermadi ($Ip`:$Port) — yoqilganini va tarmoqni tekshiring"
+            throw "Printer javob bermadi ($Ip`:$Port) - yoqilganini va tarmoqni tekshiring"
         }
         $client.EndConnect($wait)
         $stream = $client.GetStream()
@@ -117,7 +119,7 @@ while ($true) {
         $code = $null
         try { $code = [int]$_.Exception.Response.StatusCode } catch { }
         if ($code -eq 401) {
-            Log "Kalit bekor qilingan — panelda kompyuterni qayta ulang va yangi faylni yuklab oling."
+            Log "Kalit bekor qilingan - panelda kompyuterni qayta ulang va yangi faylni yuklab oling."
             Wait-Ms 60000
         } else {
             Log "Server bilan aloqa yo'q: $($_.Exception.Message)"
