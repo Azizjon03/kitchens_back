@@ -10,6 +10,7 @@ use App\Models\PrintAgent;
 use App\Models\PrintJob;
 use App\Models\Printer;
 use App\Services\KitchenService;
+use App\Services\Printing\EscPos;
 use App\Services\Printing\PrintService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -83,8 +84,9 @@ class PrinterController extends Controller
             '__SERVER__' => rtrim((string) config('app.url'), '/'),
             '__TOKEN__' => $token,
             '__VERSION__' => self::AGENT_VERSION,
-            '__COMPANY__' => str_replace(["\r", "\n"], ' ', (string) $company?->name),
-            '__AGENT__' => str_replace(["\r", "\n", "'"], ' ', $agent->name),
+            // Windows PowerShell 5.1 BOM'siz faylni ANSI deb o'qiydi — faqat ASCII
+            '__COMPANY__' => str_replace(["\r", "\n"], ' ', EscPos::ascii((string) $company?->name)),
+            '__AGENT__' => str_replace(["\r", "\n", "'", '"', '`', '$'], ' ', EscPos::ascii($agent->name)),
         ]);
 
         return $this->success(['agent' => $agent, 'script' => $script, 'filename' => 'kitchens-printer.ps1'], 201);
