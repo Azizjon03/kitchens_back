@@ -24,7 +24,7 @@ class PrinterController extends Controller
 {
     use ApiResponse, DefaultsToSingleBranch;
 
-    public const AGENT_VERSION = '1.1.0';
+    public const AGENT_VERSION = '1.2.0';
 
     public function index(): JsonResponse
     {
