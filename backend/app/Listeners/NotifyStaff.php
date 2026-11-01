@@ -29,11 +29,22 @@ class NotifyStaff
         $order->loadMissing(['table', 'customer', 'orderItems.menuItem', 'orderItems.addons']);
         $text = $this->orderText($order);
 
-        $chefs = $this->bot->recipients($order->company_id, ['chef'], $order->branch_id);
-        foreach ($chefs->pluck('telegram_id')->unique() as $chatId) {
-            $this->bot->queue($chatId, $text, ['reply_markup' => ['inline_keyboard' => [[
+        // #40: oshpazga faqat o'z bo'limi taomlari (bo'lim biriktirilmagan — hammasi)
+        $chefs = $this->bot->recipients($order->company_id, ['chef'], $order->branch_id)->load('kitchenStations:id');
+        $sent = [];
+        foreach ($chefs as $chef) {
+            if (isset($sent[$chef->telegram_id])) {
+                continue;
+            }
+            $stations = $chef->kitchenStations->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $chefText = $stations === [] ? $text : $this->orderText($order, $stations);
+            if ($chefText === null) {
+                continue; // bu buyurtmada uning bo'limi taomi yo'q
+            }
+            $this->bot->queue($chef->telegram_id, $chefText, ['reply_markup' => ['inline_keyboard' => [[
                 ['text' => '✅ Tayyor', 'callback_data' => "ready:{$order->id}"],
             ]]]]);
+            $sent[$chef->telegram_id] = true;
         }
 
         if ($order->customer_id) {
@@ -59,11 +70,19 @@ class NotifyStaff
         $this->bot->queue($waiter->telegram_id, "✅ <b>#{$order->id} tayyor</b> — {$where}. Olib boring.");
     }
 
-    private function orderText(Order $order): string
+    /**
+     * @param  array<int, int>|null  $stations  faqat shu bo'limlar taomlari; null — hammasi
+     */
+    private function orderText(Order $order, ?array $stations = null): ?string
     {
+        $items = $order->orderItems->reject(fn ($it) => $it->is_table_set)
+            ->filter(fn ($it) => $stations === null || in_array((int) $it->kitchen_station_id, $stations, true));
+        if ($items->isEmpty()) {
+            return null;
+        }
         $where = $order->table ? '🪑 Stol '.e((string) $order->table->number) : '📦 '.$this->typeName($order->type);
         $lines = ["🆕 <b>Buyurtma #{$order->id}</b> — {$where}"];
-        foreach ($order->orderItems as $it) {
+        foreach ($items as $it) {
             $qty = $it->weight_kg
                 ? rtrim(rtrim((string) $it->weight_kg, '0'), '.').' kg'
                 : rtrim(rtrim((string) $it->quantity, '0'), '.').' ta';

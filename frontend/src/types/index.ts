@@ -82,6 +82,8 @@ export interface MenuItem {
   id: number;
   company_id: number;
   category_id: number;
+  /** #40: oshxona bo'limi (null — kategoriya bo'yicha) */
+  kitchen_station_id?: number | null;
   category?: Category;
   name_uz: string;
   name_ru?: string;

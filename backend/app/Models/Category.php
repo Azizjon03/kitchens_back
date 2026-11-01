@@ -15,7 +15,7 @@ class Category extends Model
 
     protected $fillable = [
         'company_id', 'parent_id', 'catalog_category_id', 'name_uz', 'name_ru',
-        'icon', 'sort_order', 'is_active',
+        'icon', 'sort_order', 'is_active', 'kitchen_station_id',
     ];
 
     protected $casts = [
