@@ -45,6 +45,11 @@ class OrderController extends Controller
             $query->where('type', $request->type);
         }
 
+        // #43: ofitsiantning o'z buyurtmalari
+        if ($request->boolean('mine')) {
+            $query->where('user_id', $request->user()->id);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -173,6 +178,26 @@ class OrderController extends Controller
         OrderStatusUpdated::dispatch($order, $order->status);
 
         return $this->success($order);
+    }
+
+    /**
+     * #43: ofitsiant paneli — o'z buyurtmalari soni: hozir faol, tayyor, berilgan
+     * va bugun jami (bekor qilinganlarsiz).
+     */
+    public function myStats(Request $request): JsonResponse
+    {
+        $mine = Order::where('user_id', $request->user()->id);
+        $byStatus = (clone $mine)->whereIn('status', ['preparing', 'ready', 'served'])
+            ->selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
+        $today = (clone $mine)->whereDate('created_at', now()->toDateString())->where('status', '!=', 'cancelled');
+
+        return $this->success([
+            'preparing' => (int) ($byStatus['preparing'] ?? 0),
+            'ready' => (int) ($byStatus['ready'] ?? 0),
+            'served' => (int) ($byStatus['served'] ?? 0),
+            'today_count' => (clone $today)->count(),
+            'today_total' => (float) (clone $today)->sum('total'),
+        ]);
     }
 
     public function updateStatus(Request $request, Order $order, OrderService $orderService): JsonResponse

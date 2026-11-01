@@ -109,10 +109,12 @@ if (await free.count()) {
   tableNo = (await free.innerText()).match(/#(\S+)/)?.[1];
   await free.click();
   const dialog = p.locator('div.fixed.inset-0').last();
+  // #43: qoralama → tasdiqlash → yuborish
   await dialog.getByRole('button', { name: /Osh/ }).first().click();
+  await dialog.getByRole('button', { name: /^Buyurtma · / }).click();
   const [resp] = await Promise.all([
     p.waitForResponse((r) => r.url().endsWith('/api/v1/orders') && r.request().method() === 'POST'),
-    dialog.getByRole('button', { name: /Buyurtma berish/ }).click(),
+    dialog.getByRole('button', { name: /Tasdiqlash va yuborish/ }).click(),
   ]);
   log(resp.status() === 201, `Ofitsiant: stol #${tableNo} ga buyurtma berdi (HTTP ${resp.status()})`);
   var orderId = (await resp.json()).data?.id;

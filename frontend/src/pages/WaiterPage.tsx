@@ -4,351 +4,20 @@ import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
-import type { Branch, Table, Order, Category, MenuItem } from '../types';
+import type { Branch, Table, Order } from '../types';
 import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import TableSetModal from '../components/TableSetModal';
+import OrderComposer from '../components/OrderComposer';
+import { hasDraft } from '../lib/waiterDraft';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
-import { Plus, Minus, X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
+import { X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
-import { buildMenuTree } from '../lib/menuTree';
 
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
-
-interface CartLine {
-  key: string;
-  item: MenuItem;
-  quantity: number;
-  weight_kg?: number;
-  modifier_ids: number[];
-  addon_ids: number[];
-}
-
-// ─── Order composer (create order on a table) ────────────────────
-
-function OrderComposer({
-  table,
-  branchId,
-  onClose,
-}: {
-  table: Table;
-  branchId: number;
-  onClose: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [cart, setCart] = useState<CartLine[]>([]);
-  // Ikki darajali menyu (#23): kategoriya → sub-menyu → taomlar
-  const [activeTop, setActiveTop] = useState<number | null>(null);
-  const [activeSub, setActiveSub] = useState<number | null>(null);
-  const [error, setError] = useState('');
-
-  const {
-    data: categories = [],
-    isLoading: menuLoading,
-    isError: menuFailed,
-    error: menuError,
-    refetch: refetchMenu,
-  } = useQuery<Category[]>({
-    queryKey: ['pos-menu'],
-    queryFn: async () => {
-      const res = await api.get('/pos/menu');
-      const payload = res.data.data;
-      return (payload?.data ?? payload ?? []) as Category[];
-    },
-  });
-
-  const tree = useMemo(() => buildMenuTree<MenuItem>(categories), [categories]);
-  // Tanlov yo'q yoki eskirgan bo'lsa — birinchi kategoriya / birinchi sub-menyu
-  const topNode = tree.find((n) => n.category.id === activeTop) ?? tree[0];
-  const subCat = topNode?.children.find((c) => c.id === activeSub) ?? topNode?.children[0];
-
-  const addItem = (item: MenuItem) => {
-    setCart((prev) => [
-      ...prev,
-      {
-        key: `${item.id}-${Date.now()}-${Math.round(prev.length)}`,
-        item,
-        quantity: 1,
-        weight_kg: item.sell_type === 'weight' ? Number(item.min_weight) || 0.3 : undefined,
-        modifier_ids: [],
-        addon_ids: [],
-      },
-    ]);
-  };
-
-  const updateLine = (key: string, patch: Partial<CartLine>) =>
-    setCart((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
-
-  const removeLine = (key: string) => setCart((prev) => prev.filter((l) => l.key !== key));
-
-  const toggleId = (line: CartLine, field: 'modifier_ids' | 'addon_ids', id: number) => {
-    const set = new Set(line[field]);
-    if (set.has(id)) set.delete(id);
-    else set.add(id);
-    updateLine(line.key, { [field]: Array.from(set) } as Partial<CartLine>);
-  };
-
-  const lineTotal = (l: CartLine) => {
-    const base = l.item.sell_type === 'weight'
-      ? Number(l.item.price) * (l.weight_kg || 0)
-      : Number(l.item.price) * l.quantity;
-    const addonsList = l.item.addons ?? [];
-    const addonSum = l.addon_ids.reduce(
-      (s, id) => s + Number(addonsList.find((a) => a.id === id)?.price ?? 0),
-      0,
-    );
-    return base + addonSum * l.quantity;
-  };
-
-  const total = cart.reduce((s, l) => s + lineTotal(l), 0);
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        branch_id: branchId,
-        table_id: table.id,
-        type: 'dine_in',
-        items: cart.map((l) => ({
-          menu_item_id: l.item.id,
-          quantity: l.quantity,
-          weight_kg: l.item.sell_type === 'weight' ? l.weight_kg : null,
-          modifier_ids: l.modifier_ids,
-          addon_ids: l.addon_ids,
-        })),
-      };
-      return (await api.post('/orders', payload)).data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['waiter-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['waiter-tables'] });
-      onClose();
-    },
-    onError: (err: unknown) => {
-      setError(apiErrorMessage(err));
-    },
-  });
-
-  const activeItems = subCat?.menu_items ?? [];
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Stol #{table.number} — yangi buyurtma</h2>
-          <button
-            onClick={onClose}
-            aria-label="Oynani yopish"
-            className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden">
-          {/* Menu */}
-          <div className="border-r border-gray-100 flex flex-col overflow-hidden">
-            <div className="border-b border-gray-100">
-              <div className="flex gap-1 p-2 overflow-x-auto" role="tablist" aria-label="Kategoriyalar">
-                {tree.map(({ category: c }) => {
-                  const active = topNode?.category.id === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      role="tab"
-                      aria-selected={active}
-                      onClick={() => {
-                        setActiveTop(c.id);
-                        setActiveSub(null);
-                      }}
-                      className={`min-h-11 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${
-                        active ? 'bg-amber-700 text-white' : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {c.name_uz}
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Sub-menyular: kategoriyada bittadan ko'p bo'lsa ko'rsatiladi */}
-              {topNode && topNode.children.length > 1 && (
-                <div className="flex gap-1 px-2 pb-2 overflow-x-auto" role="tablist" aria-label="Sub-menyular">
-                  {topNode.children.map((c) => {
-                    const active = subCat?.id === c.id;
-                    return (
-                      <button
-                        key={c.id}
-                        role="tab"
-                        aria-selected={active}
-                        onClick={() => setActiveSub(c.id)}
-                        className={`min-h-11 px-3 py-2 rounded-full text-sm whitespace-nowrap border ${
-                          active
-                            ? 'bg-amber-50 border-amber-600 text-amber-800 font-medium'
-                            : 'bg-white border-gray-300 text-gray-700'
-                        }`}
-                      >
-                        {c.name_uz}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {menuLoading && <LoadingState label="Menyu yuklanmoqda..." />}
-              {menuFailed && (
-                <ErrorState error={menuError} onRetry={() => refetchMenu()} title="Menyuni yuklab bo'lmadi" />
-              )}
-              {activeItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => addItem(item)}
-                  className="w-full min-h-11 flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-amber-50 text-left"
-                >
-                  <span className="text-base text-gray-900">{item.name_uz}</span>
-                  <span className="text-sm text-gray-600 tabular-nums">
-                    {formatMoney(Number(item.price))}
-                    {item.sell_type === 'weight' ? '/kg' : ''}
-                  </span>
-                </button>
-              ))}
-              {!menuLoading && !menuFailed && activeItems.length === 0 && (
-                <p className="text-sm text-gray-500 p-4 text-center">{tree.length === 0 ? "Menyuda hali taom yo'q — admin \"Menyu\" bo'limida taom qo'shadi" : "Bu bo'limda taom yo'q"}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Cart */}
-          <div className="flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto p-3 space-y-3">
-              {cart.length === 0 && (
-                <p className="text-sm text-gray-500 text-center py-8">Savat bo'sh</p>
-              )}
-              {cart.map((l) => (
-                <div key={l.key} className="border border-gray-200 rounded-lg p-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-900">{l.item.name_uz}</span>
-                    <button
-                      onClick={() => removeLine(l.key)}
-                      aria-label={`${l.item.name_uz} — savatdan olib tashlash`}
-                      className="min-h-11 min-w-11 -m-2 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-
-                  {l.item.sell_type === 'weight' ? (
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        type="number"
-                        step={Number(l.item.weight_step) || 0.1}
-                        min={Number(l.item.min_weight) || 0.1}
-                        value={l.weight_kg ?? ''}
-                        onChange={(e) => updateLine(l.key, { weight_kg: Number(e.target.value) })}
-                        aria-label="Vazn, kg"
-                        className="w-24 h-11 px-3 border border-gray-300 rounded-lg text-base focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                      />
-                      <span className="text-sm text-gray-600">kg</span>
-                    </div>
-                  ) : (
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          updateLine(l.key, { quantity: Math.max(0.1, Math.round((l.quantity - 1) * 100) / 100) })
-                        }
-                        aria-label="Miqdorni kamaytirish"
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        <Minus size={18} />
-                      </button>
-                      <input
-                        type="number"
-                        step={0.1}
-                        min={0.1}
-                        value={l.quantity}
-                        onChange={(e) =>
-                          updateLine(l.key, { quantity: Math.max(0.1, parseFloat(e.target.value) || 0.1) })
-                        }
-                        aria-label="Miqdor"
-                        className="w-16 h-11 text-base text-center border border-gray-300 rounded-lg"
-                      />
-                      <button
-                        onClick={() =>
-                          updateLine(l.key, { quantity: Math.round((l.quantity + 1) * 100) / 100 })
-                        }
-                        aria-label="Miqdorni oshirish"
-                        className="min-h-11 min-w-11 inline-flex items-center justify-center border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        <Plus size={18} />
-                      </button>
-                    </div>
-                  )}
-
-                  {(l.item.modifiers ?? []).length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {(l.item.modifiers ?? []).map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => toggleId(l, 'modifier_ids', m.id)}
-                          className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
-                            l.modifier_ids.includes(m.id)
-                              ? 'bg-amber-700 text-white border-amber-700'
-                              : 'bg-white text-gray-600 border-gray-200'
-                          }`}
-                        >
-                          {m.name_uz}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {(l.item.addons ?? []).length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {(l.item.addons ?? []).map((a) => (
-                        <button
-                          key={a.id}
-                          onClick={() => toggleId(l, 'addon_ids', a.id)}
-                          className={`min-h-11 px-3 py-2 rounded-lg text-sm border ${
-                            l.addon_ids.includes(a.id)
-                              ? 'bg-amber-700 text-white border-amber-700'
-                              : 'bg-white text-gray-600 border-gray-200'
-                          }`}
-                        >
-                          + {a.name_uz} ({formatMoney(Number(a.price))})
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-1 text-right text-xs font-medium text-gray-700">
-                    {formatMoney(lineTotal(l))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t border-gray-200 p-3 space-y-2">
-              {error && <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{error}</div>}
-              <div className="flex items-center justify-between text-sm font-semibold">
-                <span>Jami</span>
-                <span>{formatMoney(total)}</span>
-              </div>
-              <button
-                onClick={() => mutation.mutate()}
-                disabled={cart.length === 0 || mutation.isPending}
-                className="w-full min-h-12 px-4 py-3 bg-amber-700 text-white rounded-lg text-base font-medium hover:bg-amber-800 disabled:opacity-50"
-              >
-                {mutation.isPending ? 'Yuborilmoqda...' : 'Buyurtma berish'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Page ────────────────────────────────────────────────────────
 
@@ -381,12 +50,19 @@ const TYPE_LABELS: Record<string, string> = {
 export default function WaiterPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [branchId, setBranchId] = useState<number | null>(user?.branch_id ?? null);
+  const [pickedBranch, setBranchId] = useState<number | null>(user?.branch_id ?? null);
   const [composerTable, setComposerTable] = useState<Table | null>(null);
   const [alerts, setAlerts] = useState<{ id: number; label: string }[]>([]);
   const [actionError, setActionError] = useState('');
   // Stol to'plami (#24): stoldagi narsalardan ochilganini belgilash
   const [tableSetOrder, setTableSetOrder] = useState<Order | null>(null);
+  // #43: ofitsiant avval o'z buyurtmalarini ko'radi
+  const [scope, setScope] = useState<'mine' | 'all'>(user?.role === 'waiter' ? 'mine' : 'all');
+
+  const { data: stats } = useQuery<{ preparing: number; ready: number; served: number; today_count: number; today_total: number }>({
+    queryKey: ['waiter-stats'],
+    queryFn: async () => (await api.get('/orders/my-stats')).data.data,
+  });
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -397,9 +73,8 @@ export default function WaiterPage() {
     },
   });
 
-  useEffect(() => {
-    if (branchId === null && branches.length > 0) setBranchId(branches[0].id);
-  }, [branches, branchId]);
+  // Tanlanmagan bo'lsa — birinchi filial
+  const branchId = pickedBranch ?? branches[0]?.id ?? null;
 
   const {
     data: tables = [],
@@ -462,10 +137,12 @@ export default function WaiterPage() {
         } catch { /* ignore */ }
       }
       queryClient.invalidateQueries({ queryKey: ['waiter-orders', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['waiter-stats'] });
     });
 
     channel.listen('.order.created', () => {
       queryClient.invalidateQueries({ queryKey: ['waiter-orders', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['waiter-stats'] });
     });
 
     return () => {
@@ -478,6 +155,7 @@ export default function WaiterPage() {
     onSuccess: () => {
       setActionError('');
       queryClient.invalidateQueries({ queryKey: ['waiter-orders', branchId] });
+      queryClient.invalidateQueries({ queryKey: ['waiter-stats'] });
     },
     // Xato jim yutilmaydi: ofitsiant "Berildi" o'tmaganini ko'rishi shart (#6)
     onError: (err) => setActionError(apiErrorMessage(err, "Buyurtmani 'Berildi' qilib bo'lmadi")),
@@ -488,12 +166,12 @@ export default function WaiterPage() {
 
   const sortedOrders = useMemo(
     () =>
-      [...orders].sort(
+      orders.filter((o) => scope === 'all' || o.user_id === user?.id).sort(
         (a, b) =>
           (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) ||
           (a.created_at ?? '').localeCompare(b.created_at ?? ''),
       ),
-    [orders],
+    [orders, scope, user?.id],
   );
 
   return (
@@ -545,6 +223,24 @@ export default function WaiterPage() {
         </div>
       )}
 
+      {/* #43: mening ishim — bir qarashda */}
+      {stats && (
+        <dl className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="Mening buyurtmalarim">
+          {[
+            { label: 'Tayyorlanmoqda', value: stats.preparing, cls: 'text-amber-800' },
+            { label: 'Tayyor — olib boring', value: stats.ready, cls: stats.ready > 0 ? 'text-blue-800' : 'text-gray-900' },
+            { label: 'Berilgan, to\'lanmagan', value: stats.served, cls: 'text-purple-800' },
+            { label: 'Bugun jami', value: stats.today_count, sub: formatMoney(stats.today_total), cls: 'text-gray-900' },
+          ].map((c) => (
+            <div key={c.label} className="rounded-xl border border-gray-200 bg-white px-4 py-3">
+              <dt className="text-xs font-medium text-gray-600">{c.label}</dt>
+              <dd className={`text-2xl font-bold tabular-nums ${c.cls}`}>{c.value}</dd>
+              {c.sub && <dd className="text-xs text-gray-600 tabular-nums">{c.sub}</dd>}
+            </div>
+          ))}
+        </dl>
+      )}
+
       {/* Tables */}
       <h2 className="text-sm font-semibold text-gray-500 mb-2">Stollar</h2>
       <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mb-8">
@@ -565,6 +261,7 @@ export default function WaiterPage() {
             >
               #{t.number}
               <span className="text-xs font-medium">{TABLE_STATUS_LABELS[t.status] ?? t.status}</span>
+              {isFree && hasDraft(t.id) && <span className="mt-0.5 rounded bg-amber-600 px-1.5 text-[11px] font-semibold text-white">qoralama</span>}
             </button>
           );
         })}
@@ -595,7 +292,17 @@ export default function WaiterPage() {
       )}
 
       {/* Active orders */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2">Faol buyurtmalar</h2>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-gray-500">Faol buyurtmalar</h2>
+        <div className="inline-flex rounded-lg border border-gray-300 p-0.5" role="group" aria-label="Qaysi buyurtmalar">
+          {(['mine', 'all'] as const).map((v) => (
+            <button key={v} type="button" aria-pressed={scope === v} onClick={() => setScope(v)}
+              className={`min-h-10 px-3 rounded-md text-sm font-medium ${scope === v ? 'bg-amber-700 text-white' : 'text-gray-700'}`}>
+              {v === 'mine' ? 'Mening' : 'Hammasi'}
+            </button>
+          ))}
+        </div>
+      </div>
       {ordersLoading ? (
         <LoadingState label="Buyurtmalar yuklanmoqda..." />
       ) : ordersFailed ? (
@@ -603,7 +310,7 @@ export default function WaiterPage() {
       ) : sortedOrders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-500">
           <ClipboardList size={36} className="text-gray-300 mx-auto mb-2" aria-hidden="true" />
-          <p className="font-medium text-gray-800">Faol buyurtma yo'q</p>
+          <p className="font-medium text-gray-800">{scope === 'mine' ? "Sizda faol buyurtma yo'q" : "Faol buyurtma yo'q"}</p>
           <p className="mt-1">Yuqoridan bo'sh stolni bosing va buyurtma oling.</p>
         </div>
       ) : (
@@ -620,6 +327,17 @@ export default function WaiterPage() {
                   {STATUS_MAP[o.status]?.label ?? o.status}
                 </span>
               </div>
+              {(o.order_items?.length ?? 0) > 0 && (
+                <ul className="mb-2 text-sm text-gray-800 space-y-0.5">
+                  {o.order_items!.filter((it) => !(it as { is_table_set?: boolean }).is_table_set).map((it) => (
+                    <li key={it.id} className="flex justify-between gap-2">
+                      <span className="truncate">{it.menu_item?.name_uz ?? 'Taom'}</span>
+                      <span className="tabular-nums text-gray-600 whitespace-nowrap">{it.weight_kg ? `${Number(it.weight_kg)} kg` : `${Number(it.quantity)} ta`}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {scope === 'all' && o.user && <p className="mb-1 text-xs text-gray-600">Ofitsiant: {o.user.name || o.user.full_name}</p>}
               <div className={`flex items-center justify-between text-sm ${(o.status === 'ready' && o.type === 'dine_in') || o.table?.table_template_id ? 'mb-3' : ''}`}>
                 <span className="text-gray-500 tabular-nums">{formatTime(o.created_at)}</span>
                 <span className="font-medium text-gray-900 tabular-nums">{formatMoney(Number(o.total))}</span>

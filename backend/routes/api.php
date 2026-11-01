@@ -137,6 +137,7 @@ Route::prefix('v1')->group(function () {
         // Orders - read + status transitions (chef included for the kitchen display)
         Route::middleware(['company.active', 'role:company_admin,manager,waiter,cashier,chef'])->group(function () {
             Route::get('orders', [OrderController::class, 'index']);
+            Route::get('orders/my-stats', [OrderController::class, 'myStats']); // #43
             Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
             // #40: oshxona bo'limlari — oshpaz o'z bo'limi taomlarini tayyor qiladi
