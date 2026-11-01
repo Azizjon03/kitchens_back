@@ -24,13 +24,14 @@ class PrinterController extends Controller
 {
     use ApiResponse, DefaultsToSingleBranch;
 
-    public const AGENT_VERSION = '1.0.0';
+    public const AGENT_VERSION = '1.1.0';
 
     public function index(): JsonResponse
     {
         return $this->success([
             'printers' => Printer::orderBy('name')->get(),
             'agents' => PrintAgent::orderBy('id')->get(),
+            'latest_agent_version' => self::AGENT_VERSION,
             'recent_jobs' => PrintJob::with('printer:id,name')->latest('id')->limit(15)
                 ->get(['id', 'printer_id', 'order_id', 'kind', 'status', 'error', 'attempts', 'created_at', 'printed_at']),
         ]);
