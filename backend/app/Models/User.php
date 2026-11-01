@@ -45,6 +45,12 @@ class User extends Authenticatable
         return $this->belongsTo(Company::class);
     }
 
+    /** #40: oshpaz biriktirilgan oshxona bo'limlari (bo'sh — hammasini ko'radi) */
+    public function kitchenStations(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(KitchenStation::class);
+    }
+
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

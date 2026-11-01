@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\TableTemplateController;
 use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\KitchenStationController;
 use App\Http\Controllers\Api\V1\StaffTelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\StaffBotController as SuperStaffBotController;
 use Illuminate\Support\Facades\Route;
@@ -108,6 +109,8 @@ Route::prefix('v1')->group(function () {
             Route::middleware('role:company_admin,manager')->group(function () {
                 Route::patch('categories/reorder', [CategoryController::class, 'reorder']);
                 Route::apiResource('categories', CategoryController::class);
+                Route::get('kitchen-stations/chefs', [KitchenStationController::class, 'chefs']); // #40
+                Route::apiResource('kitchen-stations', KitchenStationController::class)->except(['index', 'show']);
                 Route::patch('menu-items/{menuItem}/availability', [MenuItemController::class, 'toggleAvailability']);
                 Route::post('menu-items/{menuItem}/image', [MediaController::class, 'uploadMenuItem'])->middleware('throttle:30,1,media');
                 Route::delete('menu-items/{menuItem}/image', [MediaController::class, 'deleteMenuItem']);
@@ -136,6 +139,9 @@ Route::prefix('v1')->group(function () {
             Route::get('orders', [OrderController::class, 'index']);
             Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
+            // #40: oshxona bo'limlari — oshpaz o'z bo'limi taomlarini tayyor qiladi
+            Route::get('kitchen-stations', [KitchenStationController::class, 'index']);
+            Route::patch('orders/{order}/kitchen-ready', [OrderController::class, 'kitchenReady']);
         });
 
         // Orders - write actions (no chef)

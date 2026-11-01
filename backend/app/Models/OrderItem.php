@@ -14,15 +14,22 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'menu_item_id', 'quantity', 'weight_kg',
         'unit_price', 'total_price', 'note', 'is_table_set',
+        'kitchen_station_id', 'ready_at',
     ];
 
     protected $casts = [
+        'ready_at' => 'datetime',
         'quantity' => 'decimal:2',
         'weight_kg' => 'decimal:3',
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'is_table_set' => 'boolean',
     ];
+
+    public function station(): BelongsTo
+    {
+        return $this->belongsTo(KitchenStation::class, 'kitchen_station_id');
+    }
 
     public function order(): BelongsTo
     {

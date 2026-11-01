@@ -80,8 +80,20 @@ export const GUIDES = {
     steps: [
       "Yangi buyurtma kartochkasi chiqadi — eng eskisi birinchi turadi.",
       "Taom tayyor bo'lsa — kartochkadagi «Tayyor» tugmasini bosing.",
+      "Oshxona bo'limlarga bo'lingan bo'lsa (kabob, somsa, osh) — tepada o'z bo'limingizni tanlang: faqat o'z taomlaringiz chiqadi.",
       "Ofitsiant darhol xabar oladi va taomni olib ketadi.",
       "Ekranni oshxonadagi planshet yoki televizorda ochiq qoldiring.",
+    ],
+  },
+  kitchenStations: {
+    title: "Oshxona bo'limlari nima uchun?",
+    intro: "Oshxona bir necha joyda bo'lsa (kabob tashqarida, somsa va salat alohida, osh ichkarida), har oshpaz faqat o'z taomlarini ko'radi va o'zi «Tayyor» qiladi.",
+    steps: [
+      "«Yangi bo'lim» ni bosing va nom bering: Kabob, Somsa, Salatlar, Osh...",
+      "Qaysi menyu bo'limlari shu yerda tayyorlanishini belgilang.",
+      "Shu bo'limda ishlaydigan oshpazlarni belgilang.",
+      "Boshqa joyda pishadigan taomni (masalan, tandir non) taom oynasida alohida bo'limga o'tkazing.",
+      "Hamma bo'limlar «Tayyor» bosgandan keyin ofitsiantga xabar ketadi.",
     ],
   },
   cashShifts: {

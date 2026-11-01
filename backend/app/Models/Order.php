@@ -100,7 +100,7 @@ class Order extends Model
      */
     public function toBroadcastArray(): array
     {
-        $this->loadMissing(['table', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons']);
+        $this->loadMissing(['table', 'orderItems.menuItem', 'orderItems.modifiers', 'orderItems.addons', 'orderItems.station']);
 
         // NB: inside the model `$this->table` is the protected table-name string,
         // so the relation must be read via getRelationValue().
@@ -127,6 +127,10 @@ class Order extends Model
                 'quantity' => $item->quantity,
                 'weight_kg' => $item->weight_kg,
                 'note' => $item->note,
+                // #40: oshxona bo'limi va qator holati
+                'station_id' => $item->kitchen_station_id,
+                'station' => $item->getRelationValue('station')?->name,
+                'ready_at' => optional($item->ready_at)->toIso8601String(),
                 'modifiers' => $item->modifiers->map(fn (Modifier $m) => [
                     'id' => $m->id,
                     'name_uz' => $m->name_uz,

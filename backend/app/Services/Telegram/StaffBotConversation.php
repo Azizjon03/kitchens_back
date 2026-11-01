@@ -2,12 +2,11 @@
 
 namespace App\Services\Telegram;
 
-use App\Events\OrderStatusUpdated;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\KitchenService;
 use App\Services\Reports\DailyReport;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * #37: xodimlar boti suhbati.
@@ -30,6 +29,7 @@ class StaffBotConversation
         private StaffBot $bot,
         private TelegramVerification $verification,
         private DailyReport $report,
+        private KitchenService $kitchen,
     ) {
     }
 
@@ -110,26 +110,17 @@ class StaffBotConversation
             return;
         }
 
-        $previous = null;
-        DB::transaction(function () use ($order, &$previous) {
-            $locked = Order::withoutGlobalScopes()->lockForUpdate()->find($order->id);
-            $previous = $locked->status;
-            if ($locked->status === 'preparing') {
-                $locked->update(['status' => 'ready']);
-            }
-        });
+        // #40: bo'limga biriktirilgan oshpaz — faqat o'z bo'limi taomlari
+        $result = $this->kitchen->markReady($order, $this->kitchen->stationsOf($user));
 
-        if ($previous !== 'preparing') {
-            $this->answer($cb, "Buyurtma allaqachon «{$previous}» holatida.");
+        if ($result['previous'] !== 'preparing') {
+            $this->answer($cb, "Buyurtma allaqachon «{$result['previous']}» holatida.");
             $this->markMessage($cb, '✅ Tayyor (oldin belgilangan)');
 
             return;
         }
 
-        $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
-        OrderStatusUpdated::dispatch($order, 'preparing');
-
-        $this->answer($cb, '✅ Tayyor deb belgilandi');
+        $this->answer($cb, $result['order_ready'] ? '✅ Buyurtma tayyor' : '✅ Sizning qismingiz tayyor');
         $this->markMessage($cb, '✅ Tayyor — '.e($user->name));
     }
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\DefaultsToSingleBranch;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\MenuService;
+use App\Services\KitchenService;
 use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -235,8 +236,16 @@ class OrderController extends Controller
             );
         }
 
+        // #40: bo'limga biriktirilgan oshpaz faqat o'z qismini belgilaydi
+        if ($newStatus === 'ready' && app(KitchenService::class)->stationsOf($request->user()) !== null) {
+            return $this->kitchenReady($request->merge(['station_id' => null]), $order, app(KitchenService::class));
+        }
+
         DB::transaction(function () use ($order, $newStatus, $orderService) {
             $order->update(['status' => $newStatus]);
+            if ($newStatus === 'ready') {
+                $order->orderItems()->whereNull('ready_at')->update(['ready_at' => now()]); // #40
+            }
 
             if (in_array($newStatus, OrderService::TERMINAL_STATUSES, true)) {
                 $orderService->releaseTableIfIdle($order);
@@ -248,6 +257,30 @@ class OrderController extends Controller
         OrderStatusUpdated::dispatch($order, $currentStatus);
 
         return $this->success($order);
+    }
+
+    /**
+     * #40: oshxona bo'limi taomlari tayyor. Bo'limga biriktirilgan oshpaz — faqat o'z
+     * bo'limlari; boshqalar station_id bilan bitta bo'limni yoki hammasini belgilaydi.
+     * Barcha bo'limlar tayyor bo'lganda buyurtma «ready» bo'ladi.
+     */
+    public function kitchenReady(Request $request, Order $order, KitchenService $kitchen): JsonResponse
+    {
+        $data = $request->validate(['station_id' => 'nullable|integer']);
+        $mine = $kitchen->stationsOf($request->user());
+        $stationId = isset($data['station_id']) ? (int) $data['station_id'] : null;
+
+        if ($stationId !== null && $mine !== null && ! in_array($stationId, $mine, true)) {
+            return $this->error('FORBIDDEN', 'Bu bo\'lim sizga biriktirilmagan.', 403);
+        }
+        $stations = $stationId !== null ? [$stationId] : $mine;
+
+        $result = $kitchen->markReady($order, $stations);
+        if ($result['previous'] !== 'preparing') {
+            return $this->error('INVALID_STATUS_TRANSITION', "Buyurtma allaqachon «{$result['previous']}» holatida.", 422);
+        }
+
+        return $this->success($order->fresh()->toBroadcastArray());
     }
 
     public function cancel(Request $request, Order $order, OrderService $orderService): JsonResponse

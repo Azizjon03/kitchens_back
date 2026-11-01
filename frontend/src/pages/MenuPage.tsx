@@ -309,6 +309,12 @@ function MenuItemModal({
     cooking_time: item?.cooking_time?.toString() || '',
     is_available: item?.is_available ?? true,
     is_popular: item?.is_popular ?? false,
+    kitchen_station_id: item?.kitchen_station_id ?? null,
+  });
+  // #40: oshxona bo'limlari (yaratilmagan bo'lsa maydon ko'rinmaydi)
+  const { data: stations = [] } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ['kitchen-stations'],
+    queryFn: async () => (await api.get('/kitchen-stations')).data.data,
   });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -421,6 +427,23 @@ function MenuItemModal({
             </select>
             {fieldError('category_id')}
           </div>
+
+          {stations.length > 0 && (
+            <div>
+              <label htmlFor="item-station" className="block text-sm font-medium text-gray-700 mb-1">Oshxona bo'limi</label>
+              <select
+                id="item-station"
+                value={form.kitchen_station_id ?? ''}
+                onChange={(e) => setForm((p) => ({ ...p, kitchen_station_id: e.target.value ? Number(e.target.value) : null }))}
+                className={inputClass}
+              >
+                <option value="">Sub-menyu bo'limi bo'yicha</option>
+                {stations.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-gray-600">Masalan, non tandirda pishsa — «Kabob» bo'limini tanlang.</p>
+              {fieldError('kitchen_station_id')}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>

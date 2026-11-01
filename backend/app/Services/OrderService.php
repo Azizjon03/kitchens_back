@@ -171,6 +171,7 @@ class OrderService
                 'unit_price' => $this->decimal($menuItem->price, 2),
                 'total_price' => $line['total_price'],
                 'note' => $itemData['note'] ?? null,
+                'kitchen_station_id' => app(KitchenService::class)->stationFor($menuItem), // #40
             ]);
 
             foreach ($modifiers as $modifier) {

@@ -51,6 +51,7 @@ class MenuItemController extends Controller
 
         $data = $request->validate([
             'category_id' => ['required', $this->existsInCompany('categories', $companyId)],
+            'kitchen_station_id' => ['nullable', $this->existsInCompany('kitchen_stations', $companyId)], // #40
             'name_uz' => 'required|string|max:255',
             'name_ru' => 'required|string|max:255',
             'description_uz' => 'nullable|string',
@@ -99,6 +100,7 @@ class MenuItemController extends Controller
 
         $data = $request->validate([
             'category_id' => ['sometimes', $this->existsInCompany('categories', $companyId)],
+            'kitchen_station_id' => ['nullable', $this->existsInCompany('kitchen_stations', $companyId)], // #40
             'name_uz' => 'sometimes|string|max:255',
             'name_ru' => 'sometimes|string|max:255',
             'description_uz' => 'nullable|string',

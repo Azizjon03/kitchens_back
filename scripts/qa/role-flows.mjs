@@ -22,13 +22,13 @@ const log = (ok, m) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAI
 
 const PAGES = {
   '/dashboard': 'Dashboard', '/menu': 'Menyu', '/modifiers': "Qo'shimchalar", '/tables': 'Stollar',
-  '/waiter': 'Ofitsiant', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/cash-shifts': 'Kassa',
+  '/waiter': 'Ofitsiant', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/kitchen-stations': "Oshxona bo'limlari", '/cash-shifts': 'Kassa',
   '/staff': 'Xodimlar', '/branches': 'Filiallar', '/public-page': 'Restoran sahifasi', '/telegram-bot': 'Telegram bot',
 };
 // Layout.tsx allNav va App.tsx requiredRole dan
 const NAV = {
-  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/cash-shifts', '/staff', '/public-page', '/branches', '/telegram-bot'],
-  manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen'],
+  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/kitchen-stations', '/cash-shifts', '/staff', '/public-page', '/branches', '/telegram-bot'],
+  manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/orders', '/kitchen', '/kitchen-stations'],
   waiter: ['/tables', '/waiter', '/orders'],
   chef: ['/kitchen'],
   cashier: ['/orders', '/cash-shifts'],
@@ -126,11 +126,12 @@ if (await free.count()) {
 if (orderId) {
   const chef = await session('chef', { width: 1920, height: 1080 });
   await chef.page.goto(`${BASE}/kitchen`);
-  const card = chef.page.locator('div.rounded-xl.border-2', { hasText: `#${orderId}` });
+  // Aniq "#ID" — "Stol #778" kabi matnlarga mos kelmasin
+  const card = chef.page.locator('div.rounded-xl.border-2', { has: chef.page.getByText(`#${orderId}`, { exact: true }) });
   await card.waitFor({ timeout: 8000 }).catch(() => {});
   log(await card.count() === 1, `Oshpaz: buyurtma #${orderId} KDS da`);
   const [r] = await Promise.all([
-    chef.page.waitForResponse((x) => x.url().includes(`/orders/${orderId}/status`)),
+    chef.page.waitForResponse((x) => x.url().includes(`/orders/${orderId}/kitchen-ready`)),
     card.getByRole('button', { name: /Tayyor/ }).click(),
   ]);
   log(r.status() === 200, `Oshpaz: "Tayyor" (HTTP ${r.status()})`);

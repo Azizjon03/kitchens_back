@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
@@ -29,6 +29,16 @@ interface KdsItem {
   note?: string | null;
   modifiers: KdsModifier[];
   addons: KdsModifier[];
+  /** #40: oshxona bo'limi va qator holati */
+  station_id?: number | null;
+  ready_at?: string | null;
+}
+
+interface Station {
+  id: number;
+  name: string;
+  is_active: boolean;
+  users: { id: number; name: string }[];
 }
 
 interface KdsOrder {
@@ -84,17 +94,30 @@ function OrderCard({
   now,
   onReady,
   isPending,
+  visible,
+  stationNames,
 }: {
   order: KdsOrder;
   now: number;
   onReady: (id: number) => void;
   isPending: boolean;
+  /** #40: ko'rsatiladigan bo'limlar; null — hammasi */
+  visible: number[] | null;
+  stationNames: Map<number, string>;
 }) {
   void now; // re-render trigger for elapsed time
   const mins = minutesSince(order.created_at);
+  const mine = order.items.filter((i) => visible === null || visible.includes(i.station_id ?? -1));
+  const others = order.items.filter((i) => !mine.includes(i));
+  // Mening qismim tayyor — buyurtma boshqa bo'limlarni kutayotgan bo'lsa ham
+  const myDone = order.status === 'ready' || (mine.length > 0 && mine.every((i) => i.ready_at));
+  const otherStations = [...new Set(others.map((i) => i.station_id ?? 0))].map((sid) => ({
+    name: stationNames.get(sid) ?? "Bo'limsiz",
+    done: others.filter((i) => (i.station_id ?? 0) === sid).every((i) => i.ready_at),
+  }));
 
   const border =
-    order.status === 'ready'
+    myDone
       ? 'border-blue-400'
       : mins > 15
         ? 'border-red-500'
@@ -103,7 +126,7 @@ function OrderCard({
           : 'border-green-500';
 
   const headerBg =
-    order.status === 'ready'
+    myDone
       ? 'bg-blue-50 text-blue-700'
       : mins > 15
         ? 'bg-red-50 text-red-700'
@@ -126,10 +149,16 @@ function OrderCard({
       </div>
 
       <div className="flex-1 p-3 2xl:p-4 space-y-2">
-        {order.items.map((item) => (
+        {mine.map((item) => (
           <div key={item.id} className="text-base 2xl:text-lg">
-            <div className="flex justify-between font-medium text-gray-900">
-              <span>{item.name_uz || item.name_ru}</span>
+            <div className={`flex justify-between font-medium ${item.ready_at && order.status === 'preparing' ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+              <span>
+                {item.ready_at && order.status === 'preparing' && <Check size={16} className="inline mr-1 text-green-700" aria-label="Tayyor" />}
+                {item.name_uz || item.name_ru}
+                {visible === null && item.station_id && stationNames.size > 0 && (
+                  <span className="ml-2 align-middle rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700 no-underline">{stationNames.get(item.station_id)}</span>
+                )}
+              </span>
               <span className="ml-2 whitespace-nowrap">
                 {item.weight_kg ? `${item.weight_kg} kg` : `× ${Number(item.quantity)}`}
               </span>
@@ -159,6 +188,17 @@ function OrderCard({
             {item.note && <div className="mt-0.5 text-sm italic text-gray-700">“{item.note}”</div>}
           </div>
         ))}
+        {otherStations.length > 0 && order.status === 'preparing' && (
+          <div className="text-sm text-gray-700 border-t border-gray-100 pt-2">
+            Boshqa bo'limlar:{' '}
+            {otherStations.map((st, i) => (
+              <span key={st.name}>
+                {i > 0 && ', '}
+                {st.name} {st.done ? <b className="text-green-800">✓</b> : <span className="text-amber-800">— tayyorlanmoqda</span>}
+              </span>
+            ))}
+          </div>
+        )}
         {order.note && (
           <div className="text-sm italic text-gray-700 border-t border-gray-100 pt-2">
             Izoh: {order.note}
@@ -166,7 +206,7 @@ function OrderCard({
         )}
       </div>
 
-      {order.status === 'preparing' && (
+      {order.status === 'preparing' && !myDone && (
         <button
           onClick={() => onReady(order.id)}
           disabled={isPending}
@@ -175,6 +215,12 @@ function OrderCard({
           <Check size={20} aria-hidden="true" />
           {isPending ? 'Saqlanmoqda...' : 'Tayyor'}
         </button>
+      )}
+      {order.status === 'preparing' && myDone && (
+        <div className="m-3 mt-0 min-h-12 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
+          <Check size={18} aria-hidden="true" />
+          Qismingiz tayyor
+        </div>
       )}
       {order.status === 'ready' && (
         <div className="m-3 mt-0 min-h-12 px-4 py-2.5 inline-flex items-center justify-center gap-2 text-blue-800 text-base font-semibold border border-blue-200 rounded-lg bg-blue-50">
@@ -210,6 +256,22 @@ export default function KitchenPage() {
     },
   });
 
+  // #40: oshxona bo'limlari. Oshpaz o'z bo'limlarini, rahbar yoki umumiy planshet — tanlanganini ko'radi.
+  const { data: stations = [] } = useQuery<Station[]>({
+    queryKey: ['kitchen-stations'],
+    queryFn: async () => (await api.get('/kitchen-stations')).data.data,
+  });
+  const activeStations = stations.filter((st) => st.is_active);
+  const myStations = user?.role === 'chef' ? activeStations.filter((st) => st.users.some((u) => u.id === user.id)) : [];
+  const choices = myStations.length > 0 ? myStations : activeStations;
+  const [picked, setPicked] = useState<string>(() => localStorage.getItem('kds-station') ?? 'all');
+  // Saqlangan tanlov endi mavjud bo'lmasa — standart
+  const selected = picked !== 'all' && choices.some((st) => String(st.id) === picked)
+    ? Number(picked)
+    : myStations.length === 1 ? myStations[0].id : 'all';
+  const visible: number[] | null = selected !== 'all' ? [selected] : myStations.length > 0 ? myStations.map((st) => st.id) : null;
+  const stationNames = useMemo(() => new Map(stations.map((st) => [st.id, st.name])), [stations]);
+
   // Default to first branch if user has none assigned.
   useEffect(() => {
     if (branchId === null && branches.length > 0) {
@@ -239,6 +301,7 @@ export default function KitchenPage() {
           table?: { id: number; number: number } | null;
           order_items?: Array<{
             id: number; quantity: number; weight_kg?: number; note?: string; is_table_set?: boolean;
+            kitchen_station_id?: number | null; ready_at?: string | null;
             menu_item?: { name_uz?: string; name_ru?: string };
             modifiers?: KdsModifier[]; addons?: (KdsModifier & { pivot?: { quantity?: number } })[];
           }>;
@@ -263,6 +326,8 @@ export default function KitchenPage() {
           quantity: it.quantity,
           weight_kg: it.weight_kg,
           note: it.note,
+          station_id: it.kitchen_station_id ?? null,
+          ready_at: it.ready_at ?? null,
           modifiers: it.modifiers ?? [],
           // #35: API'da son pivot ichida keladi
           addons: (it.addons ?? []).map((a) => ({ ...a, quantity: a.quantity ?? a.pivot?.quantity ?? 1 })),
@@ -309,14 +374,13 @@ export default function KitchenPage() {
   }, [user?.company_id, branchId]);
 
   const readyMutation = useMutation({
+    // #40: faqat ko'rinayotgan bo'lim(lar) qismi; javob — yangilangan buyurtma
     mutationFn: async (id: number) =>
-      (await api.patch(`/orders/${id}/status`, { status: 'ready' })).data,
+      (await api.patch(`/orders/${id}/kitchen-ready`, selected !== 'all' ? { station_id: selected } : {})).data,
     onSuccess: (res) => {
-      const updated = res?.data;
+      const updated = res?.data as KdsOrder | undefined;
       if (updated) {
-        setOrders((prev) =>
-          prev.map((o) => (o.id === updated.id ? { ...o, status: 'ready' } : o)),
-        );
+        setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
       }
       setActionError('');
     },
@@ -324,20 +388,38 @@ export default function KitchenPage() {
     onError: (err) => setActionError(apiErrorMessage(err, "Buyurtmani 'Tayyor' qilib bo'lmadi")),
   });
 
-  const sorted = useMemo(
-    () =>
-      [...orders].sort((a, b) => {
-        // preparing first, then by oldest created
-        if (a.status !== b.status) return a.status === 'preparing' ? -1 : 1;
+  const sorted = useMemo(() => {
+    const shown = (o: KdsOrder) => o.items.filter((i) => visible === null || visible.includes(i.station_id ?? -1));
+    // Mening qismim tayyor bo'lsa — pastga
+    const done = (o: KdsOrder) => o.status === 'ready' || shown(o).every((i) => i.ready_at);
+    return orders
+      .filter((o) => shown(o).length > 0) // bu bo'limga tegishli taom yo'q
+      .sort((a, b) => {
+        if (done(a) !== done(b)) return done(a) ? 1 : -1;
         return (a.created_at ?? '').localeCompare(b.created_at ?? '');
-      }),
-    [orders],
-  );
+      });
+    // visible har renderda yangi massiv — kalit sifatida satr
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, JSON.stringify(visible)]);
 
   return (
     <Layout>
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Oshxona</h1>
+        <div className="flex flex-wrap items-center gap-2">
+        {choices.length > 0 && (
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+            Bo'lim
+            <select
+              value={String(selected)}
+              onChange={(e) => { setPicked(e.target.value); localStorage.setItem('kds-station', e.target.value); }}
+              className="min-h-11 px-3 border border-gray-300 rounded-lg text-base font-medium text-gray-900 focus:ring-2 focus:ring-amber-500 outline-none"
+            >
+              {choices.length > 1 && <option value="all">{myStations.length > 0 ? "Mening bo'limlarim" : "Barcha bo'limlar"}</option>}
+              {choices.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+            </select>
+          </label>
+        )}
         {branches.length > 1 && (
           <select
             value={branchId ?? ''}
@@ -351,6 +433,7 @@ export default function KitchenPage() {
             ))}
           </select>
         )}
+        </div>
       </div>
 
       <PageGuide id="kitchen" />
@@ -383,6 +466,8 @@ export default function KitchenPage() {
               now={now}
               onReady={(id) => readyMutation.mutate(id)}
               isPending={readyMutation.isPending && readyMutation.variables === order.id}
+              visible={visible}
+              stationNames={stationNames}
             />
           ))}
         </div>
