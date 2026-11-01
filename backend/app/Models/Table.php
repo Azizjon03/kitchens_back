@@ -17,12 +17,14 @@ class Table extends Model
         'company_id', 'branch_id', 'number', 'seats', 'zone',
         'status', 'qr_code', 'qr_token', 'assigned_waiter_id',
         'merged_with_table_id', 'table_template_id',
+        'table_group_id', 'is_whole_group',
     ];
 
     protected $casts = [
         // `number` is a string column (20 chars) so zone codes like "A1" are
         // preserved; casting it to int would turn them into 0.
         'seats' => 'integer',
+        'is_whole_group' => 'boolean',
     ];
 
     public function branch(): BelongsTo
@@ -39,5 +41,11 @@ class Table extends Model
     public function template(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(TableTemplate::class, 'table_template_id');
+    }
+
+    /** #49: zal */
+    public function group(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(TableGroup::class, 'table_group_id');
     }
 }

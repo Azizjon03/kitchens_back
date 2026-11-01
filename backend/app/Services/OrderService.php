@@ -87,6 +87,9 @@ class OrderService
             return $order;
         });
 
+        // #49: zal — butun zal yoki ichidagi stol band bo'ldi
+        app(TableGroupService::class)->syncForTable($order->table_id);
+
         $order->load(['table', 'user', 'orderItems.menuItem']);
 
         OrderCreated::dispatch($order);
@@ -540,6 +543,9 @@ class OrderService
             ->whereKey($order->table_id)
             ->where('status', 'occupied')
             ->update(['status' => 'free']);
+
+        // #49: zaldagi boshqa stollar ham bo'shashi mumkin
+        app(TableGroupService::class)->syncForTable($order->table_id);
     }
 
     /**

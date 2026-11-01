@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\DashboardController;
 use App\Http\Controllers\Api\V1\SuperAdmin\PlanController;
 use App\Http\Controllers\Api\V1\TableController;
+use App\Http\Controllers\Api\V1\TableGroupController;
 use App\Http\Controllers\Api\V1\TableSetController;
 use App\Http\Controllers\Api\V1\TableTemplateController;
 use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
@@ -135,6 +136,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('tables/{table}/merge', [TableController::class, 'merge']);
                 Route::post('tables/{table}/unmerge', [TableController::class, 'unmerge']);
                 Route::apiResource('tables', TableController::class);
+                // #49: zallar — ko'rish hammaga, o'zgartirish rahbar/menejerga
+                Route::get('table-groups', [TableGroupController::class, 'index']);
+                Route::apiResource('table-groups', TableGroupController::class)->only(['store', 'update', 'destroy'])
+                    ->middleware('role:company_admin,manager');
             });
         });
 

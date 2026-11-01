@@ -33,7 +33,7 @@ class TableController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Table::with(['assignedWaiter', 'template:id,name']);
+        $query = Table::with(['assignedWaiter', 'template:id,name', 'group:id,name,allow_whole,sort_order']);
 
         if ($request->filled('branch_id')) {
             $query->where('branch_id', $request->branch_id);
@@ -66,9 +66,11 @@ class TableController extends Controller
             'zone' => 'nullable|string|max:255',
             'branch_id' => ['required', $this->existsInCompany('branches', $companyId)],
             'table_template_id' => ['nullable', $this->existsInCompany('table_templates', $companyId)],
+            'table_group_id' => ['nullable', $this->existsInCompany('table_groups', $companyId)], // #49
         ]);
 
         $table = Table::create($data);
+        $this->resyncGroups([$table->table_group_id]);
 
         return $this->success($table->load('assignedWaiter'), 201);
     }
@@ -96,20 +98,43 @@ class TableController extends Controller
             'table_template_id' => ['nullable', $this->existsInCompany('table_templates', $request->user()->company_id)],
             'branch_id' => ['sometimes', $this->existsInCompany('branches', $companyId)],
             'assigned_waiter_id' => ['nullable', $this->existsWaiterInCompany($companyId)],
+            'table_group_id' => ['nullable', $this->existsInCompany('table_groups', $companyId)], // #49
         ]);
 
+        if ($table->is_whole_group && array_diff(array_keys($data), ['assigned_waiter_id'])) {
+            return $this->error('WHOLE_GROUP_TABLE', "«Butun zal» joyi zal sozlamasidan boshqariladi.", 422);
+        }
+
+        $oldGroup = $table->table_group_id;
         $table->update($data);
+        $this->resyncGroups([$oldGroup, $table->table_group_id]);
 
         return $this->success($table->fresh()->load('assignedWaiter'));
     }
 
+    /** #49: zal «butun zal» joyi sig'imi va holatini qayta hisoblash */
+    private function resyncGroups(array $groupIds): void
+    {
+        $service = app(\App\Services\TableGroupService::class);
+        foreach (array_unique(array_filter($groupIds)) as $id) {
+            if ($group = \App\Models\TableGroup::find($id)) {
+                $service->syncWholeTable($group);
+            }
+        }
+    }
+
     public function destroy(Table $table): JsonResponse
     {
+        if ($table->is_whole_group) {
+            return $this->error('WHOLE_GROUP_TABLE', "«Butun zal» joyi zal sozlamasidan boshqariladi.", 422);
+        }
         if ($this->hasActiveOrder($table)) {
             return $this->error('TABLE_HAS_ACTIVE_ORDERS', 'Table has active orders and cannot be deleted.', 422);
         }
 
+        $groupId = $table->table_group_id;
         $table->delete();
+        $this->resyncGroups([$groupId]);
 
         return $this->success(null);
     }
@@ -150,6 +175,11 @@ class TableController extends Controller
             $targetTable->update(['status' => 'occupied']);
             $table->update(['status' => 'free']);
         });
+
+        // #49: ikkala zal holati
+        $groups = app(\App\Services\TableGroupService::class);
+        $groups->syncForTable($table->id);
+        $groups->syncForTable($targetTable->id);
 
         return $this->success([
             'source_table' => $table->fresh(),

@@ -138,6 +138,10 @@ export interface Table {
   assigned_waiter_id?: number;
   assigned_waiter?: User;
   merged_with_table_id?: number;
+  /** #49: zal */
+  table_group_id?: number | null;
+  is_whole_group?: boolean;
+  group?: { id: number; name: string; allow_whole: boolean; sort_order: number } | null;
   created_at: string;
   updated_at: string;
 }
@@ -221,4 +225,14 @@ export interface DashboardStats {
 export interface LoginResponse {
   access_token: string;
   token_type: string;
+}
+
+/** #49: zal — stollar guruhi */
+export interface TableGroup {
+  id: number;
+  branch_id: number;
+  name: string;
+  allow_whole: boolean;
+  sort_order: number;
+  tables_count?: number;
 }
