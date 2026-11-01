@@ -12,7 +12,7 @@ import OrderComposer from '../components/OrderComposer';
 import { hasDraft } from '../lib/waiterDraft';
 import { LoadingState, ErrorState } from '../components/QueryState';
 import { apiErrorMessage } from '../lib/apiError';
-import { X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
+import { X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate, ArrowLeft } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
 import ReceiptButton from '../components/ReceiptButton';
 import { groupTables } from '../lib/tableGroups';
@@ -59,6 +59,8 @@ export default function WaiterPage() {
   // Stol to'plami (#24): stoldagi narsalardan ochilganini belgilash
   const [tableSetOrder, setTableSetOrder] = useState<Order | null>(null);
   // #43: ofitsiant avval o'z buyurtmalarini ko'radi
+  // #51: ochilgan zal (null — zallar ro'yxati)
+  const [openHall, setOpenHall] = useState<number | null>(null);
   const [scope, setScope] = useState<'mine' | 'all'>(user?.role === 'waiter' ? 'mine' : 'all');
 
   const { data: stats } = useQuery<{ preparing: number; ready: number; served: number; today_count: number; today_total: number }>({
@@ -243,15 +245,11 @@ export default function WaiterPage() {
         </dl>
       )}
 
-      {/* Tables — #49: zallar bo'yicha */}
-      <h2 className="text-sm font-semibold text-gray-500 mb-2">Stollar</h2>
-      {groupTables(tables).map((sec) => (
-        <section key={sec.key} className="mb-5" aria-label={sec.name}>
-          {(sec.groupId !== null || groupTables(tables).length > 1) && (
-            <h3 className="mb-1.5 text-sm font-medium text-gray-700">{sec.name}</h3>
-          )}
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">
-            {[...(sec.whole ? [sec.whole] : []), ...sec.tables].map((t) => {
+      {/* Tables — #51: zal bitta plitka, bosilganda ichidagi joylar */}
+      {(() => {
+        const sections = groupTables(tables);
+        const open = sections.find((sec) => sec.groupId !== null && sec.groupId === openHall) ?? null;
+        const renderTable = (t: Table) => {
           const isFree = t.status === 'free';
           return (
             <button
@@ -271,10 +269,50 @@ export default function WaiterPage() {
               {isFree && hasDraft(t.id) && <span className="mt-0.5 rounded bg-amber-600 px-1.5 text-[11px] font-semibold text-white">qoralama</span>}
             </button>
           );
-            })}
-          </div>
-        </section>
-      ))}
+        };
+        if (open) {
+          const all = [...(open.whole ? [open.whole] : []), ...open.tables];
+          return (
+            <section className="mb-6" aria-label={open.name}>
+              <div className="mb-2 flex items-center gap-2">
+                <button type="button" onClick={() => setOpenHall(null)} className="min-h-11 inline-flex items-center gap-1 px-3 rounded-lg border border-gray-300 text-sm font-medium text-gray-800 hover:bg-gray-50">
+                  <ArrowLeft size={16} aria-hidden="true" /> Zallar
+                </button>
+                <h2 className="text-base font-semibold text-gray-900">{open.name}</h2>
+                <span className="text-sm text-gray-600">{open.tables.filter((t) => t.status === 'free').length} / {open.tables.length} bo'sh</span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">{all.map(renderTable)}</div>
+            </section>
+          );
+        }
+        const halls = sections.filter((sec) => sec.groupId !== null);
+        const loose = sections.find((sec) => sec.groupId === null)?.tables ?? [];
+        return (
+          <>
+            <h2 className="text-sm font-semibold text-gray-500 mb-2">{halls.length ? 'Zallar va stollar' : 'Stollar'}</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 mb-2">
+              {halls.map((sec) => {
+                const free = sec.tables.filter((t) => t.status === 'free').length;
+                const drafts = sec.tables.concat(sec.whole ? [sec.whole] : []).some((t) => t.status === 'free' && hasDraft(t.id));
+                const tone = free === 0 ? 'border-amber-300 bg-amber-50 text-amber-800' : 'border-green-300 bg-green-50 text-green-800 hover:bg-green-100';
+                return (
+                  <button key={sec.key} type="button" onClick={() => setOpenHall(sec.groupId)}
+                    aria-label={`${sec.name}: ${free} / ${sec.tables.length} bo'sh`}
+                    className={`min-h-24 rounded-xl border-2 px-3 py-2 flex flex-col items-start justify-center text-left transition-colors ${tone}`}>
+                    <span className="text-base font-bold">{sec.name}</span>
+                    <span className="text-sm font-medium">{free} / {sec.tables.length} bo'sh</span>
+                    {sec.whole && <span className="text-xs">butun zal · {sec.whole.seats} kishi{sec.whole.status === 'free' ? '' : ' (band)'}</span>}
+                    {drafts && <span className="mt-0.5 rounded bg-amber-600 px-1.5 text-[11px] font-semibold text-white">qoralama</span>}
+                  </button>
+                );
+              })}
+            </div>
+            {loose.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mb-2">{loose.map(renderTable)}</div>
+            )}
+          </>
+        );
+      })()}
       <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mb-8">
         {tablesLoading && (
           <div className="col-span-full">
