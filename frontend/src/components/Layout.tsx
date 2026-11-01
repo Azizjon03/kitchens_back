@@ -29,6 +29,9 @@ import {
   Bot,
   Flame,
   Truck,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Printer,
 } from 'lucide-react';
 import type { Role } from '../types';
 import { apiErrorMessage } from '../lib/apiError';
@@ -189,6 +192,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Kompyuterda yon menyuni yig'ish (faqat belgilar) — shu qurilmada eslab qolinadi
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar-collapsed') === '1'; } catch { return false; }
+  });
+  const toggleCollapsed = () => setCollapsed((c) => {
+    try { localStorage.setItem('sidebar-collapsed', c ? '0' : '1'); } catch { /* yo'q */ }
+    return !c;
+  });
+  // Yig'ilgan holat faqat katta ekranda (mobil menyu o'zgarishsiz)
+  const mini = collapsed;
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
@@ -207,11 +220,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: 'Menyu', path: '/menu', icon: <UtensilsCrossed size={20} />, roles: ['company_admin', 'manager'] },
     { label: "Qo'shimchalar", path: '/modifiers', icon: <SlidersHorizontal size={20} />, roles: ['company_admin', 'manager'] },
     { label: 'Stollar', path: '/tables', icon: <Grid3X3 size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
-    { label: 'Ofitsiant', path: '/waiter', icon: <Bell size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
+    { label: 'Ofitsiant', path: '/waiter', icon: <Bell size={20} />, roles: ['company_admin', 'manager', 'waiter', 'cashier'] },
     { label: 'Yetkazib berish', path: '/delivery', icon: <Truck size={20} />, roles: ['company_admin', 'manager', 'cashier'] },
     { label: 'Buyurtmalar', path: '/orders', icon: <ClipboardList size={20} />, roles: ['company_admin', 'manager', 'waiter', 'cashier'] },
     { label: 'Oshxona', path: '/kitchen', icon: <Soup size={20} />, roles: ['company_admin', 'manager', 'chef'] },
     { label: "Oshxona bo'limlari", path: '/kitchen-stations', icon: <Flame size={20} />, roles: ['company_admin', 'manager'] },
+    { label: 'Printerlar', path: '/printers', icon: <Printer size={20} />, roles: ['company_admin', 'manager'] },
     { label: 'Kassa', path: '/cash-shifts', icon: <Wallet size={20} />, roles: ['company_admin', 'cashier'] },
     { label: 'Xodimlar', path: '/staff', icon: <Users size={20} />, roles: ['company_admin'] },
     { label: 'Restoran sahifasi', path: '/public-page', icon: <Globe size={20} />, roles: ['company_admin'] },
@@ -235,17 +249,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 ease-in-out ${
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 ${mini ? 'lg:w-[72px]' : ''} bg-white border-r border-gray-200 transform transition-[transform,width] duration-200 ease-in-out ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200">
-            <div className="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center">
+          <div className={`flex items-center gap-3 px-6 py-5 border-b border-gray-200 ${mini ? 'lg:px-4 lg:justify-center' : ''}`}>
+            <div className="w-9 h-9 shrink-0 bg-amber-500 rounded-lg flex items-center justify-center">
               <ChefHat size={20} className="text-white" />
             </div>
-            <div>
+            <div className={mini ? 'lg:hidden' : ''}>
               <h1 className="text-lg font-bold text-gray-900">Kitchens.uz</h1>
               <p className="text-xs text-gray-500">
                 {isSuperAdmin ? 'Super Admin' : 'Admin Panel'}
@@ -261,13 +275,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
+          <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Asosiy menyu">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                title={mini ? item.label : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${mini ? 'lg:justify-center' : ''} ${
                   isActive(item.path)
                     ? 'bg-amber-50 text-amber-700'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
@@ -276,20 +291,30 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <span className={isActive(item.path) ? 'text-amber-700' : 'text-gray-400'}>
                   {item.icon}
                 </span>
-                {item.label}
+                <span className={mini ? 'lg:sr-only' : ''}>{item.label}</span>
               </Link>
             ))}
           </nav>
 
+          {/* Yon menyuni yig'ish / ochish (kompyuterda) */}
+          <div className="hidden lg:block px-3 pb-2">
+            <button type="button" onClick={toggleCollapsed} aria-expanded={!mini}
+              aria-label={mini ? 'Menyuni ochish' : 'Menyuni yopish'} title={mini ? 'Menyuni ochish' : 'Menyuni yopish'}
+              className={`w-full min-h-11 flex items-center gap-3 px-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 ${mini ? 'justify-center' : ''}`}>
+              {mini ? <PanelLeftOpen size={20} aria-hidden="true" /> : <PanelLeftClose size={20} aria-hidden="true" />}
+              {!mini && <span>Menyuni yopish</span>}
+            </button>
+          </div>
+
           {/* User info + logout */}
           <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center gap-3">
+            <div className={`flex items-center gap-3 ${mini ? 'lg:flex-col lg:gap-1' : ''}`}>
               <div className="w-9 h-9 bg-amber-100 rounded-full flex items-center justify-center">
                 <span className="text-sm font-semibold text-amber-700">
                   {(user?.name || user?.full_name)?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
-              <div className="flex-1 min-w-0">
+              <div className={`flex-1 min-w-0 ${mini ? 'lg:hidden' : ''}`}>
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.name || user?.full_name}</p>
                 <p className="text-xs text-gray-500 truncate">{formatPhone(user?.phone)}</p>
               </div>

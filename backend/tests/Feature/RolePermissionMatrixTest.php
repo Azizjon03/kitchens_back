@@ -41,7 +41,7 @@ class RolePermissionMatrixTest extends TestCase
             'kategoriyalar' => ['GET', '/categories', [self::A, self::M]],
             'taom yaratish' => ['POST', '/menu-items', [self::A, self::M]],
             'modifikatorlar' => ['GET', '/modifiers', [self::A, self::M]],
-            'stollar' => ['GET', '/tables', [self::A, self::M, self::W]],
+            'stollar' => ['GET', '/tables', [self::A, self::M, self::W, self::K]], // kassir ham ofitsiant ekranini ishlatadi
             'stol yaratish' => ['POST', '/tables', [self::A, self::M, self::W]],
             'buyurtmalar ro\'yxati' => ['GET', '/orders', $all],
             'POS menyu' => ['GET', '/pos/menu', [self::A, self::M, self::W, self::K]],

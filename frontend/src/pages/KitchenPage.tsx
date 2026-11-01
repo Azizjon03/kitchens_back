@@ -4,7 +4,7 @@ import api from '../lib/api';
 import { getEcho, kitchenChannel } from '../lib/echo';
 import { useAuth } from '../lib/auth';
 import type { Branch } from '../types';
-import { Check, ChefHat, X } from 'lucide-react';
+import { Check, ChefHat, Printer, X } from 'lucide-react';
 import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
 import { LoadingState, ErrorState } from '../components/QueryState';
@@ -42,6 +42,43 @@ interface Station {
   name: string;
   is_active: boolean;
   users: { id: number; name: string }[];
+  /** #53: bo'lim LAN printeri */
+  printer_id?: number | null;
+}
+
+/** #53: bo'lim printeri bo'lsa — server orqali LAN printerga; bo'lmasa — shu qurilma printeri */
+function KitchenPrintButton({ orderId, visible, stationName, hasPrinter }: {
+  orderId: number; visible: number[] | null; stationName: string | null; hasPrinter: boolean;
+}) {
+  const [state, setState] = useState<'idle' | 'busy' | 'sent' | 'error'>('idle');
+  const [msg, setMsg] = useState('');
+  if (!hasPrinter) {
+    return (
+      <ReceiptButton orderId={orderId} kind="kitchen" label="" kitchen={{ stationIds: visible, stationName }}
+        className="min-h-11 min-w-11 -my-1 -mr-1 inline-flex items-center justify-center rounded-lg hover:bg-black/5" />
+    );
+  }
+  return (
+    <span className="relative inline-flex">
+      <button type="button" aria-label="Printerga yuborish" title="Bo'lim printeriga yuborish" disabled={state === 'busy'}
+        onClick={async () => {
+          setState('busy');
+          try {
+            await api.post(`/orders/${orderId}/print-kitchen`, visible?.length === 1 ? { station_id: visible[0] } : {});
+            setState('sent'); setMsg('Printerga yuborildi');
+          } catch (err) {
+            setState('error'); setMsg(apiErrorMessage(err, "Printerga yuborib bo'lmadi"));
+          }
+          setTimeout(() => setState('idle'), 3000);
+        }}
+        className="min-h-11 min-w-11 -my-1 -mr-1 inline-flex items-center justify-center rounded-lg hover:bg-black/5 disabled:opacity-50">
+        <Printer size={16} aria-hidden="true" />
+      </button>
+      {(state === 'sent' || state === 'error') && (
+        <span role={state === 'error' ? 'alert' : 'status'} className={`absolute right-0 top-full z-10 mt-1 whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium text-white ${state === 'error' ? 'bg-red-700' : 'bg-gray-900'}`}>{msg}</span>
+      )}
+    </span>
+  );
 }
 
 interface KdsOrder {
@@ -99,6 +136,7 @@ function OrderCard({
   isPending,
   visible,
   stationNames,
+  printerStations,
 }: {
   order: KdsOrder;
   now: number;
@@ -107,6 +145,7 @@ function OrderCard({
   /** #40: ko'rsatiladigan bo'limlar; null — hammasi */
   visible: number[] | null;
   stationNames: Map<number, string>;
+  printerStations: Set<number>;
 }) {
   const printName = visible?.length === 1 ? stationNames.get(visible[0]) ?? null : null;
   void now; // re-render trigger for elapsed time
@@ -151,8 +190,8 @@ function OrderCard({
         {/* Kutish vaqti — oshpazning asosiy signali, kartadagi eng yirik raqam */}
         <span className="ml-auto text-xl 2xl:text-2xl font-bold tabular-nums whitespace-nowrap">{mins} daq</span>
         {/* #44: shu bo'lim taomlari qog'ozi */}
-        <ReceiptButton orderId={order.id} kind="kitchen" label="" kitchen={{ stationIds: visible, stationName: printName }}
-          className="min-h-11 min-w-11 -my-1 -mr-1 inline-flex items-center justify-center rounded-lg hover:bg-black/5" />
+        <KitchenPrintButton orderId={order.id} visible={visible} stationName={printName}
+          hasPrinter={order.items.some((i) => (visible === null || visible.includes(i.station_id ?? -1)) && printerStations.has(i.station_id ?? -1))} />
       </div>
 
       <div className="flex-1 p-3 2xl:p-4 space-y-2">
@@ -278,19 +317,23 @@ export default function KitchenPage() {
     : myStations.length === 1 ? myStations[0].id : 'all';
   const visible: number[] | null = selected !== 'all' ? [selected] : myStations.length > 0 ? myStations.map((st) => st.id) : null;
   const stationNames = useMemo(() => new Map(stations.map((st) => [st.id, st.name])), [stations]);
+  const printerStations = useMemo(() => new Set(stations.filter((st) => st.printer_id).map((st) => st.id)), [stations]);
 
   // #44: yangi buyurtmani avtomatik chop etish (shu qurilmada; Chrome --kiosk-printing bilan oynasiz)
   const [autoPrint, setAutoPrint] = useState(() => {
     try { return localStorage.getItem('kds-autoprint') === '1'; } catch { return false; }
   });
-  const printRef = useRef<{ on: boolean; visible: number[] | null; name: string | null }>({ on: false, visible: null, name: null });
+  const printRef = useRef<{ on: boolean; visible: number[] | null; name: string | null; printers: Set<number> }>({ on: false, visible: null, name: null, printers: new Set() });
   useEffect(() => {
-    printRef.current = { on: autoPrint, visible, name: visible?.length === 1 ? stationNames.get(visible[0]) ?? null : null };
+    printRef.current = { on: autoPrint, visible, name: visible?.length === 1 ? stationNames.get(visible[0]) ?? null : null, printers: printerStations };
   });
   const autoPrintOrder = (o: KdsOrder) => {
     const { on, visible: vis, name } = printRef.current;
     if (!on || o.status !== 'preparing') return;
     if (vis && !o.items.some((i) => vis.includes(i.station_id ?? -1))) return; // bu bo'limga tegishli emas
+    // #53: LAN printerli bo'lim qog'ozini server o'zi chop etadi — takrorlamaymiz
+    const mine = o.items.filter((i) => !vis || vis.includes(i.station_id ?? -1));
+    if (mine.length > 0 && mine.every((i) => printRef.current.printers.has(i.station_id ?? -1))) return;
     printReceipt(o.id, 'kitchen', { stationIds: vis, stationName: name }).catch(() => {});
   };
 
@@ -499,6 +542,7 @@ export default function KitchenPage() {
               isPending={readyMutation.isPending && readyMutation.variables === order.id}
               visible={visible}
               stationNames={stationNames}
+              printerStations={printerStations}
             />
           ))}
         </div>

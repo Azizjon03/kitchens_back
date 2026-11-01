@@ -41,4 +41,22 @@ class WaiterDraftTest extends TestCase
         $this->getJson('/api/v1/orders/my-stats')->assertOk()
             ->assertJsonPath('data.preparing', 2)->assertJsonPath('data.today_count', 2)->assertJsonPath('data.today_total', 120000);
     }
+
+    public function test_cashier_uses_waiter_screen_tables_and_orders(): void
+    {
+        $company = Company::create(['name' => 'A', 'slug' => 'a', 'phone' => '+998700000000', 'is_active' => true, 'settings_json' => ['service_charge_pct' => 0]]);
+        $branch = Branch::create(['company_id' => $company->id, 'name' => 'F', 'is_active' => true]);
+        $cashier = User::create(['company_id' => $company->id, 'branch_id' => $branch->id, 'name' => 'K', 'phone' => '+998900000005', 'role' => 'cashier', 'password' => 'secret123', 'is_active' => true]);
+        $cat = Category::create(['company_id' => $company->id, 'name_uz' => 'T', 'is_active' => true]);
+        $item = MenuItem::create(['company_id' => $company->id, 'category_id' => $cat->id, 'name_uz' => 'Osh', 'price' => 30000, 'is_available' => true]);
+        $t = Table::create(['company_id' => $company->id, 'branch_id' => $branch->id, 'number' => '1', 'seats' => 4, 'status' => 'free']);
+
+        Sanctum::actingAs($cashier);
+        $this->getJson('/api/v1/tables')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/table-groups')->assertOk();
+        $this->getJson('/api/v1/pos/menu')->assertOk();
+        $this->postJson('/api/v1/orders', ['type' => 'dine_in', 'branch_id' => $branch->id, 'table_id' => $t->id, 'items' => [['menu_item_id' => $item->id, 'quantity' => 1]]])->assertCreated();
+        // Stollarni boshqarish — kassirga emas
+        $this->postJson('/api/v1/tables', ['number' => '2', 'seats' => 4, 'branch_id' => $branch->id])->assertForbidden();
+    }
 }

@@ -22,16 +22,16 @@ const log = (ok, m) => { ok ? pass++ : fail++; console.log(`${ok ? 'PASS' : 'FAI
 
 const PAGES = {
   '/dashboard': 'Dashboard', '/menu': 'Menyu', '/modifiers': "Qo'shimchalar", '/tables': 'Stollar',
-  '/waiter': 'Ofitsiant', '/delivery': 'Yetkazib berish', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/kitchen-stations': "Oshxona bo'limlari", '/cash-shifts': 'Kassa',
+  '/waiter': 'Ofitsiant', '/delivery': 'Yetkazib berish', '/orders': 'Buyurtmalar', '/kitchen': 'Oshxona', '/kitchen-stations': "Oshxona bo'limlari", '/printers': 'Printerlar', '/cash-shifts': 'Kassa',
   '/staff': 'Xodimlar', '/branches': 'Filiallar', '/public-page': 'Restoran sahifasi', '/telegram-bot': 'Telegram bot',
 };
 // Layout.tsx allNav va App.tsx requiredRole dan
 const NAV = {
-  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/delivery', '/orders', '/kitchen', '/kitchen-stations', '/cash-shifts', '/staff', '/public-page', '/branches', '/telegram-bot'],
-  manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/delivery', '/orders', '/kitchen', '/kitchen-stations'],
+  company_admin: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/delivery', '/orders', '/kitchen', '/kitchen-stations', '/printers', '/cash-shifts', '/staff', '/public-page', '/branches', '/telegram-bot'],
+  manager: ['/dashboard', '/menu', '/modifiers', '/tables', '/waiter', '/delivery', '/orders', '/kitchen', '/kitchen-stations', '/printers'],
   waiter: ['/tables', '/waiter', '/orders'],
   chef: ['/kitchen'],
-  cashier: ['/delivery', '/orders', '/cash-shifts'],
+  cashier: ['/waiter', '/delivery', '/orders', '/cash-shifts'],
 };
 const HOME = { company_admin: '/dashboard', manager: '/dashboard', waiter: '/waiter', chef: '/kitchen', cashier: '/cash-shifts' };
 const ROLE_UZ = { company_admin: 'Admin', manager: 'Menejer', waiter: 'Ofitsiant', chef: 'Oshpaz', cashier: 'Kassir' };

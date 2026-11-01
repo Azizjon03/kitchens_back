@@ -12,7 +12,7 @@ class KitchenStation extends Model
 {
     use BelongsToCompany;
 
-    protected $fillable = ['company_id', 'name', 'sort_order', 'is_active'];
+    protected $fillable = ['company_id', 'name', 'sort_order', 'is_active', 'printer_id'];
 
     protected $casts = ['is_active' => 'boolean', 'sort_order' => 'integer'];
 
@@ -24,5 +24,11 @@ class KitchenStation extends Model
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    /** #53: bo'lim printeri */
+    public function printer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Printer::class);
     }
 }

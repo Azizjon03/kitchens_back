@@ -12,3 +12,4 @@ Artisan::command('inspire', function () {
 // (production: cron `* * * * * php artisan schedule:run` va queue worker kerak)
 Schedule::command('telegram:health')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('telegram:daily-report')->dailyAt('23:00');
+Schedule::command('print:health')->everyMinute()->withoutOverlapping(); // #53

@@ -28,6 +28,7 @@ const WaiterPage = lazy(() => import('./pages/WaiterPage'));
 const TgMenuPage = lazy(() => import('./pages/tg/TgMenuPage'));
 const TgCartPage = lazy(() => import('./pages/tg/TgCartPage'));
 const TgOrderStatusPage = lazy(() => import('./pages/tg/TgOrderStatusPage'));
+const PrintersPage = lazy(() => import('./pages/PrintersPage'));
 const DeliveryPage = lazy(() => import('./pages/DeliveryPage'));
 const KitchenStationsPage = lazy(() => import('./pages/KitchenStationsPage'));
 const StaffTgEntryPage = lazy(() => import('./pages/StaffTgEntryPage'));
@@ -151,7 +152,7 @@ function App() {
             <Route
               path="/waiter"
               element={
-                <ProtectedRoute requiredRole={['company_admin', 'manager', 'waiter']}>
+                <ProtectedRoute requiredRole={['company_admin', 'manager', 'waiter', 'cashier']}>
                   <WaiterPage />
                 </ProtectedRoute>
               }
@@ -171,6 +172,15 @@ function App() {
               element={
                 <ProtectedRoute requiredRole={['company_admin', 'manager', 'chef']}>
                   <KitchenPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/printers"
+              element={
+                <ProtectedRoute requiredRole={['company_admin', 'manager']}>
+                  <PrintersPage />
                 </ProtectedRoute>
               }
             />

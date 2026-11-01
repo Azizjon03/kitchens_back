@@ -13,20 +13,22 @@ interface Station {
   id: number;
   name: string;
   is_active: boolean;
+  printer_id?: number | null;
   users: { id: number; name: string }[];
   categories: { id: number; name_uz: string }[];
 }
 interface Cat { id: number; name_uz: string; parent_id: number | null; kitchen_station_id?: number | null; icon?: string | null }
 interface Chef { id: number; name?: string; full_name?: string }
 
-function StationModal({ station, stations, cats, chefs, onClose }: {
-  station?: Station; stations: Station[]; cats: Cat[]; chefs: Chef[]; onClose: () => void;
+function StationModal({ station, stations, cats, chefs, printers, onClose }: {
+  station?: Station; stations: Station[]; cats: Cat[]; chefs: Chef[]; printers: { id: number; name: string; ip: string }[]; onClose: () => void;
 }) {
   const queryClient = useQueryClient();
   useEscape(onClose);
   const [name, setName] = useState(station?.name ?? '');
   const [catIds, setCatIds] = useState<number[]>(station?.categories.map((c) => c.id) ?? []);
   const [userIds, setUserIds] = useState<number[]>(station?.users.map((u) => u.id) ?? []);
+  const [printerId, setPrinterId] = useState<string>(station?.printer_id ? String(station.printer_id) : '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const owner = new Map(stations.flatMap((st) => st.categories.map((c) => [c.id, st] as const)));
   const tops = cats.filter((c) => !c.parent_id);
@@ -34,7 +36,7 @@ function StationModal({ station, stations, cats, chefs, onClose }: {
 
   const save = useMutation({
     mutationFn: async () => {
-      const body = { name: name.trim(), category_ids: catIds, user_ids: userIds };
+      const body = { name: name.trim(), category_ids: catIds, user_ids: userIds, printer_id: printerId ? Number(printerId) : null };
       return station ? api.put(`/kitchen-stations/${station.id}`, body) : api.post('/kitchen-stations', body);
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['kitchen-stations'] }); queryClient.invalidateQueries({ queryKey: ['station-categories'] }); onClose(); },
@@ -93,6 +95,16 @@ function StationModal({ station, stations, cats, chefs, onClose }: {
           )}
         </fieldset>
 
+        {/* #53: bo'lim printeri */}
+        <div>
+          <label htmlFor="st-printer" className="block text-sm font-medium text-gray-700 mb-1">Printer</label>
+          <select id="st-printer" value={printerId} onChange={(e) => setPrinterId(e.target.value)} className="w-full min-h-11 px-3 border border-gray-300 rounded-lg text-sm">
+            <option value="">Printersiz (faqat oshxona ekrani)</option>
+            {printers.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.ip})</option>)}
+          </select>
+          <p className="mt-1 text-xs text-gray-600">Buyurtma kelishi bilan shu printerdan bo'lim taomlari qog'ozi chiqadi. Printerlar «Printerlar» bo'limida qo'shiladi.</p>
+        </div>
+
         <fieldset>
           <legend className="text-sm font-medium text-gray-700">Oshpazlar</legend>
           <p className="text-xs text-gray-600 mb-2">Belgilangan oshpaz oshxona ekranida va botda faqat shu bo'lim taomlarini ko'radi.</p>
@@ -142,6 +154,10 @@ export default function KitchenStationsPage() {
     queryFn: async () => (await api.get('/kitchen-stations/chefs')).data.data,
   });
   const [modal, setModal] = useState<{ station?: Station } | null>(null);
+  const { data: printers = [] } = useQuery<{ id: number; name: string; ip: string }[]>({
+    queryKey: ['printers-list'],
+    queryFn: async () => (await api.get('/printers')).data.data.printers,
+  });
   const [confirmDelete, setConfirmDelete] = useState<Station | null>(null);
 
   const remove = useMutation({
@@ -183,6 +199,8 @@ export default function KitchenStationsPage() {
                 </div>
                 <p className="mt-2 text-sm text-gray-600">Taomlar</p>
                 <p className="text-sm text-gray-900">{st.categories.length ? st.categories.map((c) => c.name_uz).join(', ') : <span className="text-amber-800">Biriktirilmagan — ekranda taom chiqmaydi</span>}</p>
+                <p className="mt-2 text-sm text-gray-600">Printer</p>
+                <p className="text-sm text-gray-900">{printers.find((p) => p.id === st.printer_id)?.name ?? <span className="text-gray-600">Yo'q</span>}</p>
                 <p className="mt-2 text-sm text-gray-600">Oshpazlar</p>
                 <p className="text-sm text-gray-900">{st.users.length ? st.users.map((u) => u.name).join(', ') : <span className="text-gray-600">Yo'q — umumiy planshetdan bo'lim tanlab ishlatiladi</span>}</p>
               </li>
@@ -191,7 +209,7 @@ export default function KitchenStationsPage() {
         )}
       </div>
 
-      {modal && <StationModal station={modal.station} stations={stations} cats={cats} chefs={chefs} onClose={() => setModal(null)} />}
+      {modal && <StationModal station={modal.station} stations={stations} cats={cats} chefs={chefs} printers={printers} onClose={() => setModal(null)} />}
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmDelete(null)}>
