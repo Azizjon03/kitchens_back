@@ -3,40 +3,48 @@
 namespace App\Console\Commands;
 
 use App\Jobs\SendTelegramMessage;
-use App\Models\Order;
-use App\Models\Payment;
+use App\Models\Company;
 use App\Models\TelegramBot;
+use App\Services\Reports\DailyReport;
+use App\Services\Telegram\StaffBot;
 use Illuminate\Console\Command;
 
-/** #26: rahbarga kunlik hisobot — tushum, buyurtmalar soni, o'rtacha chek. */
+/**
+ * #26/#37: rahbarga kunlik hisobot. Asosiy yo'l — xodimlar boti (Telegram'i ulangan
+ * rahbar va menejerlar). Restoranda hali hech kim ulanmagan bo'lsa — eski yo'l:
+ * mijozlar botining rahbar chati.
+ */
 class TelegramDailyReport extends Command
 {
     protected $signature = 'telegram:daily-report';
 
-    protected $description = "Rahbar chatiga kunlik hisobot yuborish";
+    protected $description = 'Rahbarlarga kunlik hisobot yuborish';
 
-    public function handle(): int
+    public function handle(DailyReport $report, StaffBot $staffBot): int
     {
-        $from = now()->startOfDay();
-        $to = now()->endOfDay();
+        $today = now();
+        $sent = [];
+
+        if ($staffBot->configured()) {
+            Company::where('is_active', true)->each(function (Company $company) use ($report, $staffBot, $today, &$sent) {
+                $recipients = $staffBot->recipients($company->id, ['company_admin', 'manager']);
+                if ($recipients->isEmpty()) {
+                    return;
+                }
+                $text = $report->text($company, $today);
+                foreach ($recipients->pluck('telegram_id')->unique() as $chatId) {
+                    $staffBot->queue($chatId, $text);
+                }
+                $sent[$company->id] = true;
+            });
+        }
 
         TelegramBot::with('company')->where('status', 'connected')->whereNotNull('owner_chat_id')
-            ->each(function (TelegramBot $bot) use ($from, $to) {
-                $orders = Order::withoutGlobalScopes()->where('company_id', $bot->company_id)
-                    ->whereBetween('created_at', [$from, $to])->where('status', '!=', 'cancelled')->count();
-                $payments = Payment::withoutGlobalScopes()->where('company_id', $bot->company_id)
-                    ->where('status', 'completed')->whereBetween('paid_at', [$from, $to]);
-                $revenue = (float) (clone $payments)->sum('amount') - (float) (clone $payments)->sum('change_amount');
-                $paidOrders = (clone $payments)->distinct('order_id')->count('order_id');
-                $avg = $paidOrders > 0 ? $revenue / $paidOrders : 0;
-                $fmt = fn (float $v) => number_format($v, 0, '.', ' ');
-
-                SendTelegramMessage::dispatch($bot->id, $bot->owner_chat_id, implode("\n", [
-                    "📊 <b>".e($bot->company->name)." — {$from->format('d.m.Y')} hisobot</b>",
-                    "💰 Tushum: <b>{$fmt($revenue)} so'm</b>",
-                    "🧾 Buyurtmalar: <b>{$orders}</b>",
-                    "📈 O'rtacha chek: <b>{$fmt($avg)} so'm</b>",
-                ]));
+            ->each(function (TelegramBot $bot) use ($report, $today, $sent) {
+                if (isset($sent[$bot->company_id]) || ! $bot->company) {
+                    return;
+                }
+                SendTelegramMessage::dispatch($bot->id, $bot->owner_chat_id, $report->text($bot->company, $today));
             });
 
         return self::SUCCESS;

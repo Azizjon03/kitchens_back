@@ -12,6 +12,11 @@ function webApp(): TelegramWebApp | undefined {
   return (window as unknown as { Telegram?: { WebApp?: TelegramWebApp } }).Telegram?.WebApp;
 }
 
+/** Telegram imzolagan initData (Telegram'dan tashqarida — bo'sh) */
+export function tgInitData(): string {
+  return webApp()?.initData ?? '';
+}
+
 /** Company slug from the launch URL: /tg?company=slug */
 export function tgCompanySlug(): string {
   return new URLSearchParams(window.location.search).get('company') ?? '';

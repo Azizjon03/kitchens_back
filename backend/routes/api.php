@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\TableTemplateController;
 use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\StaffTelegramWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -39,6 +40,14 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
     });
+
+    // #37: birinchi kirishda Telegram kodi va xodimlar boti Mini App'i
+    Route::middleware('throttle:20,1,tg-verify')->group(function () {
+        Route::post('auth/telegram/verify', [AuthController::class, 'verifyTelegram']);
+        Route::post('auth/telegram/staff', [AuthController::class, 'telegramStaffLogin']);
+        Route::post('auth/telegram/staff/link', [AuthController::class, 'telegramStaffLink']);
+    });
+    Route::post('telegram/staff-webhook', StaffTelegramWebhookController::class)->middleware('throttle:600,1,tg-staff-webhook');
 
     // #35: taom rasmlari (ommaviy, uzoq kesh)
     Route::get('media/{path}', [MediaController::class, 'show'])->where('path', '[A-Za-z0-9/_-]+\.(webp|png|jpg)');
@@ -64,6 +73,8 @@ Route::prefix('v1')->group(function () {
             Route::get('me', [AuthController::class, 'me']);
             Route::put('me', [AuthController::class, 'updateProfile']);
             Route::put('change-password', [AuthController::class, 'changePassword']);
+            Route::get('telegram', [AuthController::class, 'telegramStatus']); // #37
+            Route::delete('telegram', [AuthController::class, 'unlinkTelegram']);
         });
 
         // Company-scoped routes (Menu & Tables)
@@ -89,6 +100,7 @@ Route::prefix('v1')->group(function () {
 
                 Route::apiResource('branches', BranchController::class)->except(['index']);
                 Route::apiResource('users', UserController::class);
+                Route::delete('users/{user}/telegram', [UserController::class, 'unlinkTelegram']); // #37
             });
 
             // Menu

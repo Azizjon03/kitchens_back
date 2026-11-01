@@ -19,13 +19,22 @@ class User extends Authenticatable
     ];
 
     protected $hidden = [
-        'password', 'remember_token', 'invite_token',
+        'password', 'remember_token', 'invite_token', 'telegram_id',
     ];
+
+    /** #37: panelga faqat "ulangan/ulanmagan" ko'rinadi, Telegram ID emas */
+    protected $appends = ['telegram_linked'];
+
+    public function getTelegramLinkedAttribute(): bool
+    {
+        return $this->telegram_id !== null;
+    }
 
     protected function casts(): array
     {
         return [
             'invited_at' => 'datetime',
+            'telegram_linked_at' => 'datetime',
             'is_active' => 'boolean',
             'password' => 'hashed',
         ];

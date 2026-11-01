@@ -10,16 +10,29 @@ export interface LoginAccount {
   company: { id: number; name: string; slug: string } | null;
 }
 
+/** #37: birinchi kirish — rasmiy botdan kelgan kod bilan tasdiqlash */
+export interface TelegramChallenge {
+  nonce: string;
+  botUrl: string | null;
+  codeSent: boolean;
+}
+
 export type LoginResult =
   | { status: 'ok'; user: User }
-  | { status: 'select'; accounts: LoginAccount[]; selectionToken: string };
+  | { status: 'select'; accounts: LoginAccount[]; selectionToken: string }
+  | { status: 'telegram'; challenge: TelegramChallenge };
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (phone: string, password: string) => Promise<LoginResult>;
-  selectCompany: (selectionToken: string, userId: number) => Promise<User>;
+  selectCompany: (selectionToken: string, userId: number) => Promise<LoginResult>;
+  verifyTelegram: (nonce: string, code: string) => Promise<LoginResult>;
+  /** Xodimlar boti Mini App'i: initData bilan parolsiz kirish */
+  loginWithTelegram: (initData: string) => Promise<LoginResult>;
+  /** Xodimlar boti Mini App'i: birinchi kirish — parol, keyin shu chatga kod */
+  linkTelegram: (initData: string, phone: string, password: string) => Promise<LoginResult>;
   logout: () => void;
 }
 
@@ -73,22 +86,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   }, []);
 
+  /** Kirish javobi: token, restoran tanlovi yoki Telegram kodi */
+  const handleAuth = useCallback((d: Record<string, unknown>): LoginResult => {
+    if (d.requires_telegram_verification) {
+      return {
+        status: 'telegram',
+        challenge: { nonce: d.nonce as string, botUrl: (d.bot_url as string | null) ?? null, codeSent: !!d.code_sent },
+      };
+    }
+    if (d.requires_company_selection) {
+      return { status: 'select', accounts: d.accounts as LoginAccount[], selectionToken: d.selection_token as string };
+    }
+    storeSession(d.token as string, d.user as User);
+    return { status: 'ok', user: d.user as User };
+  }, [storeSession]);
+
   const login = useCallback(async (phone: string, password: string): Promise<LoginResult> => {
     const { data } = await api.post('/auth/login', { phone, password });
-
-    if (data.data.requires_company_selection) {
-      return { status: 'select', accounts: data.data.accounts, selectionToken: data.data.selection_token };
-    }
-
-    storeSession(data.data.token, data.data.user);
-    return { status: 'ok', user: data.data.user };
-  }, [storeSession]);
+    return handleAuth(data.data);
+  }, [handleAuth]);
 
   const selectCompany = useCallback(async (selectionToken: string, userId: number) => {
     const { data } = await api.post('/auth/login/select', { selection_token: selectionToken, user_id: userId });
-    storeSession(data.data.token, data.data.user);
-    return data.data.user as User;
-  }, [storeSession]);
+    return handleAuth(data.data);
+  }, [handleAuth]);
+
+  const verifyTelegram = useCallback(async (nonce: string, code: string) => {
+    const { data } = await api.post('/auth/telegram/verify', { nonce, code });
+    return handleAuth(data.data);
+  }, [handleAuth]);
+
+  const loginWithTelegram = useCallback(async (initData: string) => {
+    const { data } = await api.post('/auth/telegram/staff', { init_data: initData });
+    return handleAuth(data.data);
+  }, [handleAuth]);
+
+  const linkTelegram = useCallback(async (initData: string, phone: string, password: string) => {
+    const { data } = await api.post('/auth/telegram/staff/link', { init_data: initData, phone, password });
+    return handleAuth(data.data);
+  }, [handleAuth]);
 
   const logout = useCallback(() => {
     // Tokenni serverda ham bekor qilamiz — aks holda u muddati tugaguncha (7 kun) amal qiladi.
@@ -112,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, selectCompany, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, selectCompany, verifyTelegram, loginWithTelegram, linkTelegram, logout }}>
       {children}
     </AuthContext.Provider>
   );

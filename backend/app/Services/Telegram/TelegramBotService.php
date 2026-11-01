@@ -147,9 +147,17 @@ class TelegramBotService
     {
         Log::error('telegram.bot_disconnected', ['bot' => $bot->id, 'company' => $bot->company_id, 'error' => $error]);
 
-        if (! $tokenRevoked && $bot->owner_chat_id) {
-            $this->client->sendMessage($bot->token, $bot->owner_chat_id,
-                "⚠️ <b>Bot aloqasi uzildi</b>\n".e($error)."\nPanel → Telegram bot → «Qayta ulash».");
+        $text = "⚠️ <b>Mijozlar boti aloqasi uzildi</b>\n".e($error)."\nPanel → Telegram bot → «Qayta ulash».";
+
+        // #37: asosiy yo'l — xodimlar botidagi rahbarlar (token bekor bo'lsa ham yetib boradi)
+        $staffBot = app(StaffBot::class);
+        $bosses = $staffBot->recipients($bot->company_id, ['company_admin']);
+        foreach ($bosses->pluck('telegram_id')->unique() as $chatId) {
+            $staffBot->queue($chatId, $text);
+        }
+
+        if ($bosses->isEmpty() && ! $tokenRevoked && $bot->owner_chat_id) {
+            $this->client->sendMessage($bot->token, $bot->owner_chat_id, $text);
         }
     }
 }

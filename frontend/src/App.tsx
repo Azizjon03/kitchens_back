@@ -27,6 +27,7 @@ const WaiterPage = lazy(() => import('./pages/WaiterPage'));
 const TgMenuPage = lazy(() => import('./pages/tg/TgMenuPage'));
 const TgCartPage = lazy(() => import('./pages/tg/TgCartPage'));
 const TgOrderStatusPage = lazy(() => import('./pages/tg/TgOrderStatusPage'));
+const StaffTgEntryPage = lazy(() => import('./pages/StaffTgEntryPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 const queryClient = new QueryClient({
@@ -52,6 +53,8 @@ function App() {
             <Route path="/tg" element={<TgMenuPage />} />
             <Route path="/tg/cart" element={<TgCartPage />} />
             <Route path="/tg/order/:id" element={<TgOrderStatusPage />} />
+            {/* #37: xodimlar boti Mini App'i */}
+            <Route path="/tg/staff" element={<StaffTgEntryPage />} />
 
             <Route
               path="/dashboard"

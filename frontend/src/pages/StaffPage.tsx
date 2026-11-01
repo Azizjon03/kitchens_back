@@ -4,7 +4,7 @@ import api from '../lib/api';
 import type { User, Branch, Role } from '../types';
 import PageGuide from '../components/PageGuide';
 import Layout from '../components/Layout';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Send, Trash2, X } from 'lucide-react';
 
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none';
@@ -280,6 +280,17 @@ export default function StaffPage() {
     },
   });
 
+  // #37: xodimlar boti havolasi
+  const { data: tgInfo } = useQuery<{ configured: boolean; bot_url: string | null; bot_username: string | null }>({
+    queryKey: ['auth-telegram'],
+    queryFn: async () => (await api.get('/auth/telegram')).data.data,
+  });
+
+  const unlinkMutation = useMutation({
+    mutationFn: async (id: number) => (await api.delete(`/users/${id}/telegram`)).data,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['staff'] }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => (await api.delete(`/users/${id}`)).data,
     onSuccess: () => {
@@ -305,6 +316,19 @@ export default function StaffPage() {
       </div>
 
       <PageGuide id="staff" />
+
+      {tgInfo?.configured && tgInfo.bot_url && (
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-950">
+          <Send size={18} className="text-sky-700 shrink-0" aria-hidden="true" />
+          <span>
+            Xodimlar boti:{' '}
+            <a href={tgInfo.bot_url} target="_blank" rel="noreferrer" className="font-medium text-sky-800 underline">
+              @{tgInfo.bot_username}
+            </a>
+            {' '}— havolani xodimlarga yuboring. Ular telefon va parol bilan bir marta kiradi, keyin buyurtma va xabarlar Telegram'da.
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="p-8 text-center">
@@ -334,6 +358,7 @@ export default function StaffPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Rol</th>
                 {branches.length > 1 && <th className="text-left px-4 py-3 font-medium text-gray-600">Filial</th>}
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Holat</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Telegram</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Amallar</th>
               </tr>
             </thead>
@@ -356,6 +381,24 @@ export default function StaffPage() {
                     >
                       {u.is_active ? 'Faol' : 'Nofaol'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {u.telegram_linked ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-800">Ulangan</span>
+                        <button
+                          type="button"
+                          onClick={() => unlinkMutation.mutate(u.id)}
+                          disabled={unlinkMutation.isPending}
+                          aria-label={`${u.name || u.full_name} Telegram'ini uzish`}
+                          className="min-h-9 px-2 text-xs text-gray-600 hover:text-red-700 underline"
+                        >
+                          Uzish
+                        </button>
+                      </span>
+                    ) : (
+                      <span className="text-gray-500">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
