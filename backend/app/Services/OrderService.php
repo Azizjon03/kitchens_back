@@ -54,7 +54,8 @@ class OrderService
                 'user_id' => $userId,
                 'customer_id' => $customerId,
                 'type' => $data['type'],
-                'status' => 'preparing',
+                // #39: botdan kelgan yetkazib berish / olib ketish — avval tasdiqlash
+                'status' => $data['status'] ?? 'preparing',
                 'note' => $data['note'] ?? null,
                 'delivery_address' => $data['delivery_address'] ?? null,
                 'delivery_lat' => $data['delivery_lat'] ?? null,

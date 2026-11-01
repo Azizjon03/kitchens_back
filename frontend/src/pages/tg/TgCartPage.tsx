@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import tgApi, { tgErrorMessage, tgInit, tgTableId } from '../../lib/tgApi';
 import { useTgCart, cartTotal, lineTotal, addonSummary, type TgCartLine } from '../../lib/tgCart';
 import { tgThemeStyle, useTgBackButton } from '../../lib/tgTheme';
@@ -11,6 +11,8 @@ import { ArrowLeft, ShoppingBag, Trash2 } from 'lucide-react';
 import { formatMoney } from '../../lib/format';
 import { useOnline } from '../../lib/useOnline';
 import TgOfflineBanner from './TgOfflineBanner';
+import TgAddressPicker from './TgAddressPicker';
+import { addressPayload, emptyNewAddress, isAddressReady, type AddressChoice, type SavedAddress } from '../../lib/tgAddress';
 
 
 interface TgMenuResponse {
@@ -28,9 +30,11 @@ export default function TgCartPage() {
   const [branchId, setBranchId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const online = useOnline();
+  const queryClient = useQueryClient();
   // #26: olib ketish yoki yetkazib berish; manzil bot ro'yxatidan oldindan to'ldiriladi
   const [orderType, setOrderType] = useState<'takeaway' | 'delivery'>('takeaway');
-  const [address, setAddress] = useState<string | null>(null);
+  // #39: saqlangan manzil yoki yangi manzil
+  const [addressChoice, setAddressChoice] = useState<AddressChoice | null>(null);
   // #26: bitta buyurtma uchun bitta kalit — tarmoq uzilib qayta yuborilsa ikki buyurtma bo'lmaydi
   const clientKey = useRef<string | null>(null);
   useEffect(() => {
@@ -46,12 +50,13 @@ export default function TgCartPage() {
     queryFn: async () => (await tgApi.get('/menu')).data.data as TgMenuResponse,
   });
 
-  const { data: me } = useQuery<{ address: string | null; latitude: number | null; registered: boolean }>({
-    queryKey: ['tg-me'],
-    queryFn: async () => (await tgApi.get('/me')).data.data,
+  const { data: savedAddresses } = useQuery<SavedAddress[]>({
+    queryKey: ['tg-addresses'],
+    queryFn: async () => (await tgApi.get('/addresses')).data.data,
   });
-  const addressValue = address ?? me?.address ?? '';
-  const hasLocation = me?.latitude != null;
+  // Tanlanmagan bo'lsa — oxirgi ishlatilgan manzil (TgAddressPicker bilan bir xil qoida)
+  const effectiveAddress: AddressChoice | null = addressChoice
+    ?? (savedAddresses === undefined ? null : savedAddresses[0] ? { mode: 'saved', id: savedAddresses[0].id } : emptyNewAddress());
 
   const theme = tgThemeStyle(data?.company?.primary_color);
   const branches = data?.branches ?? [];
@@ -82,7 +87,7 @@ export default function TgCartPage() {
       else {
         payload.branch_id = branchId;
         payload.type = orderType;
-        if (orderType === 'delivery' && addressValue.trim()) payload.delivery_address = addressValue.trim();
+        if (orderType === 'delivery' && effectiveAddress) Object.assign(payload, addressPayload(effectiveAddress));
       }
       clientKey.current ??= typeof crypto !== 'undefined' && 'randomUUID' in crypto
         ? crypto.randomUUID()
@@ -94,6 +99,7 @@ export default function TgCartPage() {
       const order = res?.data;
       clientKey.current = null;
       clear();
+      queryClient.invalidateQueries({ queryKey: ['tg-addresses'] });
       navigate(`/tg/order/${order.id}${window.location.search}`);
     },
     onError: (err: unknown) => {
@@ -110,7 +116,7 @@ export default function TgCartPage() {
   const total = subtotal + serviceChargeAmount;
 
   const divider = { borderColor: 'color-mix(in srgb, var(--tg-hint) 18%, transparent)' };
-  const blocked = mutation.isPending || !online || (orderType === 'delivery' && !tableId && !hasLocation && !addressValue.trim());
+  const blocked = mutation.isPending || !online || (orderType === 'delivery' && !tableId && !isAddressReady(effectiveAddress));
 
   return (
     <div className="min-h-screen pb-40" style={{ ...theme, background: 'var(--tg-bg)', color: 'var(--tg-text)' }}>
@@ -197,22 +203,7 @@ export default function TgCartPage() {
                   </button>
                 ))}
               </div>
-              {orderType === 'delivery' && (
-                <div className="mt-3">
-                  <label htmlFor="tg-address" className="block text-sm font-medium mb-1">Manzil</label>
-                  <input
-                    id="tg-address"
-                    value={addressValue}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Ko'cha, uy, mo'ljal"
-                    className="w-full h-12 px-3 rounded-xl text-[15px] outline-none"
-                    style={{ background: 'var(--tg-bg)', color: 'var(--tg-text)' }}
-                  />
-                  <p className="mt-1.5 text-sm" style={{ color: 'var(--tg-hint)' }}>
-                    {hasLocation ? '📍 Botga yuborgan joylashuvingiz kuryerga xarita sifatida boradi.' : "Manzilni aniq yozing — kuryer shu bo'yicha keladi."}
-                  </p>
-                </div>
-              )}
+              {orderType === 'delivery' && <TgAddressPicker value={effectiveAddress} onChange={setAddressChoice} />}
               {branches.length > 1 && (
                 <div className="mt-3">
                   <label htmlFor="tg-branch" className="block text-sm font-medium mb-1">Filial</label>

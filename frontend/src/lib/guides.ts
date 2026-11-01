@@ -58,8 +58,9 @@ export const GUIDES = {
     intro: "Buyurtmani shu yerda olasiz. Oshxona uni darhol o'z ekranida ko'radi, taom tayyor bo'lsa sizga xabar keladi.",
     steps: [
       "Bo'sh stolni bosing.",
-      "Menyudan taomlarni tanlang — soni va izohni savatda o'zgartirasiz.",
-      "«Buyurtma berish» ni bosing — buyurtma oshxonaga ketadi.",
+      "Menyudan taomlarni qo'shib boring — pastdagi panelda nechta taom va qancha bo'lgani ko'rinib turadi.",
+      "Panelni bosing: taomlar va miqdorni tekshiring, istak va qo'shimchalarni belgilang.",
+      "«Tasdiqlash va yuborish» ni bosing — shundan keyingina buyurtma oshxonaga ketadi. Oynani yopsangiz, qoralama saqlanib qoladi.",
       "Taom tayyor bo'lsa — «Tayyor» belgisi chiqadi. Mehmonga berganingizdan keyin «Berildi» ni bosing.",
       "Mehmon to'lamoqchi bo'lsa — kassirga ayting, u «Kassa» da hisobni yopadi.",
     ],
@@ -83,6 +84,17 @@ export const GUIDES = {
       "Oshxona bo'limlarga bo'lingan bo'lsa (kabob, somsa, osh) — tepada o'z bo'limingizni tanlang: faqat o'z taomlaringiz chiqadi.",
       "Ofitsiant darhol xabar oladi va taomni olib ketadi.",
       "Ekranni oshxonadagi planshet yoki televizorda ochiq qoldiring.",
+    ],
+  },
+  delivery: {
+    title: "Yetkazib berish bo'limi — qanday ishlaydi?",
+    intro: "Mijoz Telegram botda yetkazib berish yoki olib ketish buyurtmasini beradi. U oshxonaga darhol tushmaydi — avval siz tasdiqlaysiz.",
+    steps: [
+      "Yangi buyurtma «Tasdiqlash kutilmoqda» da chiqadi, xodimlar botiga ham xabar keladi.",
+      "«Qo'ng'iroq» ni bosib mijoz bilan gaplashing: buyurtma va manzilni aniqlang.",
+      "Manzil xaritada ko'rinadi — «Yandex xaritada ochish» kuryerga yo'l ko'rsatadi.",
+      "«Tasdiqlash» — buyurtma oshxonaga tushadi, mijozga «tasdiqlandi» xabari boradi. Mijoz javob bermasa — «Rad etish».",
+      "Taom tayyor bo'lgach «Kuryer yo'lga chiqdi», topshirilgach «Yetkazildi». To'lovni kassada qabul qiling.",
     ],
   },
   kitchenStations: {

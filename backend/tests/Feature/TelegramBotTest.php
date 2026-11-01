@@ -247,8 +247,15 @@ class TelegramBotTest extends TestCase
         $this->assertStringContainsString("Yangi Telegram buyurtma #{$id}", $group['text']);
         $this->assertStringContainsString('Osh — 2 ta', $group['text']);
         $this->assertStringContainsString('+998 (90) 123-45-67', $group['text']);
-        $this->assertStringContainsString('maps.google.com/?q=40.99', $group['text']);
-        $this->assertStringContainsString('qabul qilindi', $messages->firstWhere('chat_id', '555')['text']);
+        $this->assertStringContainsString('yandex.uz/maps/?pt=71.23,40.99', $group['text']);
+        $this->assertStringContainsString('operator qo\'ng\'iroq qilib tasdiqlaydi', $messages->firstWhere('chat_id', '555')['text']);
+        $this->assertSame('pending', $order->status);
+
+        // #39: tasdiqlanmaguncha oshpaz tayyor qila olmaydi; rahbar tasdiqlaydi
+        Sanctum::actingAs($this->admin);
+        $this->patchJson("/api/v1/orders/{$id}/confirm")->assertOk()->assertJsonPath('data.status', 'preparing');
+        $this->assertStringContainsString('tasdiqlandi', collect($this->sent('sendMessage'))->where('chat_id', '555')->last()['text']);
+        $this->patchJson("/api/v1/orders/{$id}/confirm")->assertStatus(422);
 
         $chef = User::create(['company_id' => $this->company->id, 'branch_id' => $this->branch->id, 'name' => 'Oshpaz', 'phone' => '+998900000003', 'role' => 'chef', 'password' => 'secret123', 'is_active' => true]);
         Sanctum::actingAs($chef);

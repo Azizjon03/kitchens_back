@@ -45,6 +45,11 @@ class OrderController extends Controller
             $query->where('type', $request->type);
         }
 
+        // #43: ofitsiantning o'z buyurtmalari
+        if ($request->boolean('mine')) {
+            $query->where('user_id', $request->user()->id);
+        }
+
         if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -175,6 +180,68 @@ class OrderController extends Controller
         return $this->success($order);
     }
 
+    /**
+     * #43: ofitsiant paneli — o'z buyurtmalari soni: hozir faol, tayyor, berilgan
+     * va bugun jami (bekor qilinganlarsiz).
+     */
+    /**
+     * #39: «Yetkazib berish» bo'limi — botdan kelgan yetkazib berish va olib ketish
+     * buyurtmalari: tasdiqlash kutayotganlari, jarayondagilari va bugun yakunlanganlari.
+     */
+    public function delivery(Request $request): JsonResponse
+    {
+        $orders = Order::with(['customer:id,name,phone', 'orderItems.menuItem:id,name_uz', 'orderItems.addons', 'orderItems.modifiers', 'branch:id,name', 'confirmedBy:id,name'])
+            ->whereNotNull('customer_id')
+            ->whereIn('type', ['delivery', 'takeaway'])
+            ->when($request->filled('branch_id'), fn ($q) => $q->where('branch_id', $request->integer('branch_id')))
+            ->where(fn ($q) => $q->whereNotIn('status', OrderService::TERMINAL_STATUSES)
+                ->orWhere(fn ($q) => $q->whereIn('status', ['paid', 'closed', 'cancelled'])->whereDate('updated_at', now()->toDateString())))
+            ->orderBy('created_at')
+            ->limit(200)
+            ->get();
+
+        return $this->success($orders);
+    }
+
+    /** #39: menejer mijozga qo'ng'iroq qilib tasdiqladi — buyurtma oshxonaga tushadi. */
+    public function confirm(Request $request, Order $order): JsonResponse
+    {
+        $updated = DB::transaction(function () use ($order, $request) {
+            $locked = Order::lockForUpdate()->findOrFail($order->id);
+            if ($locked->status !== 'pending') {
+                return false;
+            }
+            $locked->update(['status' => 'preparing', 'confirmed_at' => now(), 'confirmed_by' => $request->user()->id]);
+
+            return true;
+        });
+
+        if (! $updated) {
+            return $this->error('ALREADY_CONFIRMED', 'Buyurtma allaqachon tasdiqlangan yoki bekor qilingan.', 422);
+        }
+
+        $order->refresh()->load(['table', 'user', 'orderItems.menuItem']);
+        OrderStatusUpdated::dispatch($order, 'pending');
+
+        return $this->success($order);
+    }
+
+    public function myStats(Request $request): JsonResponse
+    {
+        $mine = Order::where('user_id', $request->user()->id);
+        $byStatus = (clone $mine)->whereIn('status', ['preparing', 'ready', 'served'])
+            ->selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
+        $today = (clone $mine)->whereDate('created_at', now()->toDateString())->where('status', '!=', 'cancelled');
+
+        return $this->success([
+            'preparing' => (int) ($byStatus['preparing'] ?? 0),
+            'ready' => (int) ($byStatus['ready'] ?? 0),
+            'served' => (int) ($byStatus['served'] ?? 0),
+            'today_count' => (clone $today)->count(),
+            'today_total' => (float) (clone $today)->sum('total'),
+        ]);
+    }
+
     public function updateStatus(Request $request, Order $order, OrderService $orderService): JsonResponse
     {
         $data = $request->validate([
@@ -303,7 +370,8 @@ class OrderController extends Controller
         $cancelLimitMinutes = $company->getCancelTimeLimitMinutes();
         $minutesSinceCreation = $order->created_at->diffInMinutes(now());
 
-        if ($minutesSinceCreation > $cancelLimitMinutes) {
+        // #39: tasdiqlanmagan bot buyurtmasini rad etish vaqt bilan cheklanmaydi
+        if ($order->status !== 'pending' && $minutesSinceCreation > $cancelLimitMinutes) {
             return $this->error(
                 'CANCEL_TIME_EXCEEDED',
                 "Orders can only be cancelled within {$cancelLimitMinutes} minutes of creation.",

@@ -6,6 +6,7 @@ use App\Events\OrderCreated;
 use App\Events\OrderStatusUpdated;
 use App\Models\Order;
 use App\Services\Telegram\StaffBot;
+use App\Support\Phone;
 
 /**
  * #37: xodimlar botidagi bildirishnomalar (Telegram'i ulangan xodimlarga):
@@ -28,7 +29,29 @@ class NotifyStaff
         $order = $event->order;
         $order->loadMissing(['table', 'customer', 'orderItems.menuItem', 'orderItems.addons']);
         $text = $this->orderText($order);
+        if ($text === null) {
+            return; // oshxonaga tegishli taom yo'q (faqat stol to'plami)
+        }
 
+        // #39: tasdiqlanmagan bot buyurtmasi oshxonaga hali tushmaydi — rahbar/menejer tasdiqlaydi
+        if ($order->status !== 'pending') {
+            $this->notifyChefs($order, $text);
+        }
+
+        if ($order->customer_id) {
+            $bosses = $this->bot->recipients($order->company_id, ['company_admin', 'manager'], $order->branch_id);
+            $head = $order->status === 'pending' ? "📲 <b>Telegram buyurtma — tasdiqlash kerak</b>" : '📲 Telegram orqali';
+            $who = $order->customer ? '👤 '.e($order->customer->name ?? 'Mijoz').($order->customer->phone ? ', '.e(Phone::format($order->customer->phone)) : '') : '';
+            $where = $order->delivery_address ? "\n📍 ".e($order->delivery_address) : '';
+            foreach ($bosses->pluck('telegram_id')->unique() as $chatId) {
+                $this->bot->queue($chatId, "{$head}\n{$text}\n{$who}{$where}");
+            }
+        }
+    }
+
+    /** Oshpazlarga — faqat o'z bo'limi taomlari, «✅ Tayyor» tugmasi bilan (#40). */
+    private function notifyChefs(Order $order, string $text): void
+    {
         // #40: oshpazga faqat o'z bo'limi taomlari (bo'lim biriktirilmagan — hammasi)
         $chefs = $this->bot->recipients($order->company_id, ['chef'], $order->branch_id)->load('kitchenStations:id');
         $sent = [];
@@ -46,18 +69,20 @@ class NotifyStaff
             ]]]]);
             $sent[$chef->telegram_id] = true;
         }
-
-        if ($order->customer_id) {
-            $bosses = $this->bot->recipients($order->company_id, ['company_admin', 'manager'], $order->branch_id);
-            foreach ($bosses->pluck('telegram_id')->diff($chefs->pluck('telegram_id'))->unique() as $chatId) {
-                $this->bot->queue($chatId, "📲 Telegram orqali\n".$text);
-            }
-        }
     }
 
     public function handleStatus(OrderStatusUpdated $event): void
     {
         $order = $event->order;
+        // #39: menejer tasdiqladi — endi oshpazlarga
+        if ($event->previousStatus === 'pending' && $order->status === 'preparing' && $this->bot->configured()) {
+            $order->loadMissing(['table', 'customer', 'orderItems.menuItem', 'orderItems.addons']);
+            if ($text = $this->orderText($order)) {
+                $this->notifyChefs($order, $text);
+            }
+
+            return;
+        }
         if (! $this->bot->configured() || $order->status !== 'ready' || $event->previousStatus === 'ready') {
             return;
         }

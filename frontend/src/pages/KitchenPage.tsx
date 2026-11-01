@@ -360,7 +360,7 @@ export default function KitchenPage() {
     };
 
     channel.listen('.order.created', (e: { order: KdsOrder }) => {
-      beep();
+      if (e.order.status === 'preparing') beep(); // #39: tasdiqlanmagan bot buyurtmasi oshxonaga tegishli emas
       upsert(e.order);
     });
 

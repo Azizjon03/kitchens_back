@@ -77,7 +77,7 @@ class TelegramOrderTest extends TestCase
 
         $response->assertCreated();
         $response->assertJsonPath('data.type', 'takeaway');
-        $response->assertJsonPath('data.status', 'preparing');
+        $response->assertJsonPath('data.status', 'pending'); // #39: operator tasdiqlaydi
 
         $customer = Customer::where('telegram_id', '555000')->first();
         $this->assertNotNull($customer);

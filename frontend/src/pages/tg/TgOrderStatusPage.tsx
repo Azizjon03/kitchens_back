@@ -19,13 +19,15 @@ interface TgOrder {
 }
 
 const STEPS_DINE_IN = ['preparing', 'ready', 'served', 'paid'];
-const STEPS_TAKEAWAY = ['preparing', 'ready', 'paid'];
-const STEPS_DELIVERY = ['preparing', 'ready', 'delivering', 'delivered'];
+// #39: bot buyurtmasi avval operator tasdiqlaydi
+const STEPS_TAKEAWAY = ['pending', 'preparing', 'ready', 'paid'];
+const STEPS_DELIVERY = ['pending', 'preparing', 'ready', 'delivering', 'delivered'];
 
 // Statuses that will never change again — once here, polling for updates is pointless.
 const TERMINAL_STATUSES = ['paid', 'closed', 'cancelled'];
 
 const LABELS: Record<string, string> = {
+  pending: 'Tasdiqlanmoqda',
   preparing: 'Tayyorlanmoqda',
   ready: 'Tayyor',
   served: 'Berildi',

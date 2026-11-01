@@ -28,6 +28,7 @@ import NumberInput from '../components/NumberInput';
 // ─── Constants ───────────────────────────────────────────────────
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
+  pending: { label: 'Tasdiqlash kutilmoqda', bg: 'bg-orange-100', text: 'text-orange-800' },
   preparing: { label: 'Tayyorlanmoqda', bg: 'bg-amber-100', text: 'text-amber-700' },
   ready: { label: 'Tayyor', bg: 'bg-blue-100', text: 'text-blue-700' },
   served: { label: 'Berildi', bg: 'bg-purple-100', text: 'text-purple-700' },

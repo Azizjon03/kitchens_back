@@ -18,6 +18,7 @@ class Order extends Model
         'discount_amount', 'service_charge_pct', 'service_charge_amount',
         'delivery_fee', 'total', 'promo_id', 'note',
         'delivery_address', 'delivery_lat', 'delivery_lng', 'client_key',
+        'confirmed_at', 'confirmed_by',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class Order extends Model
         'service_charge_pct' => 'decimal:2',
         'service_charge_amount' => 'decimal:2',
         'delivery_fee' => 'decimal:2',
+        'confirmed_at' => 'datetime',
         'total' => 'decimal:2',
     ];
 
@@ -144,5 +146,11 @@ class Order extends Model
                 ])->values(),
             ])->values(),
         ];
+    }
+
+    /** #39: bot buyurtmasini tasdiqlagan xodim */
+    public function confirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 }
