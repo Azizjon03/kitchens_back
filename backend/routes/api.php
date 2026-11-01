@@ -28,6 +28,8 @@ use App\Http\Controllers\Api\V1\Tg\MenuController as TgMenuController;
 use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\KitchenStationController;
+use App\Http\Controllers\Api\V1\PrinterController;
+use App\Http\Controllers\Api\V1\PrintAgentApiController;
 use App\Http\Controllers\Api\V1\StaffTelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\StaffBotController as SuperStaffBotController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +51,12 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/telegram/verify', [AuthController::class, 'verifyTelegram']);
         Route::post('auth/telegram/staff', [AuthController::class, 'telegramStaffLogin']);
         Route::post('auth/telegram/staff/link', [AuthController::class, 'telegramStaffLink']);
+    });
+    // #53: oshxona kompyuteridagi printer dasturi
+    Route::prefix('agent')->middleware(['print.agent', 'throttle:120,1,print-agent'])->group(function () {
+        Route::post('heartbeat', [PrintAgentApiController::class, 'heartbeat']);
+        Route::get('jobs', [PrintAgentApiController::class, 'jobs']);
+        Route::post('jobs/{job}', [PrintAgentApiController::class, 'report'])->whereNumber('job');
     });
     Route::post('telegram/staff-webhook', StaffTelegramWebhookController::class)->middleware('throttle:600,1,tg-staff-webhook');
 
@@ -115,6 +123,14 @@ Route::prefix('v1')->group(function () {
                 Route::patch('categories/reorder', [CategoryController::class, 'reorder']);
                 Route::apiResource('categories', CategoryController::class);
                 Route::get('kitchen-stations/chefs', [KitchenStationController::class, 'chefs']); // #40
+                // #53: oshxona printerlari va kompyuterlar
+                Route::get('printers', [PrinterController::class, 'index']);
+                Route::post('printers', [PrinterController::class, 'store']);
+                Route::put('printers/{printer}', [PrinterController::class, 'update']);
+                Route::delete('printers/{printer}', [PrinterController::class, 'destroy']);
+                Route::post('printers/{printer}/test', [PrinterController::class, 'test'])->middleware('throttle:20,1,printer-test');
+                Route::post('print-agents', [PrinterController::class, 'storeAgent'])->middleware('throttle:10,1,print-agent-new');
+                Route::delete('print-agents/{printAgent}', [PrinterController::class, 'destroyAgent']);
                 Route::apiResource('kitchen-stations', KitchenStationController::class)->except(['index', 'show']);
                 Route::patch('menu-items/{menuItem}/availability', [MenuItemController::class, 'toggleAvailability']);
                 Route::post('menu-items/{menuItem}/image', [MediaController::class, 'uploadMenuItem'])->middleware('throttle:30,1,media');
@@ -130,14 +146,19 @@ Route::prefix('v1')->group(function () {
             });
 
             // Tables
+            // Kassir ham ofitsiant ekranida stol va zallarni ko'radi (buyurtma qabul qiladi)
+            Route::middleware('role:company_admin,manager,waiter,cashier')->group(function () {
+                Route::get('tables', [TableController::class, 'index']);
+                Route::get('table-groups', [TableGroupController::class, 'index']);
+            });
+
             Route::middleware('role:company_admin,manager,waiter')->group(function () {
                 Route::patch('tables/{table}/status', [TableController::class, 'updateStatus']);
                 Route::post('tables/{table}/transfer', [TableController::class, 'transfer']);
                 Route::post('tables/{table}/merge', [TableController::class, 'merge']);
                 Route::post('tables/{table}/unmerge', [TableController::class, 'unmerge']);
-                Route::apiResource('tables', TableController::class);
+                Route::apiResource('tables', TableController::class)->except('index');
                 // #49: zallar — ko'rish hammaga, o'zgartirish rahbar/menejerga
-                Route::get('table-groups', [TableGroupController::class, 'index']);
                 Route::apiResource('table-groups', TableGroupController::class)->only(['store', 'update', 'destroy'])
                     ->middleware('role:company_admin,manager');
             });
@@ -155,6 +176,7 @@ Route::prefix('v1')->group(function () {
             // #40: oshxona bo'limlari — oshpaz o'z bo'limi taomlarini tayyor qiladi
             Route::get('kitchen-stations', [KitchenStationController::class, 'index']);
             Route::patch('orders/{order}/kitchen-ready', [OrderController::class, 'kitchenReady']);
+            Route::post('orders/{order}/print-kitchen', [PrinterController::class, 'printKitchen'])->middleware('throttle:30,1,print-kitchen'); // #53
         });
 
         // Orders - write actions (no chef)

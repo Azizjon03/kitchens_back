@@ -97,6 +97,17 @@ export const GUIDES = {
       "Taom tayyor bo'lgach «Kuryer yo'lga chiqdi», topshirilgach «Yetkazildi». To'lovni kassada qabul qiling.",
     ],
   },
+  printers: {
+    title: 'Oshxona printerlari — qanday ulanadi?',
+    intro: "Har bo'limga chek printeri (LAN, ESC/POS, masalan Xprinter XP-80TS). Buyurtma kelishi bilan har printer faqat o'z bo'limi taomlarini chiqaradi — ekran shart emas.",
+    steps: [
+      "Printerlarni tarmoq kabeli bilan routerga ulang. IP manzilini bilish uchun printerni o'chirib, FEED tugmasini bosib turgan holda yoqing — chiqqan qog'ozda IP yozilgan.",
+      "«Printer qo'shish»: nom (masalan, Kabob), IP manzil, qog'oz kengligi.",
+      "«Kompyuterni ulash» — dastur yuklab olinadi. Uni shu tarmoqdagi Windows kompyuterda o'ng tugma → «Run with PowerShell» bilan ishga tushiring.",
+      "Kompyuter «Ulangan» bo'lgach, har printer uchun «Sinov cheki» ni bosing.",
+      "«Oshxona bo'limlari» da har bo'limga printerini tanlang. Printer ishlamay qolsa — xodimlar botiga xabar keladi.",
+    ],
+  },
   kitchenStations: {
     title: "Oshxona bo'limlari nima uchun?",
     intro: "Oshxona bir necha joyda bo'lsa (kabob tashqarida, somsa va salat alohida, osh ichkarida), har oshpaz faqat o'z taomlarini ko'radi va o'zi «Tayyor» qiladi.",

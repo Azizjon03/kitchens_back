@@ -42,7 +42,7 @@ class KitchenStationController extends Controller
     {
         $data = $this->validated($request, $request->user()->company_id);
         $station = DB::transaction(function () use ($data) {
-            $station = KitchenStation::create(collect($data)->only(['name', 'sort_order', 'is_active'])->all());
+            $station = KitchenStation::create(collect($data)->only(['name', 'sort_order', 'is_active', 'printer_id'])->all());
             $this->sync($station, $data);
 
             return $station;
@@ -55,7 +55,7 @@ class KitchenStationController extends Controller
     {
         $data = $this->validated($request, $kitchenStation->company_id, $kitchenStation);
         DB::transaction(function () use ($kitchenStation, $data) {
-            $kitchenStation->update(collect($data)->only(['name', 'sort_order', 'is_active'])->all());
+            $kitchenStation->update(collect($data)->only(['name', 'sort_order', 'is_active', 'printer_id'])->all());
             $this->sync($kitchenStation, $data);
         });
 
@@ -83,6 +83,7 @@ class KitchenStationController extends Controller
             'category_ids.*' => ['integer', $scoped('categories')],
             'user_ids' => 'sometimes|array|max:100',
             'user_ids.*' => ['integer', Rule::exists('users', 'id')->where(fn ($q) => $q->where('company_id', $companyId)->where('role', 'chef'))],
+            'printer_id' => ['sometimes', 'nullable', $scoped('printers')], // #53
         ], [
             'name.unique' => 'Bunday nomli bo\'lim allaqachon bor.',
             'user_ids.*.exists' => 'Faqat shu restoranning oshpazlarini biriktirish mumkin.',
@@ -109,6 +110,7 @@ class KitchenStationController extends Controller
             'name' => $s->name,
             'sort_order' => $s->sort_order,
             'is_active' => $s->is_active,
+            'printer_id' => $s->printer_id,
             'users' => $s->users->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->values(),
             'categories' => $s->categories->map(fn (Category $c) => ['id' => $c->id, 'name_uz' => $c->name_uz])->values(),
         ];

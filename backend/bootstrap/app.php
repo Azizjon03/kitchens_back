@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'company.active' => \App\Http\Middleware\EnsureCompanyActive::class,
             'telegram' => \App\Http\Middleware\ValidateTelegramInitData::class,
+            'print.agent' => \App\Http\Middleware\AuthenticatePrintAgent::class, // #53
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
