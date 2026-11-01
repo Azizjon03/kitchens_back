@@ -86,6 +86,17 @@ export const GUIDES = {
       "Ekranni oshxonadagi planshet yoki televizorda ochiq qoldiring.",
     ],
   },
+  delivery: {
+    title: "Yetkazib berish bo'limi — qanday ishlaydi?",
+    intro: "Mijoz Telegram botda yetkazib berish yoki olib ketish buyurtmasini beradi. U oshxonaga darhol tushmaydi — avval siz tasdiqlaysiz.",
+    steps: [
+      "Yangi buyurtma «Tasdiqlash kutilmoqda» da chiqadi, xodimlar botiga ham xabar keladi.",
+      "«Qo'ng'iroq» ni bosib mijoz bilan gaplashing: buyurtma va manzilni aniqlang.",
+      "Manzil xaritada ko'rinadi — «Yandex xaritada ochish» kuryerga yo'l ko'rsatadi.",
+      "«Tasdiqlash» — buyurtma oshxonaga tushadi, mijozga «tasdiqlandi» xabari boradi. Mijoz javob bermasa — «Rad etish».",
+      "Taom tayyor bo'lgach «Kuryer yo'lga chiqdi», topshirilgach «Yetkazildi». To'lovni kassada qabul qiling.",
+    ],
+  },
   kitchenStations: {
     title: "Oshxona bo'limlari nima uchun?",
     intro: "Oshxona bir necha joyda bo'lsa (kabob tashqarida, somsa va salat alohida, osh ichkarida), har oshpaz faqat o'z taomlarini ko'radi va o'zi «Tayyor» qiladi.",

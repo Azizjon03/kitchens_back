@@ -52,6 +52,10 @@ class OrderController extends Controller
             'delivery_address' => 'nullable|string|max:255',
             'delivery_lat' => 'nullable|numeric|between:-90,90',
             'delivery_lng' => 'nullable|numeric|between:-180,180',
+            // #39: saqlangan manzil yoki yangisini saqlash («Uy», «Ish», ...)
+            'address_id' => 'nullable|integer',
+            'save_address' => 'nullable|boolean',
+            'address_label' => 'nullable|string|max:40',
             // #26: tarmoq uzilib qayta yuborilsa ikki buyurtma bo'lmasin
             'client_key' => 'nullable|string|max:64',
         ]);
@@ -84,17 +88,44 @@ class OrderController extends Controller
             $data['type'] = ($data['type'] ?? null) === 'delivery' ? 'delivery' : 'takeaway';
         }
 
+        $saveAddress = null;
         if ($data['type'] === 'delivery') {
-            $data['delivery_lat'] ??= $customer->latitude;
-            $data['delivery_lng'] ??= $customer->longitude;
+            if (! empty($data['address_id'])) {
+                $saved = $customer->addresses()->find($data['address_id']);
+                if (! $saved) {
+                    return $this->error('ADDRESS_NOT_FOUND', 'Manzil topilmadi. Qaytadan tanlang.', 422);
+                }
+                $data['delivery_address'] = $saved->address;
+                $data['delivery_lat'] = $saved->latitude;
+                $data['delivery_lng'] = $saved->longitude;
+                $saved->update(['last_used_at' => now()]);
+            } elseif (empty($data['delivery_address']) && ! isset($data['delivery_lat'])) {
+                // Eski Mini App: ro'yxatdan o'tishdagi joylashuv
+                $data['delivery_lat'] = $customer->latitude;
+                $data['delivery_lng'] = $customer->longitude;
+            }
             if (empty($data['delivery_address']) && $data['delivery_lat'] === null) {
                 return $this->error('ADDRESS_REQUIRED', 'Yetkazib berish uchun manzil yoki joylashuv kerak.', 422);
+            }
+            if (empty($data['address_id']) && ! empty($data['save_address'])) {
+                $saveAddress = [
+                    'label' => trim((string) ($data['address_label'] ?? '')) ?: 'Manzil',
+                    'address' => $data['delivery_address'] ?? null,
+                    'latitude' => $data['delivery_lat'] ?? null,
+                    'longitude' => $data['delivery_lng'] ?? null,
+                ];
             }
             if (! empty($data['delivery_address'])) {
                 $customer->update(['address' => $data['delivery_address']]);
             }
         } else {
             unset($data['delivery_address'], $data['delivery_lat'], $data['delivery_lng']);
+        }
+        unset($data['address_id'], $data['save_address'], $data['address_label']);
+
+        // #39: stol QR'sidan bo'lmagan bot buyurtmasi — menejer qo'ng'iroq qilib tasdiqlaydi
+        if ($data['type'] !== 'dine_in') {
+            $data['status'] = 'pending';
         }
 
         try {
@@ -106,7 +137,51 @@ class OrderController extends Controller
             return $this->success($this->serialize($order), 200);
         }
 
+        if ($saveAddress) {
+            // Bir xil nomli manzil yangilanadi («Uy» ikkita bo'lmaydi)
+            $customer->addresses()->updateOrCreate(['label' => $saveAddress['label']], $saveAddress + ['last_used_at' => now()]);
+        }
+
         return $this->success($this->serialize($order->fresh()), 201);
+    }
+
+    /** #39: saqlangan manzillar. Ro'yxatdan o'tishdagi joylashuv birinchi marta «Uy» bo'ladi. */
+    public function addresses(Request $request): JsonResponse
+    {
+        $customer = $request->attributes->get('tg_customer');
+        if ($customer->latitude !== null && ! $customer->addresses()->exists()) {
+            $customer->addresses()->create([
+                'label' => 'Uy', 'address' => $customer->address,
+                'latitude' => $customer->latitude, 'longitude' => $customer->longitude, 'last_used_at' => now(),
+            ]);
+        }
+
+        return $this->success($customer->addresses()->get(['id', 'label', 'address', 'latitude', 'longitude']));
+    }
+
+    public function storeAddress(Request $request): JsonResponse
+    {
+        $customer = $request->attributes->get('tg_customer');
+        $data = $request->validate([
+            'label' => 'required|string|max:40',
+            'address' => 'nullable|string|max:255|required_without:latitude',
+            'latitude' => 'nullable|numeric|between:-90,90|required_with:longitude',
+            'longitude' => 'nullable|numeric|between:-180,180|required_with:latitude',
+        ], ['address.required_without' => 'Manzilni yozing yoki joylashuvni yuboring.']);
+        if ($customer->addresses()->count() >= 10) {
+            return $this->error('TOO_MANY_ADDRESSES', "Ko'pi bilan 10 ta manzil saqlanadi — keraksizini o'chiring.", 422);
+        }
+        $address = $customer->addresses()->updateOrCreate(['label' => trim($data['label'])], $data + ['last_used_at' => now()]);
+
+        return $this->success($address->only(['id', 'label', 'address', 'latitude', 'longitude']), 201);
+    }
+
+    public function destroyAddress(Request $request, int $address): JsonResponse
+    {
+        $customer = $request->attributes->get('tg_customer');
+        $customer->addresses()->whereKey($address)->delete();
+
+        return $this->success(null);
     }
 
     /** #26: bot orqali ro'yxatdan o'tgan mijoz ma'lumotlari — Mini App manzilni oldindan to'ldiradi */

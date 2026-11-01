@@ -16,7 +16,7 @@ async function openSidebarIfCollapsed(page: Page) {
 const SUPER_ADMIN_LINKS = ['Dashboard', 'Kompaniyalar', 'Tariflar', 'Standart menyu', 'Telegram botlar', 'Xodimlar boti', 'Tarix'];
 const COMPANY_ADMIN_LINKS = [
   'Dashboard', 'Menyu', "Qo'shimchalar", 'Stollar', 'Ofitsiant',
-  'Buyurtmalar', 'Oshxona', "Oshxona bo'limlari", 'Kassa', 'Xodimlar', 'Restoran sahifasi', 'Filiallar', 'Telegram bot',
+  'Yetkazib berish', 'Buyurtmalar', 'Oshxona', "Oshxona bo'limlari", 'Kassa', 'Xodimlar', 'Restoran sahifasi', 'Filiallar', 'Telegram bot',
 ];
 
 // authenticatedPage — super admin

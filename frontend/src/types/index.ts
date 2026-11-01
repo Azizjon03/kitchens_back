@@ -165,7 +165,7 @@ export interface Order {
   table?: Table;
   user?: User;
   type: 'dine_in' | 'takeaway' | 'delivery';
-  status: 'preparing' | 'ready' | 'served' | 'paid' | 'closed' | 'cancelled';
+  status: 'pending' | 'preparing' | 'ready' | 'served' | 'paid' | 'closed' | 'cancelled' | 'delivering' | 'delivered';
   subtotal: number;
   service_charge_pct: number;
   service_charge_amount: number;

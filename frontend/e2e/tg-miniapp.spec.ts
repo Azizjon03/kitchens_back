@@ -27,10 +27,14 @@ const MENU = {
   ],
 };
 
+// #39: ro'yxatdan o'tishdagi joylashuv — «Uy»
+const ADDRESSES = [{ id: 7, label: 'Uy', address: 'Mustaqillik 12', latitude: 40.9983, longitude: 71.2372 }];
+
 async function mockApi(page: Page) {
   await page.route('https://telegram.org/**', (r) => r.abort());
   await page.route('**/api/v1/tg/menu**', (r) => r.fulfill({ json: { success: true, data: MENU } }));
   await page.route('**/api/v1/tg/me?*', (r) => r.fulfill({ json: { success: true, data: { address: null, latitude: null, registered: true } } }));
+  await page.route('**/api/v1/tg/addresses?*', (r) => r.fulfill({ json: { success: true, data: ADDRESSES } }));
 }
 
 test.describe('Telegram Mini App (#35)', () => {
@@ -84,5 +88,31 @@ test.describe('Telegram Mini App (#35)', () => {
     await expect(sheet.getByRole('button', { name: "Qazi: ko'paytirish" })).toBeDisabled();
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
+  });
+
+  test('yetkazib berish: saqlangan «Uy» yoki yangi manzil «Ish» nomi bilan', async ({ page }) => {
+    await page.getByRole('button', { name: "Non — savatga qo'shish" }).click();
+    await page.getByRole('button', { name: /^Savat/ }).click();
+    await page.getByRole('radio', { name: 'Yetkazib bering' }).click();
+
+    const picker = page.getByRole('radiogroup', { name: 'Yetkazib berish manzili' });
+    await expect(picker.getByRole('radio', { name: /Uy/ })).toHaveAttribute('aria-checked', 'true');
+
+    const bodies: Record<string, unknown>[] = [];
+    await page.route('**/api/v1/tg/orders?*', async (r) => {
+      bodies.push(r.request().postDataJSON());
+      await r.fulfill({ status: 201, json: { success: true, data: { id: 502, status: 'pending', type: 'delivery', total: 4000, items: [] } } });
+    });
+    await page.route('**/api/v1/tg/orders/502?*', (r) => r.fulfill({ json: { success: true, data: { id: 502, status: 'pending', type: 'delivery', total: 4000, subtotal: 4000, items: [] } } }));
+
+    // Boshqa manzil: yozilmaguncha buyurtma tugmasi yopiq
+    await picker.getByRole('radio', { name: /Boshqa manzil/ }).click();
+    await expect(page.getByRole('button', { name: /Buyurtma berish/ })).toBeDisabled();
+    await page.getByLabel("Manzil va mo'ljal").fill("Navoiy 5, 2-qavat, bank yonida");
+    await page.getByRole('button', { name: 'Ish', exact: true }).click();
+    await page.getByRole('button', { name: /Buyurtma berish/ }).click();
+    await page.waitForURL('**/tg/order/502**');
+    await expect(page.getByText('Tasdiqlanmoqda').first()).toBeVisible();
+    expect(bodies[0]).toMatchObject({ type: 'delivery', delivery_address: 'Navoiy 5, 2-qavat, bank yonida', save_address: true, address_label: 'Ish' });
   });
 });

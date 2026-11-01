@@ -60,6 +60,10 @@ Route::prefix('v1')->group(function () {
         Route::post('orders', [TgOrderController::class, 'store'])->middleware('throttle:10,1,tg-orders');
         Route::get('orders/{order}', [TgOrderController::class, 'show']);
         Route::get('me', [TgOrderController::class, 'me']);
+        // #39: mijozning saqlangan manzillari
+        Route::get('addresses', [TgOrderController::class, 'addresses']);
+        Route::post('addresses', [TgOrderController::class, 'storeAddress'])->middleware('throttle:20,1,tg-addr');
+        Route::delete('addresses/{address}', [TgOrderController::class, 'destroyAddress'])->whereNumber('address');
     });
 
     // #26: Telegram webhook — sirli kalit bilan himoyalangan, Telegram IP'laridan keladi
@@ -138,6 +142,8 @@ Route::prefix('v1')->group(function () {
         Route::middleware(['company.active', 'role:company_admin,manager,waiter,cashier,chef'])->group(function () {
             Route::get('orders', [OrderController::class, 'index']);
             Route::get('orders/my-stats', [OrderController::class, 'myStats']); // #43
+            Route::get('orders/delivery', [OrderController::class, 'delivery'])->middleware('role:company_admin,manager,cashier'); // #39
+            Route::patch('orders/{order}/confirm', [OrderController::class, 'confirm'])->middleware('role:company_admin,manager,cashier');
             Route::get('orders/{order}', [OrderController::class, 'show']);
             Route::patch('orders/{order}/status', [OrderController::class, 'updateStatus']);
             // #40: oshxona bo'limlari — oshpaz o'z bo'limi taomlarini tayyor qiladi

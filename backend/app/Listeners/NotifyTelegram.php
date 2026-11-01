@@ -37,8 +37,12 @@ class NotifyTelegram
         $order->loadMissing(['customer', 'orderItems.menuItem', 'branch']);
 
         if ($order->customer?->telegram_id) {
+            // #39: yetkazib berish / olib ketish — avval operator tasdiqlaydi
+            $text = $order->status === 'pending'
+                ? "🧾 Buyurtmangiz #%d qabul qilindi.\nTez orada operator qo'ng'iroq qilib tasdiqlaydi.\nJami: <b>%s so'm</b>"
+                : "🧾 Buyurtmangiz #%d qabul qilindi va tayyorlanmoqda.\nJami: <b>%s so'm</b>";
             SendTelegramMessage::dispatch($bot->id, (string) $order->customer->telegram_id,
-                sprintf("🧾 Buyurtmangiz #%d qabul qilindi va tayyorlanmoqda.\nJami: <b>%s so'm</b>", $order->id, $this->money($order->total)));
+                sprintf($text, $order->id, $this->money($order->total)));
         }
 
         if ($bot->group_chat_id) {
@@ -52,7 +56,9 @@ class NotifyTelegram
         if ($order->status === $event->previousStatus) {
             return;
         }
-        $template = self::CUSTOMER_TEXT[$order->status] ?? null;
+        $template = $order->status === 'preparing' && $event->previousStatus === 'pending'
+            ? "✅ Buyurtmangiz #%d tasdiqlandi va tayyorlanmoqda."
+            : (self::CUSTOMER_TEXT[$order->status] ?? null);
         if (is_array($template)) {
             $template = $template[$order->type] ?? null;
         }
@@ -95,7 +101,8 @@ class NotifyTelegram
             $lines[] = '📍 '.e($order->delivery_address);
         }
         if ($order->delivery_lat !== null && $order->delivery_lng !== null) {
-            $lines[] = "🗺 https://maps.google.com/?q={$order->delivery_lat},{$order->delivery_lng}";
+            // #39: Yandex xarita (O'zbekistonda ko'p ishlatiladi)
+            $lines[] = "🗺 https://yandex.uz/maps/?pt={$order->delivery_lng},{$order->delivery_lat}&z=17&l=map";
         }
         if ($order->note) {
             $lines[] = '📝 '.e($order->note);

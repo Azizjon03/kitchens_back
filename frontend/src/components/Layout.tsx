@@ -28,6 +28,7 @@ import {
   BookMarked,
   Bot,
   Flame,
+  Truck,
 } from 'lucide-react';
 import type { Role } from '../types';
 import { apiErrorMessage } from '../lib/apiError';
@@ -207,6 +208,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { label: "Qo'shimchalar", path: '/modifiers', icon: <SlidersHorizontal size={20} />, roles: ['company_admin', 'manager'] },
     { label: 'Stollar', path: '/tables', icon: <Grid3X3 size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
     { label: 'Ofitsiant', path: '/waiter', icon: <Bell size={20} />, roles: ['company_admin', 'manager', 'waiter'] },
+    { label: 'Yetkazib berish', path: '/delivery', icon: <Truck size={20} />, roles: ['company_admin', 'manager', 'cashier'] },
     { label: 'Buyurtmalar', path: '/orders', icon: <ClipboardList size={20} />, roles: ['company_admin', 'manager', 'waiter', 'cashier'] },
     { label: 'Oshxona', path: '/kitchen', icon: <Soup size={20} />, roles: ['company_admin', 'manager', 'chef'] },
     { label: "Oshxona bo'limlari", path: '/kitchen-stations', icon: <Flame size={20} />, roles: ['company_admin', 'manager'] },

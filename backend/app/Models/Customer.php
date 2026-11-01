@@ -35,4 +35,10 @@ class Customer extends Model
     {
         return $this->hasMany(LoyaltyAccount::class);
     }
+
+    /** #39: saqlangan manzillar — oxirgi ishlatilgani birinchi */
+    public function addresses(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerAddress::class)->orderByDesc('last_used_at')->orderByDesc('id');
+    }
 }
