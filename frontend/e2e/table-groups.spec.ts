@@ -23,13 +23,23 @@ async function setup(page: Page, user: Record<string, unknown>) {
   await page.route(/\/api\/v1\/tables(\?.*)?$/, (r) => r.fulfill({ json: { success: true, data: TABLES } }));
 }
 
-test('ofitsiant: stollar zal bo\'yicha, butun zal plitkasi', async ({ page }) => {
+test('ofitsiant: zal bitta plitka, bosilganda ichidagi so\'rilar va butun zal', async ({ page }) => {
   await setup(page, { id: 31, name: 'W', role: 'waiter', is_active: true, company_id: 1, branch_id: 7 });
   await page.goto('/waiter');
-  const big = page.getByRole('region', { name: 'Katta zal' });
-  await expect(big.getByRole('button', { name: /Katta zal\s*butun zal · 16 kishi/ })).toBeDisabled();
-  await expect(big.getByRole('button', { name: /#Katta zal so'ri 2/ })).toBeEnabled();
-  await expect(page.getByRole('region', { name: 'Zalsiz stollar' }).getByRole('button', { name: /#Kabina 1/ })).toBeVisible();
+  // Zallar ro'yxati: so'rilar yashirin, zal plitkasi bo'shlar soni bilan
+  const hallTile = page.getByRole('button', { name: "Katta zal: 1 / 2 bo'sh" });
+  await expect(hallTile).toContainText('butun zal · 16 kishi (band)');
+  await expect(page.getByRole('button', { name: /#Katta zal so'ri 2/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /#Kabina 1/ })).toBeVisible(); // zalsiz stol — to'g'ridan-to'g'ri
+
+  await hallTile.click();
+  const inside = page.getByRole('region', { name: 'Katta zal' });
+  await expect(inside.getByRole('button', { name: /Katta zal\s*butun zal · 16 kishi/ })).toBeDisabled();
+  await expect(inside.getByRole('button', { name: /#Katta zal so'ri 2/ })).toBeEnabled();
+  await expect(inside.getByRole('button', { name: /#Katta zal so'ri 1/ })).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Zallar' }).click();
+  await expect(page.getByRole('button', { name: "Katta zal: 1 / 2 bo'sh" })).toBeVisible();
 });
 
 test('rahbar: yangi zal yaratadi — nom, butun zal ruxsati, stollar', async ({ page }) => {

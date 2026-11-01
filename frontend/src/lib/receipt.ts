@@ -167,19 +167,20 @@ function kitchenHtml(d: ReceiptData, opts: KitchenOptions): string {
 
 function css(width: 58 | 80): string {
   const paper = width === 58 ? '58mm' : '80mm';
-  const font = width === 58 ? '11px' : '12px';
+  // Termoprinter ingichka va kulrangni xira chiqaradi: yirik, qalin, toza qora
+  const font = width === 58 ? '13px' : '15px';
   return `@page{size:${paper} auto;margin:0}
 *{box-sizing:border-box}
-body{margin:0;width:${paper};padding:${width === 58 ? '2mm 2mm 6mm' : '3mm 4mm 8mm'};font:${font}/1.45 "IBM Plex Mono",ui-monospace,"Courier New",monospace;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.c{text-align:center}.b{font-weight:700}.big{font-size:1.55em;font-weight:700;line-height:1.2}
-.huge{font-size:2.6em;font-weight:700;line-height:1.05}
-.sep{border:0;border-top:1px dashed #000;margin:6px 0}.sep2{border:0;border-top:2px solid #000;margin:6px 0}
-.row{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
-.row>:last-child{text-align:right;white-space:nowrap}.sub{padding-left:1.5ch}.small{font-size:.92em;margin:0}
-.inv{background:#000;color:#fff;padding:2px 6px;display:inline-block;font-weight:700}
-.mod{font-weight:700;font-size:1.25em;text-transform:uppercase}.item{font-size:1.35em;font-weight:700;line-height:1.25}
-.note{border:1.5px solid #000;padding:4px 6px;margin-top:6px}
-.qr{width:26mm;margin:6px auto 2px}.qr svg{width:100%;height:auto;display:block}
+body{margin:0;width:${paper};padding:${width === 58 ? '2mm 2mm 6mm' : '3mm 3mm 8mm'};font:700 ${font}/1.35 Arial,"Helvetica Neue",Helvetica,sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-font-smoothing:none}
+.c{text-align:center}.b{font-weight:800}.big{font-size:1.45em;font-weight:800;line-height:1.2}
+.huge{font-size:2.4em;font-weight:800;line-height:1.05}
+.sep{border:0;border-top:2px dashed #000;margin:6px 0}.sep2{border:0;border-top:3px solid #000;margin:6px 0}
+.row{display:flex;justify-content:space-between;gap:6px;font-variant-numeric:tabular-nums}
+.row>:last-child{text-align:right;white-space:nowrap}.sub{padding-left:1.5ch}.small{font-size:.9em;margin:0}
+.inv{background:#000;color:#fff;padding:2px 6px;display:inline-block;font-weight:800}
+.mod{font-weight:800;font-size:1.25em;text-transform:uppercase}.item{font-size:1.4em;font-weight:800;line-height:1.25}
+.note{border:2px solid #000;padding:4px 6px;margin-top:6px}
+.qr{width:28mm;margin:6px auto 2px}.qr svg{width:100%;height:auto;display:block}
 p{margin:0}`;
 }
 
