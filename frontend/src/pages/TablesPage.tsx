@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-import type { Table, Branch } from '../types';
+import type { TableGroup, Table, Branch } from '../types';
 import HelpHint from '../components/HelpHint';
 import { FIELD_HINTS } from '../lib/guides';
 import Layout from '../components/Layout';
@@ -21,6 +21,8 @@ import {
 import { apiErrorMessage, apiFieldErrors } from '../lib/apiError';
 import { useEscape } from '../lib/useEscape';
 import NumberInput from '../components/NumberInput';
+import TableGroupModal from '../components/TableGroupModal';
+import { groupTables } from '../lib/tableGroups';
 
 const STATUS_MAP: Record<string, { label: string; bg: string; text: string }> = {
   free: { label: 'Bo\'sh', bg: 'bg-green-100', text: 'text-green-700' },
@@ -54,11 +56,15 @@ function TableModal({
   const [form, setForm] = useState({
     number: table?.number?.toString() || '',
     seats: table?.seats?.toString() || '4',
-    zone: table?.zone || '',
+    table_group_id: table?.table_group_id ? String(table.table_group_id) : '',
     branch_id: table?.branch_id || (branches[0]?.id ?? 0),
     table_template_id: table?.table_template_id ? String(table.table_template_id) : '',
   });
   const { data: templates = [] } = useTableTemplates();
+  const { data: groups = [] } = useQuery<TableGroup[]>({
+    queryKey: ['table-groups'],
+    queryFn: async () => (await api.get('/table-groups')).data.data ?? [],
+  });
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   useEscape(onClose);
@@ -70,7 +76,8 @@ function TableModal({
         // Backend stol raqamini matn sifatida qabul qiladi ("A1", "VIP-2"); son yuborilsa 422 edi
         number: form.number.trim(),
         seats: parseInt(form.seats),
-        zone: form.zone || null,
+        // #49: zal
+        table_group_id: form.table_group_id ? Number(form.table_group_id) : null,
         // Bo'sh tanlov — stolga oldindan hech narsa qo'yilmaydi (#24)
         table_template_id: form.table_template_id ? Number(form.table_template_id) : null,
       };
@@ -171,17 +178,17 @@ function TableModal({
           </div>
 
           <div>
-            <label htmlFor="table-zone" className="block text-sm font-medium text-gray-700 mb-1">Zona (ixtiyoriy)</label>
-            <input
-              id="table-zone"
-              aria-invalid={!!fieldErrors.zone}
-              type="text"
-              value={form.zone}
-              onChange={(e) => setForm((p) => ({ ...p, zone: e.target.value }))}
-              placeholder="Veranda, Ichki zal..."
+            <label htmlFor="table-group" className="block text-sm font-medium text-gray-700 mb-1">Zal (ixtiyoriy)</label>
+            <select
+              id="table-group"
+              value={form.table_group_id}
+              onChange={(e) => setForm((p) => ({ ...p, table_group_id: e.target.value }))}
               className={inputClass}
-            />
-              {fieldErrors.zone && <p className="mt-1 text-sm text-red-600">{fieldErrors.zone}</p>}
+            >
+              <option value="">Zalsiz</option>
+              {groups.filter((g) => g.branch_id === Number(form.branch_id)).map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            {fieldErrors.table_group_id && <p className="mt-1 text-sm text-red-600">{fieldErrors.table_group_id}</p>}
           </div>
 
           <div>
@@ -278,6 +285,12 @@ export default function TablesPage() {
   const [editTable, setEditTable] = useState<Table | undefined>();
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; number: string } | null>(null);
   const [tab, setTab] = useState<'tables' | 'templates'>('tables');
+  // #49: zallar
+  const [hallModal, setHallModal] = useState<{ group?: TableGroup } | null>(null);
+  const { data: halls = [] } = useQuery<TableGroup[]>({
+    queryKey: ['table-groups', filterBranch],
+    queryFn: async () => (await api.get('/table-groups', { params: filterBranch ? { branch_id: filterBranch } : {} })).data.data ?? [],
+  });
 
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ['branches'],
@@ -383,6 +396,21 @@ export default function TablesPage() {
         </div>
       </div>
 
+      {/* #49: zallar */}
+      <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Zallar">
+        <span className="text-sm font-medium text-gray-700">Zallar:</span>
+        {halls.map((h) => (
+          <button key={h.id} type="button" onClick={() => setHallModal({ group: h })}
+            className="min-h-10 inline-flex items-center gap-1.5 px-3 rounded-full border border-gray-300 bg-white text-sm text-gray-800 hover:border-amber-500">
+            {h.name} <span className="text-gray-600">· {h.tables_count ?? 0} ta{h.allow_whole ? ' · butun zal' : ''}</span>
+            <Pencil size={14} aria-hidden="true" className="text-gray-500" />
+          </button>
+        ))}
+        <button type="button" onClick={() => setHallModal({})} className="min-h-10 inline-flex items-center gap-1 px-3 rounded-full border border-dashed border-amber-600 text-sm font-medium text-amber-800 hover:bg-amber-50">
+          <Plus size={14} aria-hidden="true" /> Yangi zal
+        </button>
+      </div>
+
       {/* Grid */}
       {isLoading ? (
         <div className="p-8 text-center">
@@ -404,8 +432,14 @@ export default function TablesPage() {
           </button>
         </div>
       ) : (
+        <div className="space-y-6">
+        {groupTables(tables).map((sec) => (
+        <section key={sec.key} aria-labelledby={`sec-${sec.key}`}>
+          <h2 id={`sec-${sec.key}`} className="mb-2 text-sm font-semibold text-gray-700">
+            {sec.name} <span className="font-normal text-gray-600">· {sec.tables.length} ta stol</span>
+          </h2>
         <div className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {tables.map((table) => {
+          {[...(sec.whole ? [sec.whole] : []), ...sec.tables].map((table) => {
             const st = STATUS_MAP[table.status] || STATUS_MAP.free;
             const borderClass = STATUS_BORDER[table.status] || 'border-gray-200';
             return (
@@ -415,7 +449,7 @@ export default function TablesPage() {
               >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-lg font-bold text-gray-900">#{table.number}</span>
+                  <span className="text-lg font-bold text-gray-900">{table.is_whole_group ? `${table.number} — butun zal` : `#${table.number}`}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${st.bg} ${st.text}`}>
                     {st.label}
                   </span>
@@ -460,7 +494,10 @@ export default function TablesPage() {
                   ))}
                 </div>
 
-                {/* Actions */}
+                {/* Actions — «butun zal» joyi zal sozlamasidan boshqariladi */}
+                {table.is_whole_group ? (
+                  <p className="pt-2 border-t border-gray-100 text-xs text-gray-600">Butun zal — «Zallar» dan sozlanadi</p>
+                ) : (
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100">
                   <button
                     onClick={() => {
@@ -480,9 +517,13 @@ export default function TablesPage() {
                     O'chirish
                   </button>
                 </div>
+                )}
               </div>
             );
           })}
+        </div>
+        </section>
+        ))}
         </div>
       )}
 
@@ -500,6 +541,8 @@ export default function TablesPage() {
           }}
         />
       )}
+
+      {hallModal && <TableGroupModal group={hallModal.group} branches={branches} tables={tables} onClose={() => setHallModal(null)} />}
 
       {deleteTarget && (
         <DeleteConfirmModal

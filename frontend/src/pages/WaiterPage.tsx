@@ -15,6 +15,7 @@ import { apiErrorMessage } from '../lib/apiError';
 import { X, Bell, Check, ClipboardList, Grid3X3, LayoutTemplate } from 'lucide-react';
 import { formatMoney, formatTime } from '../lib/format';
 import ReceiptButton from '../components/ReceiptButton';
+import { groupTables } from '../lib/tableGroups';
 
 
 const inputClass =
@@ -242,17 +243,22 @@ export default function WaiterPage() {
         </dl>
       )}
 
-      {/* Tables */}
+      {/* Tables — #49: zallar bo'yicha */}
       <h2 className="text-sm font-semibold text-gray-500 mb-2">Stollar</h2>
-      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mb-8">
-        {tables.map((t) => {
+      {groupTables(tables).map((sec) => (
+        <section key={sec.key} className="mb-5" aria-label={sec.name}>
+          {(sec.groupId !== null || groupTables(tables).length > 1) && (
+            <h3 className="mb-1.5 text-sm font-medium text-gray-700">{sec.name}</h3>
+          )}
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2">
+            {[...(sec.whole ? [sec.whole] : []), ...sec.tables].map((t) => {
           const isFree = t.status === 'free';
           return (
             <button
               key={t.id}
               onClick={() => isFree && setComposerTable(t)}
               disabled={!isFree}
-              className={`aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-semibold border-2 transition-colors ${
+              className={`${t.is_whole_group ? 'col-span-2 min-h-24' : 'aspect-square'} rounded-lg flex flex-col items-center justify-center text-sm font-semibold border-2 transition-colors ${
                 isFree
                   ? 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100'
                   : t.status === 'occupied'
@@ -260,12 +266,16 @@ export default function WaiterPage() {
                     : 'border-gray-200 bg-gray-50 text-gray-600 cursor-not-allowed'
               }`}
             >
-              #{t.number}
+              {t.is_whole_group ? <>{t.number}<span className="text-xs font-medium">butun zal · {t.seats} kishi</span></> : `#${t.number}`}
               <span className="text-xs font-medium">{TABLE_STATUS_LABELS[t.status] ?? t.status}</span>
               {isFree && hasDraft(t.id) && <span className="mt-0.5 rounded bg-amber-600 px-1.5 text-[11px] font-semibold text-white">qoralama</span>}
             </button>
           );
-        })}
+            })}
+          </div>
+        </section>
+      ))}
+      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-2 mb-8">
         {tablesLoading && (
           <div className="col-span-full">
             <LoadingState label="Stollar yuklanmoqda..." />
