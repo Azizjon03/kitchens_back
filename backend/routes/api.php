@@ -52,6 +52,8 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/telegram/staff', [AuthController::class, 'telegramStaffLogin']);
         Route::post('auth/telegram/staff/link', [AuthController::class, 'telegramStaffLink']);
     });
+    // #59: Windows ilovasini ulash kodi bilan ulash (kalitsiz)
+    Route::post('agent/pair', [PrintAgentApiController::class, 'pair'])->middleware('throttle:10,1,print-agent-pair');
     // #53: oshxona kompyuteridagi printer dasturi
     Route::prefix('agent')->middleware(['print.agent', 'throttle:120,1,print-agent'])->group(function () {
         Route::post('heartbeat', [PrintAgentApiController::class, 'heartbeat']);
@@ -129,6 +131,7 @@ Route::prefix('v1')->group(function () {
                 Route::put('printers/{printer}', [PrinterController::class, 'update']);
                 Route::delete('printers/{printer}', [PrinterController::class, 'destroy']);
                 Route::post('printers/{printer}/test', [PrinterController::class, 'test'])->middleware('throttle:20,1,printer-test');
+                Route::post('print-agents/pair-code', [PrinterController::class, 'pairCode'])->middleware('throttle:10,1,print-pair-code');
                 Route::post('print-agents', [PrinterController::class, 'storeAgent'])->middleware('throttle:10,1,print-agent-new');
                 Route::delete('print-agents/{printAgent}', [PrinterController::class, 'destroyAgent']);
                 Route::apiResource('kitchen-stations', KitchenStationController::class)->except(['index', 'show']);

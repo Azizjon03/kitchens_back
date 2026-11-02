@@ -191,4 +191,62 @@ class PrintAgentTest extends TestCase
         Sanctum::actingAs($this->waiter);
         $this->getJson('/api/v1/printers')->assertForbidden();
     }
+
+    /** #59: Windows ilovasi panelda olingan 6 raqamli kod bilan ulanadi. */
+    public function test_desktop_app_pairs_with_one_time_code(): void
+    {
+        Sanctum::actingAs($this->waiter);
+        $this->postJson('/api/v1/print-agents/pair-code', ['name' => 'Kassa'])->assertForbidden();
+
+        Sanctum::actingAs($this->admin);
+        $res = $this->postJson('/api/v1/print-agents/pair-code', ['name' => 'Oshxona kompyuteri'])->assertCreated();
+        $code = $res->json('data.code');
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
+        $this->assertSame(600, $res->json('data.ttl_seconds'));
+        $this->assertDatabaseMissing('print_pair_codes', ['code_hash' => $code]); // kod ochiq saqlanmaydi
+
+        $this->app['auth']->forgetGuards(); // ilova login qilmagan
+        $this->postJson('/api/v1/agent/pair', ['code' => '12ab56'])->assertUnprocessable();
+        $wrong = $code === '000000' ? '000001' : '000000';
+        $this->postJson('/api/v1/agent/pair', ['code' => $wrong])->assertUnprocessable()->assertJsonPath('error.code', 'INVALID_PAIR_CODE');
+
+        $pair = $this->postJson('/api/v1/agent/pair', ['code' => $code, 'version' => '0.2.0'])->assertCreated();
+        $token = $pair->json('data.token');
+        $this->assertSame('Oshxona kompyuteri', $pair->json('data.agent.name'));
+        $this->assertSame('Archazor', $pair->json('data.company.name'));
+
+        // Bir martalik
+        $this->postJson('/api/v1/agent/pair', ['code' => $code])->assertUnprocessable();
+
+        // Kalit ishlaydi va agent kompaniya filialiga bog'langan
+        $beat = $this->withHeaders(['X-Agent-Token' => $token])->postJson('/api/v1/agent/heartbeat', ['version' => '0.2.0', 'client' => 'desktop'])->assertOk();
+        $this->assertCount(2, $beat->json('data.printers'));
+        $agent = \App\Models\PrintAgent::withoutGlobalScopes()->findOrFail($pair->json('data.agent.id'));
+        $this->assertSame([$this->company->id, $this->branch->id, 'desktop'], [$agent->company_id, $agent->branch_id, $agent->client]);
+
+        Sanctum::actingAs($this->admin);
+        $list = $this->getJson('/api/v1/printers')->assertOk();
+        $this->assertSame('desktop', collect($list->json('data.agents'))->firstWhere('id', $agent->id)['client']);
+        $this->assertNotEmpty($list->json('data.latest_desktop_version'));
+    }
+
+    public function test_pair_code_expires_and_dies_with_inactive_company(): void
+    {
+        $code = $this->postJson('/api/v1/print-agents/pair-code', ['name' => 'Kassa'])->assertCreated()->json('data.code');
+        $this->travel(11)->minutes();
+        $this->postJson('/api/v1/agent/pair', ['code' => $code])->assertUnprocessable();
+        $this->travelBack();
+
+        Sanctum::actingAs($this->admin);
+        $code = $this->postJson('/api/v1/print-agents/pair-code', ['name' => 'Kassa'])->assertCreated()->json('data.code');
+        $this->company->forceFill(['is_active' => false])->save();
+        $this->postJson('/api/v1/agent/pair', ['code' => $code])->assertUnprocessable();
+    }
+
+    public function test_pair_code_branch_must_belong_to_company(): void
+    {
+        $other = Company::create(['name' => 'Boshqa', 'slug' => 'boshqa', 'phone' => '+998700000009', 'is_active' => true]);
+        $otherBranch = Branch::create(['company_id' => $other->id, 'name' => 'Begona filial', 'is_active' => true]);
+        $this->postJson('/api/v1/print-agents/pair-code', ['name' => 'Kassa', 'branch_id' => $otherBranch->id])->assertUnprocessable();
+    }
 }
