@@ -13,3 +13,4 @@ Artisan::command('inspire', function () {
 Schedule::command('telegram:health')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('telegram:daily-report')->dailyAt('23:00');
 Schedule::command('print:health')->everyMinute()->withoutOverlapping(); // #53
+Schedule::command('desktop:prune')->dailyAt('04:30'); // #62

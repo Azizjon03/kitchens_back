@@ -11,6 +11,7 @@ use App\Models\PrintJob;
 use App\Models\PrintPairCode;
 use App\Models\Printer;
 use App\Services\KitchenService;
+use App\Services\Printing\DesktopRelease;
 use App\Services\Printing\EscPos;
 use App\Services\Printing\PrintService;
 use Illuminate\Http\JsonResponse;
@@ -27,16 +28,13 @@ class PrinterController extends Controller
 
     public const AGENT_VERSION = '1.2.0';
 
-    /** Windows ilovasining eng yangi versiyasi (#62 da avtoyangilanish) */
-    public const DESKTOP_VERSION = '0.2.0';
-
     public function index(): JsonResponse
     {
         return $this->success([
             'printers' => Printer::orderBy('name')->get(),
             'agents' => PrintAgent::orderBy('id')->get(),
             'latest_agent_version' => self::AGENT_VERSION,
-            'latest_desktop_version' => self::DESKTOP_VERSION,
+            'latest_desktop_version' => DesktopRelease::latest()['version'] ?? null,
             'recent_jobs' => PrintJob::with('printer:id,name')->latest('id')->limit(15)
                 ->get(['id', 'printer_id', 'order_id', 'kind', 'status', 'error', 'attempts', 'created_at', 'printed_at']),
         ]);

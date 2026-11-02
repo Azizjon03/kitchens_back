@@ -42,7 +42,7 @@ test('printer holati, xatosi va kompyuterni ulash — dastur fayli yuklanadi', a
 });
 
 test('Windows ilovasini 6 raqamli kod bilan ulash (#59)', async ({ page }) => {
-  data = { ...data, agents: [{ id: 1, name: 'Eski kompyuter', online: true, last_seen_at: new Date().toISOString(), version: '1.2.0', client: 'powershell' }] };
+  data = { ...data, latest_desktop_version: '0.3.0', agents: [{ id: 1, name: 'Eski kompyuter', online: true, last_seen_at: new Date().toISOString(), version: '1.2.0', client: 'powershell' }] } as typeof data;
   await setup(page);
   let body: Record<string, unknown> | null = null;
   await page.route('**/api/v1/print-agents/pair-code', (r) => {
@@ -54,6 +54,7 @@ test('Windows ilovasini 6 raqamli kod bilan ulash (#59)', async ({ page }) => {
   await page.getByRole('button', { name: 'Kompyuterni ulash' }).click();
   const dlg = page.getByRole('dialog');
   await expect(dlg.getByRole('tab', { name: 'Windows ilovasi (tavsiya)' })).toHaveAttribute('aria-selected', 'true');
+  await expect(dlg.getByRole('link', { name: 'Windows ilovasini yuklab olish (v0.3.0)' })).toHaveAttribute('href', '/api/v1/desktop/download');
   await dlg.getByLabel('Kompyuter nomi').fill('Kassa');
   await dlg.getByRole('button', { name: 'Ulash kodini olish' }).click();
   await expect(dlg.getByTestId('pair-code')).toHaveText('048213');
@@ -65,6 +66,7 @@ test('Windows ilovasini 6 raqamli kod bilan ulash (#59)', async ({ page }) => {
   await expect(dlg.getByRole('status')).toContainText('«Kassa» ulandi', { timeout: 8000 });
   await dlg.getByRole('button', { name: 'Yopish' }).click();
   await expect(page.getByText('Windows ilovasi v0.2.0')).toBeVisible();
+  await expect(page.getByText("Yangi versiya v0.3.0 — ilova o'zi yuklab oladi")).toBeVisible();
 });
 
 test('printer qo\'shish: IP tekshiruvi va yuborilgan qiymatlar', async ({ page }) => {
