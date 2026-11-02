@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Monitor, Pencil, Plus, Printer as PrinterIcon, Trash2, X } from 'lucide-react';
 import api from '../lib/api';
@@ -18,12 +18,12 @@ interface PrinterRow {
   id: number; name: string; ip: string; port: number; paper_width: 58 | 80; is_active: boolean;
   status: 'online' | 'offline' | 'unknown'; last_error: string | null; last_checked_at: string | null;
 }
-interface AgentRow { id: number; name: string; online: boolean; last_seen_at: string | null; version: string | null }
+interface AgentRow { id: number; name: string; online: boolean; last_seen_at: string | null; version: string | null; client?: 'desktop' | 'powershell' | null }
 interface JobRow {
   id: number; order_id: number | null; kind: string; status: 'pending' | 'sent' | 'printed' | 'failed';
   error: string | null; created_at: string; printer?: { id: number; name: string } | null;
 }
-interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[]; latest_agent_version?: string }
+interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[]; latest_agent_version?: string; latest_desktop_version?: string }
 
 const PSTATUS = {
   online: { label: 'Ishlayapti', cls: 'bg-green-100 text-green-800' },
@@ -111,17 +111,88 @@ function PrinterModal({ printer, onClose }: { printer?: PrinterRow; onClose: () 
   );
 }
 
-function AgentModal({ onClose }: { onClose: () => void }) {
+function useCountdown(until: number | null) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!until) return;
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [until]);
+  return until ? Math.max(0, Math.round((until - now) / 1000)) : 0;
+}
+
+/** #59: Windows ilovasi panelda olingan 6 raqamli kod bilan ulanadi. */
+function DesktopPair({ name, knownAgentIds }: { name: string; knownAgentIds: number[] }) {
+  const queryClient = useQueryClient();
+  const [pair, setPair] = useState<{ code: string; until: number } | null>(null);
+  const [error, setError] = useState('');
+  const left = useCountdown(pair?.until ?? null);
+  const create = useMutation({
+    mutationFn: async () => (await api.post('/print-agents/pair-code', { name: name.trim() })).data.data as { code: string; ttl_seconds: number },
+    onSuccess: (d) => setPair({ code: d.code, until: Date.now() + d.ttl_seconds * 1000 }),
+    onError: (err) => setError(apiErrorMessage(err, "Kod olib bo'lmadi")),
+  });
+  // Kod kiritilgach yangi kompyuter ro'yxatda paydo bo'ladi — tezroq ko'rish uchun tez-tez so'raymiz.
+  const { data } = useQuery<Data>({
+    queryKey: ['printers'],
+    queryFn: async () => (await api.get('/printers')).data.data,
+    refetchInterval: pair && left > 0 ? 3000 : false,
+  });
+  const paired = pair ? data?.agents.find((a) => !knownAgentIds.includes(a.id) && a.client === 'desktop') : undefined;
+  useEffect(() => { if (paired) queryClient.invalidateQueries({ queryKey: ['printers'] }); }, [paired, queryClient]);
+
+  if (paired) {
+    return <p role="status" className="rounded-lg bg-green-50 border border-green-200 px-3 py-3 text-sm text-green-900">«{paired.name}» ulandi. Endi printerlar uchun «Sinov cheki» ni bosing.</p>;
+  }
+  if (!pair) {
+    return (
+      <div className="space-y-3">
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+        <button type="button" disabled={create.isPending || !name.trim()} onClick={() => { setError(''); create.mutate(); }}
+          className="w-full min-h-12 bg-amber-700 text-white rounded-lg font-semibold hover:bg-amber-800 disabled:opacity-50">
+          Ulash kodini olish
+        </button>
+      </div>
+    );
+  }
+  const expired = left === 0;
+  return (
+    <div className="space-y-3 text-sm text-gray-800">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 py-4 text-center">
+        <p className="text-xs text-amber-900">Ulash kodi</p>
+        <p data-testid="pair-code" className={`mt-1 font-mono text-4xl font-bold tracking-[0.3em] ${expired ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{pair.code}</p>
+        <p className="mt-1 text-xs text-amber-900">{expired ? 'Muddati o\'tdi' : `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} amal qiladi · bir marta`}</p>
+      </div>
+      {expired ? (
+        <button type="button" onClick={() => { setPair(null); create.mutate(); }} className="w-full min-h-11 rounded-lg border border-amber-600 font-medium text-amber-800 hover:bg-amber-50">Yangi kod olish</button>
+      ) : (
+        <ol className="list-decimal pl-5 space-y-1.5">
+          <li>Oshxona kompyuterida <b>Kitchens</b> ilovasini oching.</li>
+          <li>Soat yonidagi Kitchens belgisi ustida o'ng tugma → <b>«Printerlarni ulash»</b>.</li>
+          <li>Shu kodni kiriting. Ulanish shu oynada ko'rinadi.</li>
+        </ol>
+      )}
+    </div>
+  );
+}
+
+function AgentModal({ knownAgentIds, onClose }: { knownAgentIds: number[]; onClose: () => void }) {
   const queryClient = useQueryClient();
   useEscape(onClose);
+  const [mode, setMode] = useState<'desktop' | 'powershell'>('desktop');
   const [name, setName] = useState('Oshxona kompyuteri');
   const [done, setDone] = useState<{ script: string; filename: string } | null>(null);
   const [error, setError] = useState('');
+  const [known] = useState(knownAgentIds);
   const create = useMutation({
     mutationFn: async () => (await api.post('/print-agents', { name: name.trim() })).data.data as { script: string; filename: string },
     onSuccess: (d) => { queryClient.invalidateQueries({ queryKey: ['printers'] }); setDone(d); download(d.filename, d.script); },
     onError: (err) => setError(apiErrorMessage(err, "Ulab bo'lmadi")),
   });
+  const tab = (m: typeof mode, label: string) => (
+    <button type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)}
+      className={`flex-1 min-h-11 rounded-lg text-sm font-medium ${mode === m ? 'bg-white shadow text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}>{label}</button>
+  );
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 sm:p-4" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="ag-title" onClick={(e) => e.stopPropagation()} className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 space-y-4">
@@ -129,13 +200,25 @@ function AgentModal({ onClose }: { onClose: () => void }) {
           <h2 id="ag-title" className="text-lg font-semibold text-gray-900">Oshxona kompyuterini ulash</h2>
           <button type="button" onClick={onClose} aria-label="Yopish" className="min-h-11 min-w-11 inline-flex items-center justify-center text-gray-600"><X size={20} /></button>
         </div>
-        {!done ? (
-          <form onSubmit={(e) => { e.preventDefault(); setError(''); create.mutate(); }} className="space-y-4">
-            <p className="text-sm text-gray-700">Printerlar ulangan tarmoqdagi Windows kompyuter. Unga kichik dastur yuklab olinadi — u cheklarni printerlarga yuboradi.</p>
+        {!done && (
+          <>
+            <div role="tablist" aria-label="Ulash usuli" className="flex gap-1 rounded-xl bg-gray-100 p-1">
+              {tab('desktop', 'Windows ilovasi (tavsiya)')}
+              {tab('powershell', 'PowerShell dasturi')}
+            </div>
+            <p className="text-sm text-gray-700">
+              {mode === 'desktop'
+                ? 'Printerlar ulangan tarmoqdagi Windows kompyuter. Kitchens ilovasi cheklarni printerlarga yuboradi.'
+                : 'Ilova o\'rnatib bo\'lmaydigan kompyuter uchun. Kichik dastur yuklab olinadi — u cheklarni printerlarga yuboradi.'}
+            </p>
             <div>
               <label htmlFor="ag-name" className="block text-sm font-medium text-gray-700 mb-1">Kompyuter nomi</label>
               <input id="ag-name" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className="w-full min-h-11 px-3 border border-gray-300 rounded-lg text-sm" />
             </div>
+          </>
+        )}
+        {mode === 'desktop' && !done ? <DesktopPair name={name} knownAgentIds={known} /> : !done ? (
+          <form onSubmit={(e) => { e.preventDefault(); setError(''); create.mutate(); }} className="space-y-4">
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
             <button type="submit" disabled={create.isPending} className="w-full min-h-12 bg-amber-700 text-white rounded-lg font-semibold hover:bg-amber-800 disabled:opacity-50 inline-flex items-center justify-center gap-2">
               <Download size={18} aria-hidden="true" /> Dasturni yuklab olish
@@ -204,9 +287,9 @@ export default function PrintersPage() {
                     <li key={a.id} className="flex flex-wrap items-center gap-3 py-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.online ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{a.online ? 'Ulangan' : 'Aloqada emas'}</span>
                       <span className="font-medium text-gray-900">{a.name}</span>
-                      <span className="text-sm text-gray-600">{a.last_seen_at ? `oxirgi: ${formatDateTime(a.last_seen_at)}` : 'hali ishga tushmagan'}{a.version ? ` · v${a.version}` : ''}</span>
+                      <span className="text-sm text-gray-600">{a.client === 'desktop' ? 'Windows ilovasi' : 'PowerShell'}{a.version ? ` v${a.version}` : ''} · {a.last_seen_at ? `oxirgi: ${formatDateTime(a.last_seen_at)}` : 'hali ishga tushmagan'}</span>
                       <button type="button" onClick={() => removeAgent.mutate(a.id)} className="ml-auto min-h-11 px-2 text-sm text-gray-600 hover:text-red-700">Uzish</button>
-                      {a.version && data.latest_agent_version && a.version !== data.latest_agent_version && (
+                      {a.client !== 'desktop' && a.version && data.latest_agent_version && a.version !== data.latest_agent_version && (
                         <p className="w-full text-sm text-amber-800">
                           Dastur eski (v{a.version}). Yangi versiya v{data.latest_agent_version} — oyna pauzaga tushmaydi, yopilsa o'zi qayta ishga tushadi. «Uzish» → «Kompyuterni ulash» bilan faylni qayta yuklab oling.
                         </p>
@@ -264,7 +347,7 @@ export default function PrintersPage() {
         )}
       </div>
       {printerModal && <PrinterModal printer={printerModal.printer} onClose={() => setPrinterModal(null)} />}
-      {agentModal && <AgentModal onClose={() => setAgentModal(false)} />}
+      {agentModal && <AgentModal knownAgentIds={data?.agents.map((a) => a.id) ?? []} onClose={() => setAgentModal(false)} />}
     </Layout>
   );
 }

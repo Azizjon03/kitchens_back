@@ -34,10 +34,37 @@ test('printer holati, xatosi va kompyuterni ulash — dastur fayli yuklanadi', a
 
   await page.getByRole('button', { name: 'Kompyuterni ulash' }).click();
   const dlg = page.getByRole('dialog');
+  await dlg.getByRole('tab', { name: 'PowerShell dasturi' }).click();
   const download = page.waitForEvent('download');
   await dlg.getByRole('button', { name: 'Dasturni yuklab olish' }).click();
   expect((await download).suggestedFilename()).toBe('kitchens-printer.ps1');
   await expect(dlg).toContainText('Run with PowerShell');
+});
+
+test('Windows ilovasini 6 raqamli kod bilan ulash (#59)', async ({ page }) => {
+  data = { ...data, agents: [{ id: 1, name: 'Eski kompyuter', online: true, last_seen_at: new Date().toISOString(), version: '1.2.0', client: 'powershell' }] };
+  await setup(page);
+  let body: Record<string, unknown> | null = null;
+  await page.route('**/api/v1/print-agents/pair-code', (r) => {
+    body = r.request().postDataJSON();
+    return r.fulfill({ status: 201, json: { success: true, data: { code: '048213', ttl_seconds: 600, expires_at: new Date().toISOString() } } });
+  });
+  await page.goto('/printers');
+  await expect(page.getByText('PowerShell v1.2.0')).toBeVisible();
+  await page.getByRole('button', { name: 'Kompyuterni ulash' }).click();
+  const dlg = page.getByRole('dialog');
+  await expect(dlg.getByRole('tab', { name: 'Windows ilovasi (tavsiya)' })).toHaveAttribute('aria-selected', 'true');
+  await dlg.getByLabel('Kompyuter nomi').fill('Kassa');
+  await dlg.getByRole('button', { name: 'Ulash kodini olish' }).click();
+  await expect(dlg.getByTestId('pair-code')).toHaveText('048213');
+  await expect(dlg).toContainText(/9:5\d amal qiladi/);
+  expect(body).toEqual({ name: 'Kassa' });
+
+  // Ilova kodni kiritdi — yangi kompyuter paydo bo'ladi
+  data = { ...data, agents: [...data.agents, { id: 2, name: 'Kassa', online: true, last_seen_at: new Date().toISOString(), version: '0.2.0', client: 'desktop' }] };
+  await expect(dlg.getByRole('status')).toContainText('«Kassa» ulandi', { timeout: 8000 });
+  await dlg.getByRole('button', { name: 'Yopish' }).click();
+  await expect(page.getByText('Windows ilovasi v0.2.0')).toBeVisible();
 });
 
 test('printer qo\'shish: IP tekshiruvi va yuborilgan qiymatlar', async ({ page }) => {

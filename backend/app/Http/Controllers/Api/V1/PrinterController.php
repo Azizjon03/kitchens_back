@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\PrintAgent;
 use App\Models\PrintJob;
+use App\Models\PrintPairCode;
 use App\Models\Printer;
 use App\Services\KitchenService;
 use App\Services\Printing\EscPos;
@@ -26,12 +27,16 @@ class PrinterController extends Controller
 
     public const AGENT_VERSION = '1.2.0';
 
+    /** Windows ilovasining eng yangi versiyasi (#62 da avtoyangilanish) */
+    public const DESKTOP_VERSION = '0.2.0';
+
     public function index(): JsonResponse
     {
         return $this->success([
             'printers' => Printer::orderBy('name')->get(),
             'agents' => PrintAgent::orderBy('id')->get(),
             'latest_agent_version' => self::AGENT_VERSION,
+            'latest_desktop_version' => self::DESKTOP_VERSION,
             'recent_jobs' => PrintJob::with('printer:id,name')->latest('id')->limit(15)
                 ->get(['id', 'printer_id', 'order_id', 'kind', 'status', 'error', 'attempts', 'created_at', 'printed_at']),
         ]);
@@ -69,6 +74,38 @@ class PrinterController extends Controller
     }
 
     /** Kompyuterni ulash: kalit faqat shu javobda ko'rinadi va dastur fayliga yoziladi */
+    /**
+     * #59: Windows ilovasini ulash kodi. Kod 10 daqiqa va bir marta amal qiladi;
+     * ilova uni `POST /agent/pair` ga yuborib, agent kalitini oladi.
+     */
+    public function pairCode(Request $request): JsonResponse
+    {
+        $companyId = $request->user()->company_id;
+        $this->defaultToSingleBranch($request, $companyId);
+        $data = $request->validate([
+            'name' => 'required|string|max:60',
+            'branch_id' => ['required', Rule::exists('branches', 'id')->where('company_id', $companyId)],
+        ]);
+
+        // Hozir amal qilayotgan kodlar bilan to'qnashmasin (kod bo'yicha qidiriladi).
+        do {
+            $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $busy = PrintPairCode::withoutGlobalScopes()->where('code_hash', PrintPairCode::hash($code))
+                ->whereNull('used_at')->where('expires_at', '>', now())->exists();
+        } while ($busy);
+
+        $pair = PrintPairCode::create($data + [
+            'code_hash' => PrintPairCode::hash($code),
+            'expires_at' => now()->addMinutes(PrintPairCode::TTL_MINUTES),
+        ]);
+
+        return $this->success([
+            'code' => $code,
+            'expires_at' => $pair->expires_at->toIso8601String(),
+            'ttl_seconds' => PrintPairCode::TTL_MINUTES * 60,
+        ], 201);
+    }
+
     public function storeAgent(Request $request): JsonResponse
     {
         $companyId = $request->user()->company_id;

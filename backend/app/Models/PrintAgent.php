@@ -12,7 +12,7 @@ class PrintAgent extends Model
 
     public const ONLINE_SECONDS = 90;
 
-    protected $fillable = ['company_id', 'branch_id', 'name', 'token_hash', 'last_seen_at', 'version', 'alerted_at'];
+    protected $fillable = ['company_id', 'branch_id', 'name', 'token_hash', 'last_seen_at', 'version', 'alerted_at', 'client'];
 
     protected $hidden = ['token_hash'];
 
