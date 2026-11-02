@@ -227,7 +227,7 @@ class PrintAgentTest extends TestCase
         Sanctum::actingAs($this->admin);
         $list = $this->getJson('/api/v1/printers')->assertOk();
         $this->assertSame('desktop', collect($list->json('data.agents'))->firstWhere('id', $agent->id)['client']);
-        $this->assertNotEmpty($list->json('data.latest_desktop_version'));
+        $this->assertArrayHasKey('latest_desktop_version', $list->json('data')); // #62: o'rnatuvchi yuklanmaguncha null
     }
 
     public function test_pair_code_expires_and_dies_with_inactive_company(): void

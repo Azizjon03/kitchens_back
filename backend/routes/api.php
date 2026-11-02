@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\Tg\OrderController as TgOrderController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\KitchenStationController;
 use App\Http\Controllers\Api\V1\PrinterController;
+use App\Http\Controllers\Api\V1\DesktopReleaseController;
 use App\Http\Controllers\Api\V1\PrintAgentApiController;
 use App\Http\Controllers\Api\V1\StaffTelegramWebhookController;
 use App\Http\Controllers\Api\V1\SuperAdmin\StaffBotController as SuperStaffBotController;
@@ -51,6 +52,12 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/telegram/verify', [AuthController::class, 'verifyTelegram']);
         Route::post('auth/telegram/staff', [AuthController::class, 'telegramStaffLogin']);
         Route::post('auth/telegram/staff/link', [AuthController::class, 'telegramStaffLink']);
+    });
+    // #62: Windows ilovasini tarqatish (o'rnatuvchi va avtoyangilanish)
+    Route::prefix('desktop')->middleware('throttle:60,1,desktop')->group(function () {
+        Route::get('info', [DesktopReleaseController::class, 'info']);
+        Route::get('download', [DesktopReleaseController::class, 'download']);
+        Route::get('{file}', [DesktopReleaseController::class, 'file'])->where('file', '[A-Za-z0-9.\-]+');
     });
     // #59: Windows ilovasini ulash kodi bilan ulash (kalitsiz)
     Route::post('agent/pair', [PrintAgentApiController::class, 'pair'])->middleware('throttle:10,1,print-agent-pair');

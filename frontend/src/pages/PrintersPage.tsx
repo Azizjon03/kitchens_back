@@ -23,7 +23,7 @@ interface JobRow {
   id: number; order_id: number | null; kind: string; status: 'pending' | 'sent' | 'printed' | 'failed';
   error: string | null; created_at: string; printer?: { id: number; name: string } | null;
 }
-interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[]; latest_agent_version?: string; latest_desktop_version?: string }
+interface Data { printers: PrinterRow[]; agents: AgentRow[]; recent_jobs: JobRow[]; latest_agent_version?: string; latest_desktop_version?: string | null }
 
 const PSTATUS = {
   online: { label: 'Ishlayapti', cls: 'bg-green-100 text-green-800' },
@@ -176,7 +176,21 @@ function DesktopPair({ name, knownAgentIds }: { name: string; knownAgentIds: num
   );
 }
 
-function AgentModal({ knownAgentIds, onClose }: { knownAgentIds: number[]; onClose: () => void }) {
+/** #62: o'rnatuvchi kitchens.uz serverida; ilova keyin o'zi yangilanadi. */
+const DESKTOP_DOWNLOAD = '/api/v1/desktop/download';
+
+function DesktopDownload({ version }: { version?: string | null }) {
+  if (!version) {
+    return <p className="text-sm text-gray-600">Windows ilovasi hali serverga yuklanmagan. Hozircha «PowerShell dasturi» dan foydalaning.</p>;
+  }
+  return (
+    <a href={DESKTOP_DOWNLOAD} download className="w-full min-h-11 inline-flex items-center justify-center gap-2 rounded-lg border border-amber-600 text-sm font-medium text-amber-800 hover:bg-amber-50">
+      <Download size={16} aria-hidden="true" /> Windows ilovasini yuklab olish (v{version})
+    </a>
+  );
+}
+
+function AgentModal({ knownAgentIds, desktopVersion, onClose }: { knownAgentIds: number[]; desktopVersion?: string | null; onClose: () => void }) {
   const queryClient = useQueryClient();
   useEscape(onClose);
   const [mode, setMode] = useState<'desktop' | 'powershell'>('desktop');
@@ -217,6 +231,7 @@ function AgentModal({ knownAgentIds, onClose }: { knownAgentIds: number[]; onClo
             </div>
           </>
         )}
+        {mode === 'desktop' && !done && <DesktopDownload version={desktopVersion} />}
         {mode === 'desktop' && !done ? <DesktopPair name={name} knownAgentIds={known} /> : !done ? (
           <form onSubmit={(e) => { e.preventDefault(); setError(''); create.mutate(); }} className="space-y-4">
             {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
@@ -289,6 +304,9 @@ export default function PrintersPage() {
                       <span className="font-medium text-gray-900">{a.name}</span>
                       <span className="text-sm text-gray-600">{a.client === 'desktop' ? 'Windows ilovasi' : 'PowerShell'}{a.version ? ` v${a.version}` : ''} · {a.last_seen_at ? `oxirgi: ${formatDateTime(a.last_seen_at)}` : 'hali ishga tushmagan'}</span>
                       <button type="button" onClick={() => removeAgent.mutate(a.id)} className="ml-auto min-h-11 px-2 text-sm text-gray-600 hover:text-red-700">Uzish</button>
+                      {a.client === 'desktop' && a.version && data.latest_desktop_version && a.version !== data.latest_desktop_version && (
+                        <p className="w-full text-sm text-gray-600">Yangi versiya v{data.latest_desktop_version} — ilova o'zi yuklab oladi va tunda yangilanadi.</p>
+                      )}
                       {a.client !== 'desktop' && a.version && data.latest_agent_version && a.version !== data.latest_agent_version && (
                         <p className="w-full text-sm text-amber-800">
                           Dastur eski (v{a.version}). Yangi versiya v{data.latest_agent_version} — oyna pauzaga tushmaydi, yopilsa o'zi qayta ishga tushadi. «Uzish» → «Kompyuterni ulash» bilan faylni qayta yuklab oling.
@@ -347,7 +365,7 @@ export default function PrintersPage() {
         )}
       </div>
       {printerModal && <PrinterModal printer={printerModal.printer} onClose={() => setPrinterModal(null)} />}
-      {agentModal && <AgentModal knownAgentIds={data?.agents.map((a) => a.id) ?? []} onClose={() => setAgentModal(false)} />}
+      {agentModal && <AgentModal knownAgentIds={data?.agents.map((a) => a.id) ?? []} desktopVersion={data?.latest_desktop_version} onClose={() => setAgentModal(false)} />}
     </Layout>
   );
 }
